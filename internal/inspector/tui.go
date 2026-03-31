@@ -19,7 +19,6 @@ var (
 	yellow = lipgloss.Color("#E3B341")
 	muted  = lipgloss.Color("#8B949E")
 	white  = lipgloss.Color("#E6EDF3")
-	border = lipgloss.Color("#30363D")
 
 	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(cyan)
 	urlStyle    = lipgloss.NewStyle().Bold(true).Foreground(yellow)
@@ -29,10 +28,6 @@ var (
 	replayTag   = lipgloss.NewStyle().Foreground(muted).Italic(true)
 	flashOK     = lipgloss.NewStyle().Foreground(green)
 	flashErr    = lipgloss.NewStyle().Foreground(red)
-	detailBox   = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(border).
-			Padding(0, 1)
 	sectionHead = lipgloss.NewStyle().Bold(true).Foreground(cyan).MarginTop(1)
 )
 

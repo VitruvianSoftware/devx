@@ -75,7 +75,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST: %v", err)
 	}
-	body, _ = io.ReadAll(resp.Body)
+	_, _ = io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != 201 {
