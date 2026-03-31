@@ -66,28 +66,37 @@ go install github.com/VitruvianSoftware/devx@latest
 
 ### Prerequisites
 
-These tools must be installed before running `devx vm init`:
+Run the built-in health check to audit and install prerequisites automatically:
+
+```bash
+devx doctor            # check what's installed
+devx doctor install    # install missing tools
+devx doctor auth       # authenticate required services
+```
+
+Or install them manually:
 
 | Tool | Install | Purpose |
 |------|---------|---------|
 | [Podman](https://podman.io) | `brew install podman` | VM and container runtime |
 | [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `brew install cloudflare/cloudflare/cloudflared` | Cloudflare tunnel daemon |
 | [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler |
+| [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`) |
 
 ## Quick Start
 
 ```bash
-# 1. Authenticate with Cloudflare (one-time)
-cloudflared login
+# 0. Check your environment (one-time)
+devx doctor
 
-# 2. Provision your dev environment
+# 1. Provision your dev environment
 devx vm init
 
-# 3. Run something and expose it
+# 2. Run something and expose it
 devx exec podman run -d -p 8080:80 docker.io/nginx
 # Visit https://your-name.ipv1337.dev — it's live!
 
-# 4. Expose any local port instantly (like ngrok)
+# 3. Expose any local port instantly (like ngrok)
 devx tunnel expose 3000 --name myapp
 # → https://myapp.your-name.ipv1337.dev
 ```
