@@ -288,6 +288,94 @@ func runSilent(name string, args ...string) (string, error) {
 	return string(out), err
 }
 
+// ── devx doctor install ──────────────────────────────────────────────────────
+
+var doctorInstallAll bool
+
+var doctorInstallCmd = &cobra.Command{
+	Use:   "install",
+	Short: "Install missing prerequisite CLI tools",
+	Long: `Detects missing CLI tools and installs them using your system's
+package manager (Homebrew on macOS, apt/dnf on Linux).
+
+By default, only required tools are installed. Use --all to include optional ones.
+
+Examples:
+  devx doctor install          # install missing required tools
+  devx doctor install --all    # install all missing tools (including optional)
+  devx doctor install -y       # auto-confirm, no prompts`,
+	RunE: runDoctorInstall,
+}
+
+func runDoctorInstall(_ *cobra.Command, _ []string) error {
+	plan, err := doctor.PlanInstall(!doctorInstallAll)
+	if err != nil {
+		return err
+	}
+
+	if outputJSON {
+		enc, _ := json.MarshalIndent(plan, "", "  ")
+		fmt.Println(string(enc))
+		return nil
+	}
+
+	if len(plan.Steps) == 0 {
+		fmt.Println(tui.StyleSuccessBox.Render("✅ Nothing to install — all tools are present!"))
+		fmt.Println()
+		return nil
+	}
+
+	// ── Show Plan (Transparency) ────────────────────────────────────
+	fmt.Println()
+	fmt.Println(tui.StyleTitle.Render("📦 Install Plan"))
+	fmt.Printf("  %s  %s\n\n", tui.StyleLabel.Render("Package Manager:"), plan.PackageManager)
+
+	for _, s := range plan.Steps {
+		reqLabel := tui.StyleDetailDone.Render("required")
+		if !s.IsRequired {
+			reqLabel = tui.StyleMuted.Render("optional")
+		}
+		fmt.Printf("    %s  %-20s %s\n",
+			tui.StyleDetailRunning.Render("→"),
+			s.Tool,
+			reqLabel,
+		)
+		if s.Tap != "" {
+			fmt.Printf("       %s\n", tui.StyleMuted.Render("brew tap "+s.Tap))
+		}
+		fmt.Printf("       %s\n", tui.StyleMuted.Render(s.Command))
+	}
+	fmt.Println()
+
+	// ── Confirm ─────────────────────────────────────────────────────
+	if !NonInteractive {
+		fmt.Printf("  Install %d tool(s)? [y/N] ", len(plan.Steps))
+		var answer string
+		if _, err := fmt.Scanln(&answer); err != nil || (answer != "y" && answer != "Y" && answer != "yes") {
+			fmt.Println(tui.StyleMuted.Render("  Cancelled."))
+			return nil
+		}
+	}
+
+	fmt.Println()
+	fmt.Println(tui.StyleTitle.Render("  Installing..."))
+	fmt.Println()
+
+	if err := doctor.ExecuteInstall(plan, NonInteractive); err != nil {
+		return err
+	}
+
+	fmt.Println()
+	fmt.Println(tui.StyleSuccessBox.Render("✅ Installation complete! Run 'devx doctor' to verify."))
+	fmt.Println()
+
+	return nil
+}
+
 func init() {
+	doctorInstallCmd.Flags().BoolVar(&doctorInstallAll, "all", false,
+		"Install all missing tools, including optional ones")
+
+	doctorCmd.AddCommand(doctorInstallCmd)
 	rootCmd.AddCommand(doctorCmd)
 }
