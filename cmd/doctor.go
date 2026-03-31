@@ -372,10 +372,84 @@ func runDoctorInstall(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
+// ── devx doctor auth ─────────────────────────────────────────────────────────
+
+var doctorAuthCmd = &cobra.Command{
+	Use:   "auth",
+	Short: "Walk through authenticating required tools and credentials",
+	Long: `Guides you through authenticating each tool that devx depends on.
+Steps that are already configured are automatically skipped.
+
+Examples:
+  devx doctor auth`,
+	RunE: runDoctorAuth,
+}
+
+func runDoctorAuth(_ *cobra.Command, _ []string) error {
+	steps := doctor.AuthPlan(envFile)
+
+	if outputJSON {
+		enc, _ := json.MarshalIndent(steps, "", "  ")
+		fmt.Println(string(enc))
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Println(tui.StyleTitle.Render("🔑 devx doctor auth — Credential Setup"))
+	fmt.Println()
+
+	total := len(steps)
+	skipped := 0
+	completed := 0
+
+	for i, step := range steps {
+		stepNum := fmt.Sprintf("[%d/%d]", i+1, total)
+
+		if step.Configured {
+			fmt.Printf("  %s  %s  %s\n",
+				tui.StyleMuted.Render(stepNum),
+				step.Name,
+				tui.StyleDetailDone.Render("✅ "+step.Detail),
+			)
+			skipped++
+			continue
+		}
+
+		fmt.Printf("  %s  %s  %s\n",
+			tui.StyleDetailRunning.Render(stepNum),
+			step.Name,
+			tui.StyleDetailError.Render(step.Detail),
+		)
+		fmt.Printf("         %s\n\n",
+			tui.StyleMuted.Render(step.Action),
+		)
+
+		if doctor.RunAuthStep(step, envFile) {
+			completed++
+			fmt.Println()
+		} else {
+			fmt.Println()
+		}
+	}
+
+	fmt.Println()
+	if completed > 0 || skipped == total {
+		fmt.Println(tui.StyleSuccessBox.Render(
+			fmt.Sprintf("✅ Auth complete! %d configured, %d skipped.\n   Run 'devx doctor' to verify.", completed, skipped)))
+	} else {
+		fmt.Println(tui.StyleBox.Render(
+			fmt.Sprintf("ℹ️  %d step(s) skipped, %d configured.\n   Run 'devx doctor' to see remaining gaps.", skipped, completed)))
+	}
+	fmt.Println()
+
+	return nil
+}
+
 func init() {
 	doctorInstallCmd.Flags().BoolVar(&doctorInstallAll, "all", false,
 		"Install all missing tools, including optional ones")
 
 	doctorCmd.AddCommand(doctorInstallCmd)
+	doctorCmd.AddCommand(doctorAuthCmd)
 	rootCmd.AddCommand(doctorCmd)
 }

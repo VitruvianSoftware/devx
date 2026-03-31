@@ -111,8 +111,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
   - Map each prerequisite tool to install commands for each detected package manager
   - Store detection results for use by the auto-installer (Task 16c)
 
-#### Task 16c: Auto-Installer (`devx doctor install`)
-* **Status:** TODO
+#### Task 16c: Auto-Installer (`devx doctor install`) (DONE)
+* **Status:** DONE
 * **What:** Offer to install missing tools automatically using the detected package manager.
 * **Details:**
   - Interactive mode: present a checklist of missing tools, let the developer select which to install
@@ -121,8 +121,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
   - Handle tap/repository additions (e.g., `brew tap cloudflare/cloudflare` before installing `cloudflared`)
   - Summarize what was installed and any post-install steps needed
 
-#### Task 16d: Credential & Authentication Audit
-* **Status:** TODO
+#### Task 16d: Credential & Authentication Audit (DONE)
+* **Status:** DONE — implemented as part of `CheckCredentials()` in `internal/doctor/check.go`. Checks Cloudflare API token, cloudflared cert, GitHub CLI auth (with scope detection), Tailscale VM state, CF tunnel token, and optional vault credentials (1Password, Bitwarden, GCP with multi-account support).
 * **What:** Check that required credentials and authentication sessions are configured.
 * **Details:**
   - Check for each credential and report status:
@@ -139,19 +139,11 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
   | `bw` session | `bw status` | Vault (Bitwarden) | JSON output parse |
   | `gcloud` auth | `gcloud auth print-access-token` | Vault (GCP) | Exit code |
 
-#### Task 16e: Guided Authentication (`devx doctor auth`)
-* **Status:** TODO
-* **What:** Walk the developer through authenticating each tool interactively.
-* **Details:**
-  - `cloudflared login` — open browser for Cloudflare auth
-  - `gh auth login --scopes admin:org` — authenticate GitHub CLI with required scopes
-  - `.env` file creation — prompt for `CLOUDFLARE_API_TOKEN` and write to `.env`
-  - Tailscale auth key — provide link to Tailscale admin console to generate key
-  - Each step should detect if already authenticated and skip
-  - Show clear progress: `[3/5] GitHub CLI ✅ already authenticated`
+#### Task 16e: Guided Authentication (`devx doctor auth`) (DONE)
+* **Status:** DONE — implemented in `internal/doctor/auth.go`. Walks through cloudflared login, gh auth (with scope refresh), and Cloudflare API token. Skips already-configured steps.
 
-#### Task 16f: Unified `devx doctor` Dashboard
-* **Status:** TODO
+#### Task 16f: Unified `devx doctor` Dashboard (DONE)
+* **Status:** DONE — the base `devx doctor` command already runs the full audit: system info, CLI tools, credentials, and feature readiness.
 * **What:** Combine all checks into a single beautiful dashboard output.
 * **Details:**
   - When run without a subcommand, `devx doctor` runs the full audit:
