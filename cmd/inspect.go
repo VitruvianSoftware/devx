@@ -56,14 +56,14 @@ This is a free, open-source replacement for ngrok's paid web inspector.`,
 
 		// Optionally expose via Cloudflare tunnel
 		var cfProcess *os.Process
-		var tunnelName string
+		var tunnelName, tunnelID string
 
 		if inspectExpose || inspectName != "" {
-			tunnelURL, tunnelName, cfProcess, err = setupTunnel(proxyPort)
+			tunnelURL, tunnelName, tunnelID, cfProcess, err = setupTunnel(proxyPort)
 			if err != nil {
 				return err
 			}
-			defer cleanupTunnel(cfProcess, tunnelName)
+			defer cleanupTunnel(cfProcess, tunnelName, tunnelID)
 		}
 
 		// Launch the TUI
@@ -75,7 +75,7 @@ This is a free, open-source replacement for ngrok's paid web inspector.`,
 }
 
 // setupTunnel creates a Cloudflare tunnel pointing at the proxy port.
-func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, proc *os.Process, err error) {
+func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, tunnelID string, proc *os.Process, err error) {
 	devName := os.Getenv("USER")
 
 	cfg := config.New(devName, "", "", "")
@@ -86,11 +86,11 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, proc *os.P
 	}
 
 	if cfg.CFDomain == "" {
-		return "", "", nil, fmt.Errorf("CFDomain is not configured. Run `devx vm init` or `devx config secrets` first")
+		return "", "", "", nil, fmt.Errorf("CFDomain is not configured. Run `devx vm init` or `devx config secrets` first")
 	}
 
 	if err = cloudflare.CheckLogin(); err != nil {
-		return "", "", nil, fmt.Errorf("cloudflared missing credentials: %w", err)
+		return "", "", "", nil, fmt.Errorf("cloudflared missing credentials: %w", err)
 	}
 
 	exposeID := inspectName
@@ -103,11 +103,11 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, proc *os.P
 
 	tunnel, err := cloudflare.EnsureTunnel(tunnelName)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("failed creating tunnel: %w", err)
+		return "", "", "", nil, fmt.Errorf("failed creating tunnel: %w", err)
 	}
 
 	if err = cloudflare.RouteDNS(tunnelName, fullDomain); err != nil {
-		return "", "", nil, fmt.Errorf("failed routing DNS: %w", err)
+		return "", "", "", nil, fmt.Errorf("failed routing DNS: %w", err)
 	}
 
 	// Persist exposure state
@@ -118,27 +118,25 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, proc *os.P
 		Domain:     fullDomain,
 	})
 
-	home, _ := os.UserHomeDir()
-	credFile := fmt.Sprintf("%s/.cloudflared/%s.json", home, tunnel.ID)
+	configFile, err := cloudflare.WriteIngressConfig(tunnel.ID, fullDomain, fmt.Sprintf("%d", proxyPort))
+	if err != nil {
+		return "", "", "", nil, fmt.Errorf("failed to create ingress config: %w", err)
+	}
 
 	// Run cloudflared in background
-	cfCmd := exec.Command("cloudflared", "tunnel", "run",
-		"--credentials-file", credFile,
-		"--url", fmt.Sprintf("http://localhost:%d", proxyPort),
-		tunnel.ID,
-	)
+	cfCmd := exec.Command("cloudflared", "tunnel", "--config", configFile, "run")
 	cfCmd.Stdout = nil
 	cfCmd.Stderr = nil
 	if err = cfCmd.Start(); err != nil {
-		return "", "", nil, fmt.Errorf("failed starting cloudflared: %w", err)
+		return "", "", "", nil, fmt.Errorf("failed starting cloudflared: %w", err)
 	}
 
 	tunnelURL = "https://" + fullDomain
-	return tunnelURL, tunnelName, cfCmd.Process, nil
+	return tunnelURL, tunnelName, tunnel.ID, cfCmd.Process, nil
 }
 
 // cleanupTunnel kills cloudflared and removes the tunnel.
-func cleanupTunnel(proc *os.Process, tunnelName string) {
+func cleanupTunnel(proc *os.Process, tunnelName, tunnelID string) {
 	if proc != nil {
 		_ = proc.Kill()
 		_, _ = proc.Wait()
@@ -146,6 +144,13 @@ func cleanupTunnel(proc *os.Process, tunnelName string) {
 	if tunnelName != "" {
 		_, _ = exec.Command("cloudflared", "tunnel", "delete", "-f", tunnelName).CombinedOutput()
 		_ = exposure.RemoveByName(tunnelName)
+	}
+	if tunnelID != "" {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			os.Remove(fmt.Sprintf("%s/.cloudflared/%s.json", home, tunnelID))
+			os.Remove(fmt.Sprintf("%s/.cloudflared/%s-config.yml", home, tunnelID))
+		}
 	}
 }
 

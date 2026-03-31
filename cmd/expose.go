@@ -60,9 +60,6 @@ var exposeCmd = &cobra.Command{
 			return fmt.Errorf("failed routing dns: %w", err)
 		}
 
-		home, _ := os.UserHomeDir()
-		credFile := fmt.Sprintf("%s/.cloudflared/%s.json", home, tunnel.ID)
-
 		// Persist exposure metadata so 'devx tunnel list' can show the port
 		_ = exposure.Save(exposure.Entry{
 			TunnelName: tunnelName,
@@ -76,7 +73,12 @@ var exposeCmd = &cobra.Command{
 		fmt.Printf("Traffic is being securely routed to localhost:%s.\n", port)
 		fmt.Printf("Press Ctrl+C to stop exposing your app.\n\n")
 
-		pCmd := exec.Command("cloudflared", "tunnel", "run", "--credentials-file", credFile, "--url", "http://localhost:"+port, tunnel.ID)
+		configFile, err := cloudflare.WriteIngressConfig(tunnel.ID, fullDomain, port)
+		if err != nil {
+			return fmt.Errorf("failed to create ingress config: %w", err)
+		}
+
+		pCmd := exec.Command("cloudflared", "tunnel", "--config", configFile, "run")
 
 		// Hide noisy Cloudflared standard output, let it run silently just blocking
 		pCmd.Stdout = nil

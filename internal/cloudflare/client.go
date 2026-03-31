@@ -130,7 +130,9 @@ func CleanupExposedTunnels(devName string) (int, error) {
 			home, err := os.UserHomeDir()
 			if err == nil {
 				credFile := fmt.Sprintf("%s/.cloudflared/%s.json", home, t.ID)
+				configFile := fmt.Sprintf("%s/.cloudflared/%s-config.yml", home, t.ID)
 				os.Remove(credFile)
+				os.Remove(configFile)
 			}
 
 			count++
@@ -153,4 +155,28 @@ func ListExposedTunnels(devName string) ([]Tunnel, error) {
 		}
 	}
 	return exposed, nil
+}
+
+// WriteIngressConfig generates a temporary cloudflare tunnel ingress configuration file
+// on disk. This is required for named tunnels since --url is ignored by cloudflared run
+// unless an ingress config explicitly permits the hostname.
+func WriteIngressConfig(tunnelID, fullDomain, targetPort string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	credFile := fmt.Sprintf("%s/.cloudflared/%s.json", home, tunnelID)
+	configFile := fmt.Sprintf("%s/.cloudflared/%s-config.yml", home, tunnelID)
+
+	configContent := fmt.Sprintf(`tunnel: %s
+credentials-file: %s
+
+ingress:
+  - hostname: %s
+    service: http://localhost:%s
+  - service: http_status:404
+`, tunnelID, credFile, fullDomain, targetPort)
+
+	err = os.WriteFile(configFile, []byte(configContent), 0644)
+	return configFile, err
 }
