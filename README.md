@@ -288,9 +288,10 @@ devx vm teardown --provider docker
 
 | Command | Description |
 |---------|-------------|
-| `devx tunnel expose [port]` | Expose a local port to the internet via `*.ipv1337.dev` |
+| `devx tunnel expose [port]` | Expose a static local port (generates random subdomain) |
 | `devx tunnel expose [port] --name myapp` | Use a static subdomain (`myapp.you.ipv1337.dev`) |
 | `devx tunnel expose [port] --basic-auth "user:pass"` | Protect your exposed URL with Basic Authentication |
+| `devx tunnel expose [port] --throttle 3g` | Simulate poor network conditions (3g, edge, slow) |
 | `devx tunnel inspect [port]` | Live TUI to inspect and replay HTTP traffic (like ngrok inspect) |
 | `devx up` | Provision databases & expose routes via a `devx.yaml` topology |
 | `devx tunnel list` | List all active port exposures with URLs and ports |
@@ -328,6 +329,7 @@ tunnels:
     basic_auth: "admin:supersecret"
   - name: web
     port: 3000
+    throttle: "3g" # Simulate mobile conditions (adds latency and lowers bandwidth)
 ```
 
 ### 🔒 Built-in Authentication (`--basic-auth`)
@@ -342,6 +344,22 @@ devx tunnel expose 3000 --basic-auth "admin:supersecret"
 
 # Inspect webhooks while restricting access
 devx tunnel inspect 8080 --name stripe-test --basic-auth "webhook:testing123"
+```
+
+### 🐢 Network Simulation (`--throttle`)
+
+Testing how your local app handles high latency, dropped packets, or 3G network speeds is usually tedious. `devx` includes a cross-platform (Podman, Docker, OrbStack) network simulator proxy natively built-in.
+
+Pass the `--throttle` flag to artificially shape incoming Edge traffic so you can test real-world scenarios for frontend and mobile endpoints.
+
+**Supported Profiles:**
+- `3g`: Adds 200ms latency, 50ms jitter, speeds ~2 Mbps
+- `edge`: Adds 400ms latency, 100ms jitter, speeds ~400 kbps
+- `slow`: Adds 500ms latency, 200ms jitter, 5% packet loss, speeds ~80 kbps
+
+```bash
+# Expose your frontend app simulating a slow 3G cellular network
+devx tunnel expose 3000 --throttle 3g
 ```
 
 ### 🌍 Custom Domain Support (BYOD)

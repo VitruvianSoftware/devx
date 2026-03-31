@@ -12,6 +12,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -20,6 +21,7 @@ type DevxConfigTunnel struct {
 	Name      string `yaml:"name"`       // Subdomain explicitly requested
 	Port      int    `yaml:"port"`       // Local port to forward traffic towards
 	BasicAuth string `yaml:"basic_auth"` // basic auth literal value 'user:pass'
+	Throttle  string `yaml:"throttle"`   // traffic shaping profile e.g. '3g'
 }
 
 type DevxConfigDatabase struct {
@@ -141,6 +143,16 @@ var upCmd = &cobra.Command{
 			}
 
 			targetPort := fmt.Sprintf("%d", tConfig.Port)
+
+			if tConfig.Throttle != "" {
+				proxyPort, cleanupTraffic, err := trafficproxy.Start(targetPort, tConfig.Throttle)
+				if err != nil {
+					return fmt.Errorf("failed starting traffic proxy for %s: %w", domain, err)
+				}
+				defer cleanupTraffic()
+				targetPort = fmt.Sprintf("%d", proxyPort)
+				fmt.Printf("  🐢 Traffic shaping active (%s) on %s\n", tConfig.Throttle, domain)
+			}
 
 			if tConfig.BasicAuth != "" {
 				proxyPort, cleanupAuth, err := authproxy.Start(targetPort, tConfig.BasicAuth)

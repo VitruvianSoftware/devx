@@ -11,12 +11,14 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
 	"github.com/spf13/cobra"
 )
 
 var exposeName string
 var exposeDomain string
 var basicAuth string
+var trafficProfile string
 
 var exposeCmd = &cobra.Command{
 	Use:   "expose [port]",
@@ -80,6 +82,16 @@ var exposeCmd = &cobra.Command{
 		fmt.Printf("Press Ctrl+C to stop exposing your app.\n\n")
 
 		targetPort := port
+		if trafficProfile != "" {
+			proxyPort, cleanupTraffic, err := trafficproxy.Start(targetPort, trafficProfile)
+			if err != nil {
+				return fmt.Errorf("failed starting traffic proxy: %w", err)
+			}
+			defer cleanupTraffic()
+			targetPort = fmt.Sprintf("%d", proxyPort)
+			fmt.Printf("🐢 Traffic shaping enabled (profile: %s).\n\n", trafficProfile)
+		}
+
 		if basicAuth != "" {
 			proxyPort, cleanupAuth, err := authproxy.Start(port, basicAuth)
 			if err != nil {
@@ -115,5 +127,6 @@ func init() {
 	exposeCmd.Flags().StringVarP(&exposeName, "name", "n", "", "Static sub-domain name to use (e.g. 'api' -> api.james.ipv1337.dev)")
 	exposeCmd.Flags().StringVar(&exposeDomain, "domain", "", "Custom Cloudflare domain (BYOD) (e.g. 'mycompany.dev')")
 	exposeCmd.Flags().StringVar(&basicAuth, "basic-auth", "", "Protect the exposed tunnel with basic auth (e.g. 'user:pass')")
+	exposeCmd.Flags().StringVar(&trafficProfile, "throttle", "", "Simulate network conditions (profiles: 3g, edge, slow)")
 	tunnelCmd.AddCommand(exposeCmd)
 }

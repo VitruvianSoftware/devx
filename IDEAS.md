@@ -36,9 +36,9 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** Setting up local databases (Postgres, Redis), persisting data, and wiring them securely takes friction.
 * **The Solution:** Add `devx db spawn postgres`. This spins up Postgres inside the VM, wires it to the Tailnet automatically, and prints the connection string. It guarantees persistence across VM rebuilds using core Podman volumes.
 
-### 8. Network Simulation (Traffic Shaping & Fault Injection)
+### 8. Network Simulation (Traffic Shaping & Fault Injection) (DONE)
 * **The Problem:** Testing how your local app handles high latency, dropped packets, or 3G network speeds is extremely tedious.
-* **The Solution:** Add `--throttle=3g` or `--latency=200ms` flags to the `expose` command. We can leverage Linux `tc` (traffic control) inside the CoreOS VM to artificially shape incoming Edge traffic, simulating real-world conditions for frontend/mobile testing.
+* **The Solution:** Add `--throttle=3g` or `--latency=200ms` flags to the `expose` command. We leveraged a native Go TCP proxy (`internal/trafficproxy`) to intercept the Cloudflare tunnel and artificially shape incoming Edge traffic. This allows cross-platform simulation (macOS/Docker/OrbStack) for frontend/mobile testing without OS-level `tc` limits.
 
 ### 9. Automated Resource Scaling & Deep Sleep
 * **The Problem:** VMs reserve RAM and CPU constantly, draining Macbook batteries when sitting idle.
