@@ -45,7 +45,7 @@ var exposeCmd = &cobra.Command{
 			exposeID = fmt.Sprintf("app-%x", int(rand.Int31()&0xfffff))
 		}
 
-		fullDomain := fmt.Sprintf("%s.%s", exposeID, cfg.CFDomain)
+		fullDomain := exposure.GenerateDomain(exposeID, cfg.CFDomain)
 		tunnelName := fmt.Sprintf("devx-expose-%s-%s", devName, exposeID)
 
 		fmt.Printf("🚀 Organizing explicit tunnel '%s'...\n", tunnelName)

@@ -98,7 +98,7 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, proc *os.P
 		exposeID = fmt.Sprintf("inspect-%x", int(rand.Int31()&0xfffff))
 	}
 
-	fullDomain := fmt.Sprintf("%s.%s", exposeID, cfg.CFDomain)
+	fullDomain := exposure.GenerateDomain(exposeID, cfg.CFDomain)
 	tunnelName = fmt.Sprintf("devx-expose-%s-%s", devName, exposeID)
 
 	tunnel, err := cloudflare.EnsureTunnel(tunnelName)

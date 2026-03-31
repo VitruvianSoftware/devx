@@ -9,6 +9,7 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/devx/internal/exposure"
 	"github.com/VitruvianSoftware/devx/internal/podman"
 	"github.com/VitruvianSoftware/devx/internal/tailscale"
 	"github.com/VitruvianSoftware/devx/internal/tui"
@@ -75,7 +76,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		prefix := fmt.Sprintf("devx-expose-%s-", devName)
 		for _, t := range tunnels {
 			exposeID := strings.TrimPrefix(t.Name, prefix)
-			fullDomain := fmt.Sprintf("%s.%s", exposeID, cfg.CFDomain)
+			fullDomain := exposure.GenerateDomain(exposeID, cfg.CFDomain)
 			fmt.Printf("    https://%-30s %s\n", fullDomain, tui.StyleMuted.Render("("+t.Name+")"))
 		}
 		fmt.Println()

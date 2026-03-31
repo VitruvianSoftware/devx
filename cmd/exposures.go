@@ -44,7 +44,7 @@ var exposuresCmd = &cobra.Command{
 		prefix := fmt.Sprintf("devx-expose-%s-", devName)
 		for _, t := range tunnels {
 			exposeID := strings.TrimPrefix(t.Name, prefix)
-			fullDomain := fmt.Sprintf("%s.%s", exposeID, cfg.CFDomain)
+			fullDomain := exposure.GenerateDomain(exposeID, cfg.CFDomain)
 			port := exposure.LookupPort(t.Name)
 			if port == "" {
 				port = "unknown"
