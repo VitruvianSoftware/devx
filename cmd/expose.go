@@ -9,6 +9,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/authproxy"
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
@@ -48,7 +49,7 @@ var exposeCmd = &cobra.Command{
 
 		// Ensure cloudflared is logged in
 		if err := cloudflare.CheckLogin(); err != nil {
-			return fmt.Errorf("cloudflared missing credentials: %w", err)
+			return devxerr.New(devxerr.CodeNotLoggedIn, "Cloudflare credentials missing. Run 'cloudflared tunnel login'", err)
 		}
 
 		// Generate random sub-domain name if one wasn't provided

@@ -8,6 +8,7 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ var exposuresCmd = &cobra.Command{
 		}
 
 		if err := cloudflare.CheckLogin(); err != nil {
-			return fmt.Errorf("cloudflared missing credentials: %w", err)
+			return devxerr.New(devxerr.CodeNotLoggedIn, "Cloudflare credentials missing. Run 'cloudflared tunnel login'", err)
 		}
 
 		tunnels, err := cloudflare.ListExposedTunnels(devName)

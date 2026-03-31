@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +17,7 @@ var unexposeCmd = &cobra.Command{
 		devName := os.Getenv("USER")
 
 		if err := cloudflare.CheckLogin(); err != nil {
-			return fmt.Errorf("cloudflared missing credentials: %w", err)
+			return devxerr.New(devxerr.CodeNotLoggedIn, "Cloudflare credentials missing. Run 'cloudflared tunnel login'", err)
 		}
 
 		fmt.Println("🧹 Cleaning up exposed Cloudflare applications...")
