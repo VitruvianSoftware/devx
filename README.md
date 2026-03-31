@@ -404,6 +404,7 @@ devx up --domain mycompany.dev
 |---------|-------------|
 | `devx config secrets` | Interactive credential setup / rotation for `.env` |
 | `devx config pull` | Pull `.env` secrets from remote vaults dynamically |
+| `devx config push` | Push local `.env` secrets securely up to remote vaults |
 
 ### 🔍 Request Inspector (`devx tunnel inspect`)
 
@@ -464,6 +465,15 @@ If you need to extract the secrets directly into your local terminal environment
 ```bash
 eval $(devx config pull)
 ```
+
+### Migrating Existing Secrets (`config push`)
+If your project currently relies on `.env` files and you want to instantly migrate your team to standard remote vaults, simply configure the targets in `devx.yaml` and run:
+
+```bash
+devx config push
+```
+
+This acts as a secure reverse-sync, seamlessly updating 1Password notes, Bitwarden entities, and GCP Secret Manager layers without you ever fumbling with their native CLIs.
 cp .env.example .env
 # Edit .env with your Cloudflare tunnel token and hostname
 ```
