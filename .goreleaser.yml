@@ -1,0 +1,63 @@
+version: 2
+
+builds:
+  - id: devx
+    main: .
+    binary: devx
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/VitruvianSoftware/devx/cmd.version={{.Version}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: "devx_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - .env.example
+      - dev-machine.template.bu
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: VitruvianSoftware
+    name: devx
+  draft: false
+  prerelease: auto
+  name_template: "devx {{.Version}}"
+  header: |
+    ## What's Changed
+
+    Install with:
+    ```bash
+    # macOS (Apple Silicon)
+    curl -sL https://github.com/VitruvianSoftware/devx/releases/download/v{{.Version}}/devx_darwin_arm64.tar.gz | tar xz
+    sudo mv devx /usr/local/bin/
+
+    # macOS (Intel)
+    curl -sL https://github.com/VitruvianSoftware/devx/releases/download/v{{.Version}}/devx_darwin_amd64.tar.gz | tar xz
+    sudo mv devx /usr/local/bin/
+
+    # Linux (amd64)
+    curl -sL https://github.com/VitruvianSoftware/devx/releases/download/v{{.Version}}/devx_linux_amd64.tar.gz | tar xz
+    sudo mv devx /usr/local/bin/
+    ```

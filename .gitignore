@@ -1,0 +1,26 @@
+# Secrets — real values, never commit
+.env
+.env.keys
+
+# Go build output
+devx
+dist/
+
+# Go tooling
+vendor/
+
+# Coverage artifacts
+coverage.out
+
+# Ignition build artifacts
+dev-machine.bu
+config.ign
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~

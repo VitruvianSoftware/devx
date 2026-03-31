@@ -1,0 +1,91 @@
+variant: fcos
+version: 1.5.0
+
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ${SSH_PUB_KEY}
+
+storage:
+  files:
+    # 1. Developer Quality of Life: Fix file watcher limits
+    - path: /etc/sysctl.d/99-inotify.conf
+      mode: 0644
+      contents:
+        inline: |
+          fs.inotify.max_user_instances=8192
+          fs.inotify.max_user_watches=524288
+
+    # 2. Inject Developer-Specific Secrets
+    # (These will be populated by a setup script before compiling)
+    - path: /etc/dev-secrets.env
+      mode: 0600
+      contents:
+        inline: |
+          CF_TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+          DEV_HOSTNAME=${DEV_HOSTNAME}
+
+    # 3. Cloudflare Credentials
+    - path: /etc/cloudflared/cert.json
+      mode: 0644
+      contents:
+        inline: |
+          ${CF_TUNNEL_TOKEN}
+          
+    # 4. Cloudflare Ingress Configuration
+    - path: /etc/cloudflared/config.yml
+      mode: 0644
+      contents:
+        inline: |
+          tunnel: ${CF_TUNNEL_ID}
+          credentials-file: /etc/cloudflared/cert.json
+          ingress:
+            - hostname: ${CF_DOMAIN}
+              service: http://localhost:8080
+            - service: http_status:404
+
+systemd:
+  units:
+    # 3. Tailscale Daemon (runs as a privileged host-network container)
+    - name: tailscaled.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Tailscale Node Agent
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        EnvironmentFile=/etc/dev-secrets.env
+        ExecStartPre=-/usr/bin/podman rm -f tailscaled
+        ExecStart=/usr/bin/podman run --name tailscaled --network=host --privileged \
+          -v /var/lib/tailscale:/var/lib/tailscale -v /dev/net/tun:/dev/net/tun \
+          docker.io/tailscale/tailscale:latest tailscaled --state=/var/lib/tailscale/tailscaled.state
+        ExecStop=/usr/bin/podman stop tailscaled
+        Restart=always
+
+        [Install]
+        WantedBy=multi-user.target
+
+    # 4. Cloudflare Tunnel (Exposes local ports to *.ipv1337.dev)
+    - name: cloudflared.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Cloudflare Tunnel
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        EnvironmentFile=/etc/dev-secrets.env
+        ExecStartPre=-/usr/bin/podman rm -f cloudflared
+        # Runs on host network so it can route to any port exposed by other podman containers
+        ExecStart=/usr/bin/podman run --name cloudflared --network=host \
+          -v /etc/cloudflared:/etc/cloudflared \
+          docker.io/cloudflare/cloudflared:latest tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+        ExecStop=/usr/bin/podman stop cloudflared
+        Restart=always
+
+        [Install]
+        WantedBy=multi-user.target
