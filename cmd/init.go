@@ -107,8 +107,8 @@ func runInit(cmd *cobra.Command, _ []string) error {
 			return "compiled from " + butaneTemplatePath, nil
 		},
 		func() (string, error) {
-			podman.StopAll()
-			podman.Remove(cfg.DevHostname)
+			_ = podman.StopAll()
+			_ = podman.Remove(cfg.DevHostname)
 			return "stopped and removed " + cfg.DevHostname, nil
 		},
 		func() (string, error) {
@@ -174,7 +174,7 @@ func runInit(cmd *cobra.Command, _ []string) error {
 		fmt.Println("  ", state.authURL)
 		fmt.Println()
 		fmt.Println("Visit the URL above to connect to your Tailnet, then press Enter...")
-		fmt.Scanln()
+		_, _ = fmt.Scanln()
 	}
 
 	if !sm.IsDone() || sm.IsFailed() {

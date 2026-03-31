@@ -48,7 +48,7 @@ func Deploy(ignPath, machineName string) error {
 	}
 
 	// Make necessary paths First
-	podman.SSH(machineName, "sudo mkdir -p /etc/cloudflared /var/lib/tailscale /etc/sysctl.d")
+	_, _ = podman.SSH(machineName, "sudo mkdir -p /etc/cloudflared /var/lib/tailscale /etc/sysctl.d")
 
 	for _, f := range conf.Storage.Files {
 		content := f.Contents.Source
@@ -80,7 +80,7 @@ func Deploy(ignPath, machineName string) error {
 		}
 	}
     // Re-evaluate sysctls
-    podman.SSH(machineName, "sudo sysctl --system")
+	_, _ = podman.SSH(machineName, "sudo sysctl --system")
 
 	var enabledUnits []string
 	for _, u := range conf.Systemd.Units {
@@ -102,7 +102,7 @@ func Deploy(ignPath, machineName string) error {
 		if _, err := podman.SSH(machineName, "sudo systemctl enable --now "+u); err != nil {
 			return fmt.Errorf("systemctl enable --now %s: %w", u, err)
 		}
-		podman.SSH(machineName, "sudo systemctl restart "+u)
+		_, _ = podman.SSH(machineName, "sudo systemctl restart "+u)
 	}
 
 	return nil

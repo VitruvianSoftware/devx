@@ -9,7 +9,6 @@ var (
 	colorYellow  = lipgloss.Color("#E3B341")
 	colorMuted   = lipgloss.Color("#8B949E")
 	colorWhite   = lipgloss.Color("#E6EDF3")
-	colorBg      = lipgloss.Color("#0D1117")
 	colorBorder  = lipgloss.Color("#30363D")
 
 	// Status icons

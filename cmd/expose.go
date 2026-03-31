@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
-	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
@@ -43,7 +42,6 @@ var exposeCmd = &cobra.Command{
 		// Generate random sub-domain name if one wasn't provided
 		exposeID := exposeName
 		if exposeID == "" {
-			rand.Seed(time.Now().UnixNano())
 			exposeID = fmt.Sprintf("app-%x", int(rand.Int31()&0xfffff))
 		}
 

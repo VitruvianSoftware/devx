@@ -51,10 +51,10 @@ func runTeardown(_ *cobra.Command, _ []string) error {
 	}
 
 	fmt.Printf("Stopping %s...\n", cfg.DevHostname)
-	podman.StopAll()
+	_ = podman.StopAll()
 
 	fmt.Printf("Removing %s...\n", cfg.DevHostname)
-	podman.Remove(cfg.DevHostname)
+	_ = podman.Remove(cfg.DevHostname)
 
 	fmt.Println("✓ VM removed.")
 	return nil
