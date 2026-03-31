@@ -65,14 +65,31 @@ func runShell(_ *cobra.Command, _ []string) error {
 		"-w", workspaceFolder,
 	}
 
+	// Auto-mount the devx binary so the full CLI is available inside the container
+	if devxBin, err := os.Executable(); err == nil {
+		args = append(args, "-v", fmt.Sprintf("%s:/usr/local/bin/devx:ro", devxBin))
+		fmt.Println("🔧 devx CLI mounted into container at /usr/local/bin/devx")
+	}
+
+	// Share host network so devx tunnel commands work seamlessly from inside
+	args = append(args, "--network", "host")
+
 	// Apply environment variables
 	for k, v := range cfg.ContainerEnv {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	// Forward ports
+	// Forward ports (skipped when using host networking, but kept for documentation)
 	for _, port := range cfg.ForwardPorts {
 		args = append(args, "-p", fmt.Sprintf("%d:%d", port, port))
+	}
+
+	// Mount cloudflared credentials so tunnel commands work inside the container
+	if home, err := os.UserHomeDir(); err == nil {
+		cfDir := filepath.Join(home, ".cloudflared")
+		if _, statErr := os.Stat(cfDir); statErr == nil {
+			args = append(args, "-v", fmt.Sprintf("%s:/root/.cloudflared:ro", cfDir))
+		}
 	}
 
 	// Set remote user

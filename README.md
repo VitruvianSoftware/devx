@@ -193,10 +193,15 @@ devx shell --runtime docker
 Running `devx shell` in a project with the above config will:
 1. Pull the Go 1.22 dev container image
 2. Mount your project at `/workspace`
-3. Set `GOPATH` inside the container
-4. Expose ports 8080 and 3000 on your host
-5. Run `go mod tidy` on first launch
-6. Drop you into an interactive shell as the `vscode` user
+3. **Auto-mount the `devx` binary** into the container at `/usr/local/bin/devx`
+4. **Mount your `~/.cloudflared` credentials** so tunnel commands work inside the container
+5. **Share the host network** so exposed tunnels are accessible
+6. Set `GOPATH` inside the container
+7. Expose ports 8080 and 3000 on your host
+8. Run `go mod tidy` on first launch
+9. Drop you into an interactive shell as the `vscode` user
+
+This means you can run `devx tunnel expose 8080` **from inside the dev container** — the full CLI travels with you.
 
 ### VM Management (`devx vm`)
 
