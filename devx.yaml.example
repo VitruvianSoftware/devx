@@ -13,6 +13,14 @@ name: demo-app
 # Ensure you are logged into a Cloudflare account that has permissions over this zone.
 domain: mycompany.dev
 
+# Define remote and local secret vaults to securely inject environment variables 
+# directly into your `devx shell` without writing plaintext .env files to disk.
+env:
+  - 1password://dev/my-app/env
+  - gcp://projects/my-org/secrets/my-prod/versions/latest
+  - bitwarden://my-app-env
+  - file://.env.local
+
 # Define local databases to provision. When running 'devx up', devx will 
 # spin up containers with persistent volumes for each defined database.
 databases:

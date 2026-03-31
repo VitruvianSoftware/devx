@@ -403,6 +403,7 @@ devx up --domain mycompany.dev
 | Command | Description |
 |---------|-------------|
 | `devx config secrets` | Interactive credential setup / rotation for `.env` |
+| `devx config pull` | Pull `.env` secrets from remote vaults dynamically |
 
 ### 🔍 Request Inspector (`devx tunnel inspect`)
 
@@ -426,11 +427,7 @@ devx tunnel inspect 8080 --name myapi
 - 🏷️ Replay tagging so you can compare original vs replayed responses
 - 🧹 Clear captured requests with `c`
 
-### Configuration (`devx config`)
 
-| Command | Description |
-|---------|-------------|
-| `devx config secrets` | Interactive credential setup / rotation for `.env` |
 
 ### Low-Level Tools (`devx exec`)
 
@@ -443,11 +440,30 @@ Pass-through wrappers that forward arguments directly to the underlying tools:
 | `devx exec cloudflared [args]` | Run cloudflared commands directly |
 | `devx exec butane [args]` | Run butane commands directly |
 
-## Configuration
+## Global Secret Sync & `.env` Management
 
-devx reads its secrets from a `.env` file in the current directory. Copy the example and fill in your values:
+Sharing `.env` files securely across a team is typically a massive pain resulting in Slack DMs and out-of-sync environments.
+
+`devx` natively integrates with 1Password CLI, Bitwarden, and GCP Secret Manager so you never have to store plaintext secrets on your Macbook's disk.
+
+Add an `env:` list to your `devx.yaml`. You can mix and match providers:
+```yaml
+env:
+  - 1password://dev/my-app/env
+  - gcp://projects/my-org/secrets/my-prod/versions/latest
+  - bitwarden://my-app-env
+  - file://.env.local
+```
+
+### JIT Memory Injection
+When you launch the local topological environment (`devx shell`), devx will automatically reach out, fetch the secrets securely, and inject them straight into the container's isolated memory using `-e`, completely skipping physical dot files!
+
+### Extracting Secrets (`config pull`)
+If you need to extract the secrets directly into your local terminal environment to run native tools like `go test`, use:
 
 ```bash
+eval $(devx config pull)
+```
 cp .env.example .env
 # Edit .env with your Cloudflare tunnel token and hostname
 ```
