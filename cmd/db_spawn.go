@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/database"
@@ -87,10 +90,14 @@ func runSpawn(_ *cobra.Command, args []string) error {
 	runArgs = append(runArgs, engine.Image)
 
 	cmd := exec.Command(runtime, runArgs...)
+	var stderrBuf bytes.Buffer
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
 
 	if err := cmd.Run(); err != nil {
+		if strings.Contains(stderrBuf.String(), "address already in use") || strings.Contains(stderrBuf.String(), "port is already allocated") {
+			return devxerr.New(devxerr.CodeHostPortInUse, fmt.Sprintf("Port %d is already in use by another process", port), err)
+		}
 		return fmt.Errorf("failed to start %s: %w", engine.Name, err)
 	}
 

@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
 )
 
 // ensureVMRunning is a lifecycle hook invoked by devx CLI commands
@@ -25,7 +28,10 @@ func ensureVMRunning() error {
 	if !prov.IsRunning("devx") {
 		fmt.Fprintln(os.Stderr, "😴 VM is asleep. Waking it up...")
 		if err := prov.Start("devx"); err != nil {
-			return fmt.Errorf("auto-resume failed: %w", err)
+			if strings.Contains(err.Error(), "VM does not exist") {
+				return devxerr.New(devxerr.CodeVMNotFound, "VM does not exist. Run 'devx init' to create it.", err)
+			}
+			return devxerr.New(devxerr.CodeVMDormant, "Failed to wake up VM", err)
 		}
 	}
 

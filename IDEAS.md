@@ -64,9 +64,9 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** Agents are prone to hallucinating or misunderstanding their scope. If an agent calls `devx vm teardown` or `devx db rm`, it could wipe out gigabytes of critical developer state irreversibly.
 * **The Solution:** Added a global `--dry-run` flag wired into destructive actions (`vm teardown`, `db rm`, `tunnel unexpose`) so the agent can safely perform a preflight dry-run check and deterministically echo what records, VMs, and data would be deleted BEFORE actually taking action or bypassing the interactive prompts.
 
-### 14. Standardized Predictable Exit Codes
+### 14. Standardized Predictable Exit Codes (DONE)
 * **The Problem:** Command Line tools typically just return `exit status 1` for every single failure under the sun, forcing AI agents to parse raw English stderr logs to figure out what broke.
-* **The Solution:** Map specific internal devx errors into specific exit status codes (e.g. `Exit Code 12: Port Address in Use`, `Exit Code 15: VM Dormant`). This allows agents to write tight deterministic programmatic rescue paths.
+* **The Solution:** Mapped specific internal devx errors into specific deterministic exit status codes (e.g. `Exit Code 22: Port Address in Use`, `Exit Code 15: VM Dormant`, `Exit Code 41: Cloudflare Missing Auth Credentials`). We also disabled `--help` spam on failure. This ensures agents parsing `devxerr` exits can cleanly `switch(exitCode)` to write tight programmatic rescue paths without LLM parsing hallucination risks.
 
 ### 15. Official Agent Tool Manifest (`.agent/skills/devx`)
 * **The Problem:** When an AI drops into a repository, it has to guess what `devx` does or blindly run `devx --help` over and over, consuming expensive tokens.

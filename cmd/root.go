@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/spf13/cobra"
 )
@@ -23,11 +26,19 @@ Run 'devx vm init' to set up your environment for the first time.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
+	SilenceErrors: true, // we handle it in Execute()
+	SilenceUsage:  true, // don't dump help text on errors
 }
 
-// Execute is the main entrypoint called from main.go.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
+		var dex *devxerr.DevxError
+		if errors.As(err, &dex) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(dex.ExitCode)
+		}
+		
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
