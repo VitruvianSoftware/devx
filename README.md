@@ -151,10 +151,53 @@ Commands:
   vm          Manage the local development VM
   tunnel      Manage Cloudflare tunnels and port exposure
   shell       Launch a dev container from devcontainer.json
+  db          Manage local development databases
   config      Manage devx configuration and credentials
   exec        Run low-level infrastructure tools directly
   version     Print the devx version
 ```
+
+### 🗄️ Database Provisioning (`devx db`)
+
+Spin up local databases in one command with persistent volumes. No Docker Compose files, no YAML — just `devx db spawn`.
+
+| Command | Description |
+|---------|-------------|
+| `devx db spawn <engine>` | Start a database with persistent storage |
+| `devx db list` | List all devx-managed databases |
+| `devx db rm <engine>` | Stop and remove a database (prompts for confirmation) |
+
+**Supported engines:**
+
+| Engine | Image | Default Port |
+|--------|-------|-------------|
+| `postgres` | `postgres:16-alpine` | 5432 |
+| `redis` | `redis:7-alpine` | 6379 |
+| `mysql` | `mysql:8` | 3306 |
+| `mongo` | `mongo:7` | 27017 |
+
+```bash
+# Spawn a PostgreSQL database — ready in seconds
+devx db spawn postgres
+# → postgresql://devx:devx@localhost:5432/devx
+
+# Spawn Redis on a custom port
+devx db spawn redis --port 6380
+
+# Spawn MySQL using Docker instead of Podman
+devx db spawn mysql --runtime docker
+
+# List all running databases
+devx db list
+
+# Remove a database but keep its data volume for later
+devx db rm postgres --keep-volume
+
+# Fully remove a database and its data
+devx db rm mongo
+```
+
+Data is stored in named volumes (`devx-data-<engine>`) so it **survives container restarts and rebuilds**. Containers are configured with `--restart unless-stopped` for automatic recovery.
 
 ### 🐳 Dev Containers (`devx shell`)
 

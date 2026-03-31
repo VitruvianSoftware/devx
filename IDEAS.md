@@ -32,7 +32,7 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** The VM gives you an OS, but you still need node, go, rust, etc. for your specific project.
 * **The Solution:** Add native support for `devcontainer.json`. Running `devx shell` reads the config, spins up the exact container inside the Podman VM, mounts your code, and drops you into a shell with completely isolated tooling.
 
-### 7. One-Click Database Provisioning (`devx db span`)
+### 7. One-Click Database Provisioning (`devx db spawn`) (DONE)
 * **The Problem:** Setting up local databases (Postgres, Redis), persisting data, and wiring them securely takes friction.
 * **The Solution:** Add `devx db spawn postgres`. This spins up Postgres inside the VM, wires it to the Tailnet automatically, and prints the connection string. It guarantees persistence across VM rebuilds using core Podman volumes.
 
