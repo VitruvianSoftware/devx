@@ -1,0 +1,158 @@
+package cmd
+
+import (
+	"fmt"
+	"math/rand"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/VitruvianSoftware/devx/internal/authproxy"
+	"github.com/VitruvianSoftware/devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/devx/internal/exposure"
+	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
+)
+
+type DevxConfigTunnel struct {
+	Name      string `yaml:"name"`       // Subdomain explicitly requested
+	Port      int    `yaml:"port"`       // Local port to forward traffic towards
+	BasicAuth string `yaml:"basic_auth"` // basic auth literal value 'user:pass'
+}
+
+type DevxConfig struct {
+	Name    string             `yaml:"name"`    // Project name 
+	Tunnels []DevxConfigTunnel `yaml:"tunnels"` // List of ports to expose
+}
+
+var upCmd = &cobra.Command{
+	Use:   "up",
+	Short: "Simultaneously expose all ports defined in devx.yaml locally under a unified namespace.",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		yamlPath := "devx.yaml"
+		if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
+			return fmt.Errorf("could not find devx.yaml in the current directory. Please create one to use 'devx tunnel up'")
+		}
+
+		b, err := os.ReadFile(yamlPath)
+		if err != nil {
+			return fmt.Errorf("failed creating reading devx.yaml: %w", err)
+		}
+
+		var cfgYaml DevxConfig
+		if err = yaml.Unmarshal(b, &cfgYaml); err != nil {
+			return fmt.Errorf("failed parsing YAML file block: %w", err)
+		}
+
+		if len(cfgYaml.Tunnels) == 0 {
+			return fmt.Errorf("devx.yaml has no 'tunnels' defined")
+		}
+
+		projectName := cfgYaml.Name
+		if projectName == "" {
+			projectName = filepath.Base(mustGetwd())
+		}
+		
+		devName := os.Getenv("USER")
+		cfg := config.New(devName, "", "", "")
+		if s, err := secrets.Load(envFile); err == nil && s.DevHostname != "" {
+			cfg.DevHostname = s.DevHostname
+		}
+
+		if cfg.CFDomain == "" {
+			return fmt.Errorf("CFDomain is not configured. Run `devx init` or `devx config secrets` first")
+		}
+
+		if err := cloudflare.CheckLogin(); err != nil {
+			return fmt.Errorf("cloudflared missing credentials: %w", err)
+		}
+
+		// Generate a single tunnel for the whole project topology
+		tunnelName := fmt.Sprintf("devx-expose-%s-prj-%s-%x", devName, projectName, int(rand.Int31()&0xfff))
+
+		fmt.Printf("🏗️ Bootstrapping Project '%s' via tunnel %s...\n", projectName, tunnelName)
+
+		tunnel, err := cloudflare.EnsureTunnel(tunnelName)
+		if err != nil {
+			return fmt.Errorf("failed creating project aggregate tunnel: %w", err)
+		}
+
+		var ingresses []cloudflare.IngressEntry
+
+		for _, tConfig := range cfgYaml.Tunnels {
+			// e.g. 'api' -> 'api-myproject' mapping
+			exposeID := tConfig.Name
+			if exposeID == "" {
+				exposeID = fmt.Sprintf("port-%d", tConfig.Port) // fallbacks
+			}
+			composedDomainID := fmt.Sprintf("%s-%s", exposeID, projectName)
+			domain := exposure.GenerateDomain(composedDomainID, cfg.CFDomain)
+			
+			fmt.Printf("🌍 Routing %s to port %d...\n", domain, tConfig.Port)
+			if err := cloudflare.RouteDNS(tunnelName, domain); err != nil {
+				return fmt.Errorf("failed routing DNS for %s: %w", domain, err)
+			}
+
+			targetPort := fmt.Sprintf("%d", tConfig.Port)
+
+			if tConfig.BasicAuth != "" {
+				proxyPort, cleanupAuth, err := authproxy.Start(targetPort, tConfig.BasicAuth)
+				if err != nil {
+					return fmt.Errorf("failed starting auth proxy for %s: %w", domain, err)
+				}
+				// we technically leak these cleanups when this function defers out unless we catch it
+				defer cleanupAuth()
+				targetPort = fmt.Sprintf("%d", proxyPort)
+				fmt.Printf("  🔒 Proxy Auth active on %s\n", domain)
+			}
+			
+			// register to our ingress routing pipeline
+			ingresses = append(ingresses, cloudflare.IngressEntry{
+				Hostname:   domain,
+				TargetPort: targetPort,
+			})
+			
+			// persist exposure state
+			_ = exposure.Save(exposure.Entry{
+				TunnelName: tunnelName,
+				TunnelID:   tunnel.ID,
+				Port:       fmt.Sprintf("%d", tConfig.Port),
+				Domain:     domain,
+			})
+		}
+		
+		fmt.Printf("\n🎉 All services are now explicitly available worldwide! Press Ctrl+C to stop exposing your environment.\n\n")
+
+		configFile, err := cloudflare.WriteMultiIngressConfig(tunnel.ID, ingresses)
+		if err != nil {
+			return fmt.Errorf("failed to create ingress config payload: %w", err)
+		}
+
+		pCmd := exec.Command("cloudflared", "tunnel", "--config", configFile, "run")
+		
+		pCmd.Stdout = nil
+		pCmd.Stderr = nil 
+
+		err = pCmd.Run()
+		if err != nil && err.Error() != "signal: interrupt" {
+			return fmt.Errorf("cloudflared crashed: %w", err)
+		}
+
+		return nil
+	},
+}
+
+func mustGetwd() string {
+	d, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	return d
+}
+
+func init() {
+	tunnelCmd.AddCommand(upCmd)
+}
