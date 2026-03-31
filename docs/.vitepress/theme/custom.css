@@ -1,14 +1,16 @@
-/* Overriding VitePress hero image default max-width to render our diagram much larger */
+/* Scale up the hero image container while preserving aspect ratio */
+.VPHero .image-container {
+  max-width: 550px !important;
+}
+
 .VPHero .image-src {
-  max-width: 650px !important;
-  width: 135% !important;
-  margin-left: -15%;
+  max-width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
 }
 
 @media (max-width: 768px) {
-  .VPHero .image-src {
+  .VPHero .image-container {
     max-width: 100% !important;
-    width: 100% !important;
-    margin-left: 0;
   }
 }
