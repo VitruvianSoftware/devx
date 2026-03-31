@@ -15,6 +15,10 @@ var agentCmd = &cobra.Command{
 	Short: "Manage AI Agent configuration for your project",
 }
 
+var (
+	agentForceUpdate bool
+)
+
 var agentInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize AI Agent tools/manifests for the devx environment",
@@ -56,7 +60,7 @@ var agentInitCmd = &cobra.Command{
 
 		fmt.Println("📦 Installing devx configurations...")
 		for _, a := range selectedAgents {
-			if err := agent.Install(a); err != nil {
+			if err := agent.Install(a, agentForceUpdate); err != nil {
 				fmt.Fprintf(os.Stderr, "failed to install %s config: %v\n", a, err)
 			}
 		}
@@ -67,6 +71,8 @@ var agentInitCmd = &cobra.Command{
 }
 
 func init() {
+	agentInitCmd.Flags().BoolVarP(&agentForceUpdate, "force", "f", false, "Force overwrite existing AI agent manifests")
+
 	agentCmd.AddCommand(agentInitCmd)
 	rootCmd.AddCommand(agentCmd)
 }

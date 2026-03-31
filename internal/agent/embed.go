@@ -18,7 +18,7 @@ var ManifestPaths = map[string]string{
 }
 
 // Install copies the correct template string to the local working directory.
-func Install(targetAgent string) error {
+func Install(targetAgent string, force bool) error {
 	relPath, ok := ManifestPaths[targetAgent]
 	if !ok {
 		return fmt.Errorf("unsupported agent: %s", targetAgent)
@@ -35,11 +35,13 @@ func Install(targetAgent string) error {
 	}
 
 	// Check if file exists to prevent hard-overwriting without confirmation
-	if _, err := os.Stat(relPath); err == nil {
-		fmt.Printf("⚠️  File %s already exists. Skipping.\n", relPath)
-		return nil
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("stat %q: %w", relPath, err)
+	if !force {
+		if _, err := os.Stat(relPath); err == nil {
+			fmt.Printf("⚠️  File %s already exists. Skipping. (use --force to overwrite)\n", relPath)
+			return nil
+		} else if !os.IsNotExist(err) {
+			return fmt.Errorf("stat %q: %w", relPath, err)
+		}
 	}
 
 	if err := os.WriteFile(relPath, content, 0644); err != nil {
