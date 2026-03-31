@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 
 	cfapi "github.com/VitruvianSoftware/devx/internal/cloudflare"
@@ -50,6 +51,9 @@ Examples:
 }
 
 func runSitesInit(cmd *cobra.Command, _ []string) error {
+	// Load .env so tokens like CLOUDFLARE_API_TOKEN are available
+	_ = godotenv.Load(envFile)
+
 	// ── Step 1: Detect the current repository ─────────────────────────────
 	owner, repo, err := github.RepoInfo()
 	if err != nil {
