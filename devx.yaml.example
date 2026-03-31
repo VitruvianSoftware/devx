@@ -8,6 +8,10 @@
 # E.g. If your dev name is 'james', the base domain is 'james-prj-demo-app'
 name: demo-app
 
+# Optional: Override the fallback `.ipv1337.dev` domain with your own custom domain (BYOD).
+# Ensure you are logged into a Cloudflare account that has permissions over this zone.
+domain: mycompany.dev
+
 tunnels:
   # The 'name' field defines the subdomain for this specific service.
   # Example output: https://api-demo-app-james.ipv1337.dev
