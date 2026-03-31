@@ -1,0 +1,27 @@
+# devx.yaml
+# Example topology configuration for running multiple interconnected services
+# locally and exposing them through a single devx Cloudflare tunnel.
+#
+# Run 'devx tunnel up' in the same directory as this file to start the services.
+
+# Project name determines the base subdomain for all nested services below.
+# E.g. If your dev name is 'james', the base domain is 'james-prj-demo-app'
+name: demo-app
+
+tunnels:
+  # The 'name' field defines the subdomain for this specific service.
+  # Example output: https://api-demo-app-james.ipv1337.dev
+  - name: api
+    port: 8080
+    
+    # You can instantly secure any application from the public edge by providing
+    # basic authentication credentials. No external premium services necessary.
+    basic_auth: "admin:supersecret"
+
+  # Example output: https://web-demo-app-james.ipv1337.dev
+  - name: web
+    port: 3000
+
+  # Example output: https://webhooks-demo-app-james.ipv1337.dev
+  - name: webhooks
+    port: 8000
