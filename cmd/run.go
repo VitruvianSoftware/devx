@@ -26,7 +26,7 @@ var runCmd = &cobra.Command{
 
 		// Ensure log dir exists
 		logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
-		os.MkdirAll(logDir, 0755)
+		_ = os.MkdirAll(logDir, 0755)
 
 		// Open log file for append
 		logFile, err := os.OpenFile(filepath.Join(logDir, name+".log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -60,7 +60,7 @@ var runCmd = &cobra.Command{
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sigChan
-			command.Process.Signal(syscall.SIGINT)
+			_ = command.Process.Signal(syscall.SIGINT)
 		}()
 
 		err = command.Wait()

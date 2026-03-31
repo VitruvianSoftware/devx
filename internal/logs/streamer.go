@@ -103,10 +103,10 @@ func (s *Streamer) tailContainer(ctx context.Context, name string) {
 
 	go func() {
 		<-ctx.Done()
-		cmd.Process.Kill()
+		_ = cmd.Process.Kill()
 	}()
 
-	cmd.Wait()
+	_ = cmd.Wait()
 
 	s.mu.Lock()
 	delete(s.services, name)
@@ -115,7 +115,7 @@ func (s *Streamer) tailContainer(ctx context.Context, name string) {
 
 func (s *Streamer) watchHostLogs(ctx context.Context) {
 	logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
-	os.MkdirAll(logDir, 0755)
+	_ = os.MkdirAll(logDir, 0755)
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
