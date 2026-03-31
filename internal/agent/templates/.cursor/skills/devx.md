@@ -1,3 +1,7 @@
+---
+description: "Agent Skill: Use when managing the devx local environment including the Container VM, Database spawning, Cloudflare Tunnel Exposing, or networking management."
+argument-hint: Ask the user to clarify what devx component they are seeking to manage if unclear.
+---
 # Cursor AI Rules for Devx
 
 This repository orchestrates `devx`, a local VM environment manager covering Podman, Cloudflare Tunnels, and Tailscale.
