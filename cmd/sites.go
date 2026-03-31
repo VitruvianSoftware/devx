@@ -154,52 +154,24 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("✓ (%s)\n", zoneID[:8]+"...")
 
 	fmt.Print("⏳ Creating DNS CNAME record... ")
-	// GitHub Pages requires the CNAME to NOT be proxied (DNS only)
 	if err := cfapi.CreateCNAME(zoneID, subdomain, pagesTarget, false); err != nil {
 		fmt.Println("✗")
 		return err
 	}
 	fmt.Println("✓")
 
-	// ── Step 8: Domain verification + SSL ─────────────────────────────────
-	fmt.Print("⏳ Requesting GitHub domain verification... ")
-	verification, err := github.RequestDomainVerification(owner, subdomain)
-	if err != nil {
-		fmt.Println("✗")
-		return err
-	}
-
-	if verification != nil {
-		fmt.Println("pending")
-		// Create the TXT record in Cloudflare
-		fmt.Print("⏳ Creating DNS TXT verification record... ")
-		if err := cfapi.CreateTXT(zoneID, verification.Host, verification.Value); err != nil {
+	// ── Step 8: Configure custom domain + SSL ─────────────────────────────
+	needsVerification := false
+	fmt.Print("⏳ Configuring custom domain & SSL certificate... ")
+	if err := github.SetCustomDomain(owner, repo, subdomain); err != nil {
+		if _, ok := err.(*github.DomainNotVerifiedError); ok {
+			fmt.Println("⚠ (needs verification)")
+			needsVerification = true
+		} else {
 			fmt.Println("✗")
 			return err
 		}
-		fmt.Println("✓")
-
-		fmt.Println()
-		fmt.Println("┌─────────────────────────────────────────────────────────────")
-		fmt.Println("│  ℹ️  Domain Verification Pending")
-		fmt.Println("├─────────────────────────────────────────────────────────────")
-		fmt.Printf("│  TXT Record:    %s\n", verification.Host)
-		fmt.Printf("│  TXT Value:     %s\n", verification.Value)
-		fmt.Println("│")
-		fmt.Println("│  GitHub will verify the TXT record automatically.")
-		fmt.Println("│  DNS propagation typically takes 1-5 minutes.")
-		fmt.Println("│")
-		fmt.Println("│  Once verified, run this command again to finish SSL setup.")
-		fmt.Println("└─────────────────────────────────────────────────────────────")
 	} else {
-		fmt.Println("✓ (already verified)")
-
-		// Domain is verified — set custom domain + SSL
-		fmt.Print("⏳ Configuring custom domain & SSL certificate... ")
-		if err := github.SetCustomDomain(owner, repo, subdomain); err != nil {
-			fmt.Println("✗")
-			return err
-		}
 		fmt.Println("✓")
 	}
 
@@ -214,6 +186,31 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	// ── Domain verification instructions ──────────────────────────────────
+	if needsVerification {
+		verifyURL := fmt.Sprintf("https://github.com/organizations/%s/settings/pages", owner)
+		fmt.Println()
+		fmt.Println("┌─────────────────────────────────────────────────────────────")
+		fmt.Println("│  ⚠️  One-Time Domain Verification Required")
+		fmt.Println("├─────────────────────────────────────────────────────────────")
+		fmt.Println("│")
+		fmt.Println("│  GitHub requires org-level domain verification before")
+		fmt.Println("│  it will provision an SSL certificate for custom domains.")
+		fmt.Println("│")
+		fmt.Println("│  Steps:")
+		fmt.Printf("│    1. Open: %s\n", verifyURL)
+		fmt.Printf("│    2. Click \"Add a domain\" → enter: %s\n", domain)
+		fmt.Println("│    3. GitHub will show a TXT record to add")
+		fmt.Println("│    4. Add the TXT record in your Cloudflare DNS dashboard")
+		fmt.Println("│    5. Click \"Verify\" in GitHub")
+		fmt.Println("│    6. Re-run: devx sites init --domain " + domain)
+		fmt.Println("│")
+		fmt.Println("│  This only needs to be done once per domain per org.")
+		fmt.Println("└─────────────────────────────────────────────────────────────")
+		fmt.Println()
+		return nil
+	}
+
 	// ── Summary ──────────────────────────────────────────────────────────
 	fmt.Printf("\n🎉 Site infrastructure is ready!\n\n")
 	fmt.Printf("  Live URL:       https://%s\n", subdomain)
@@ -222,11 +219,7 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("  Next steps:\n")
 	fmt.Printf("    1. Add a deploy-docs.yml GitHub Action (if not already present)\n")
 	fmt.Printf("    2. Push to main to trigger the first deployment\n")
-	if verification != nil {
-		fmt.Printf("    3. Wait for domain verification, then re-run this command\n")
-	} else {
-		fmt.Printf("    3. SSL certificate may take up to 15 minutes to provision\n")
-	}
+	fmt.Printf("    3. SSL certificate may take up to 15 minutes to provision\n")
 	fmt.Println()
 
 	return nil

@@ -1,7 +1,6 @@
 package github
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -46,7 +45,7 @@ func PagesEndpoint(owner string) string {
 
 // SetCustomDomain configures the custom domain on GitHub Pages and triggers
 // SSL certificate provisioning via Let's Encrypt.
-// Requires the domain to be verified at the org level first.
+// Requires the domain to be verified at the org level first (done via GitHub UI).
 func SetCustomDomain(owner, repo, domain string) error {
 	out, err := exec.Command("gh", "api", "-X", "PUT",
 		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
@@ -55,68 +54,20 @@ func SetCustomDomain(owner, repo, domain string) error {
 	).CombinedOutput()
 	if err != nil {
 		outStr := string(out)
-		if strings.Contains(outStr, "verify your domain") {
-			return fmt.Errorf("domain not verified: run 'devx sites verify --domain %s' first", domain)
+		if strings.Contains(outStr, "verify your domain") || strings.Contains(outStr, "Invalid cname") {
+			return &DomainNotVerifiedError{Domain: domain, Owner: owner}
 		}
 		return fmt.Errorf("set custom domain: %w\n%s", err, outStr)
 	}
 	return nil
 }
 
-// DomainVerification holds the TXT record details returned by GitHub.
-type DomainVerification struct {
-	Host  string // e.g. _github-pages-challenge-VitruvianSoftware.vitruviansoftware.dev
-	Value string // The TXT record value
+// DomainNotVerifiedError indicates the domain needs org-level verification in GitHub UI.
+type DomainNotVerifiedError struct {
+	Domain string
+	Owner  string
 }
 
-// RequestDomainVerification initiates domain verification at the org level.
-// Returns the TXT record details that must be set in DNS before calling ConfirmDomainVerification.
-func RequestDomainVerification(owner, domain string) (*DomainVerification, error) {
-	out, err := exec.Command("gh", "api", "-X", "POST",
-		fmt.Sprintf("/orgs/%s/pages/domains", owner),
-		"-f", fmt.Sprintf("domain=%s", domain),
-	).CombinedOutput()
-	if err != nil {
-		outStr := string(out)
-		if strings.Contains(outStr, "already") || strings.Contains(outStr, "409") {
-			return nil, nil // Already verified
-		}
-		if strings.Contains(outStr, "admin:org") {
-			return nil, fmt.Errorf("missing GitHub OAuth scope.\n\n  Run this once to grant org-level access:\n\n    gh auth refresh -h github.com -s admin:org\n\n  Then re-run this command")
-		}
-		return nil, fmt.Errorf("request domain verification: %w\n%s", err, outStr)
-	}
-
-	// GitHub responds with the challenge details
-	var resp struct {
-		Host  string `json:"host"`
-		Value string `json:"value"`
-	}
-	if err := json.Unmarshal(out, &resp); err != nil {
-		return nil, fmt.Errorf("parse verification response: %w\nraw: %s", err, string(out))
-	}
-
-	if resp.Host == "" || resp.Value == "" {
-		return nil, fmt.Errorf("GitHub did not return verification TXT record details.\nRaw response: %s", string(out))
-	}
-
-	return &DomainVerification{Host: resp.Host, Value: resp.Value}, nil
-}
-
-// ConfirmDomainVerification tells GitHub to check the TXT record and complete verification.
-func ConfirmDomainVerification(owner, domain string) error {
-	// GitHub doesn't have a specific "confirm" endpoint — the verification happens
-	// automatically once GitHub detects the TXT record. We can check status instead.
-	out, err := exec.Command("gh", "api",
-		fmt.Sprintf("/orgs/%s/pages/domains", owner),
-	).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("check verification status: %w\n%s", err, string(out))
-	}
-
-	// Check if our domain is in the verified list
-	if strings.Contains(string(out), domain) {
-		return nil
-	}
-	return fmt.Errorf("domain %s is not yet verified — DNS TXT record may still be propagating", domain)
+func (e *DomainNotVerifiedError) Error() string {
+	return fmt.Sprintf("domain %q is not verified for the %s organization", e.Domain, e.Owner)
 }
