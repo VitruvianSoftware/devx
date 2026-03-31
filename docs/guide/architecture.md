@@ -1,1 +1,98 @@
 # Architecture
+
+## System Overview
+
+`devx` orchestrates three infrastructure layers from a single CLI:
+
+```mermaid
+flowchart TB
+    subgraph devlaptop["Developer's Mac"]
+        direction TB
+        Code["VS Code / Terminal"] -->|podman run| UserContainers
+
+        subgraph podmanvm["Podman Machine · Fedora CoreOS"]
+            subgraph daemons["Systemd Controlled"]
+                TS["Tailscale Daemon"]
+                CF["Cloudflared Tunnel"]
+            end
+
+            subgraph UserContainers["Developer's Apps"]
+                App["API / Web App<br/>Port 8080"]
+                DB[("Local DB")]
+            end
+
+            CF -->|Forwards Ingress| App
+            TS -->|Exposes Subnets| App
+        end
+    end
+
+    subgraph internet["Public Web"]
+        CFEdge(("Cloudflare Edge"))
+        PublicURL["https://you.ipv1337.dev"]
+        ExternalUser(("External User"))
+
+        ExternalUser --> PublicURL
+        PublicURL --> CFEdge
+    end
+
+    subgraph tailnet["Corporate Tailnet"]
+        StagingDB[("Staging Database")]
+        InternalAPI["Internal Microservices"]
+    end
+
+    CFEdge <-->|Encrypted Tunnel| CF
+    TS <-->|Zero-Trust Overlay| tailnet
+```
+
+## Components
+
+### Podman Machine (VM Layer)
+
+The foundation is a **Fedora CoreOS** VM managed by Podman Machine. CoreOS is chosen because:
+
+- **Immutable OS** — The root filesystem is read-only, preventing drift
+- **Ignition provisioning** — Configuration is applied atomically at first boot
+- **Auto-updates** — CoreOS updates itself via OSTree without user intervention
+- **Container-optimized** — Minimal footprint, purpose-built for running containers
+
+`devx vm init` compiles a [Butane](https://coreos.github.io/butane/) config into Ignition format and injects it during VM creation.
+
+### Cloudflare Tunnel (Public Access)
+
+Each VM gets a dedicated Cloudflare Tunnel that:
+
+1. Creates an outbound-only connection to Cloudflare's edge network
+2. Routes traffic from `*.ipv1337.dev` subdomains to local ports
+3. Provides automatic TLS termination — no cert management needed
+4. Runs as a `systemd` unit inside the VM
+
+The `devx tunnel expose` command dynamically adds DNS routes without restarting the tunnel.
+
+### Tailscale (Private Access)
+
+Tailscale provides zero-trust access to internal services:
+
+- The VM joins your Tailnet using a pre-authenticated auth key
+- Services on the Tailnet (databases, APIs, dashboards) are reachable from inside the VM
+- No traditional VPN — traffic goes peer-to-peer via WireGuard
+
+## CLI Architecture
+
+```
+devx
+├── vm          # VM lifecycle (init, status, teardown, resize, ssh)
+├── tunnel      # Cloudflare tunnel management (expose, unexpose, list)
+├── db          # Database provisioning (spawn, list, rm)
+├── sites       # GitHub Pages + Cloudflare DNS (init, verify, status)
+├── agent       # AI agent skill configuration
+├── shell       # Devcontainer-based isolated shells
+├── config      # Credential and configuration management
+├── exec        # Raw passthrough to infrastructure tools
+└── up          # Declarative provisioning from devx.yaml
+```
+
+Each subcommand group is self-contained in `cmd/` and communicates with backend services through packages in `internal/`:
+
+- `internal/cloudflare/` — Cloudflare API client (DNS, tunnels)
+- `internal/github/` — GitHub API client (Pages, repos)
+- `internal/ignition/` — Butane/Ignition config generation
