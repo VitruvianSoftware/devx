@@ -68,6 +68,6 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** Command Line tools typically just return `exit status 1` for every single failure under the sun, forcing AI agents to parse raw English stderr logs to figure out what broke.
 * **The Solution:** Mapped specific internal devx errors into specific deterministic exit status codes (e.g. `Exit Code 22: Port Address in Use`, `Exit Code 15: VM Dormant`, `Exit Code 41: Cloudflare Missing Auth Credentials`). We also disabled `--help` spam on failure. This ensures agents parsing `devxerr` exits can cleanly `switch(exitCode)` to write tight programmatic rescue paths without LLM parsing hallucination risks.
 
-### 15. Official Agent Tool Manifest (`.agent/skills/devx`)
+### 15. Official Agent Tool Manifest (`.agent/skills/devx`) (DONE)
 * **The Problem:** When an AI drops into a repository, it has to guess what `devx` does or blindly run `devx --help` over and over, consuming expensive tokens.
-* **The Solution:** Create an official `.agent/skills/devx.md` Agent Skill manifest in the codebase so any standard agent architecture instantly understands the tool's composition, workflows, and strict rules.
+* **The Solution:** Created official agent manifest files (`.agent/skills/devx/SKILL.md` for standard Antigravity/Gemini agents, `.cursorrules` for Cursor, `CLAUDE.md` for Claude Code, and `.github/copilot-instructions.md` for Copilot). These configuration files ensure any AI immediately drops into a repository natively understanding `devx`'s non-interactive composition, JSON workflows, and numeric error codes without hallucinations.
