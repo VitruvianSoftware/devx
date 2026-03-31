@@ -7,7 +7,8 @@ hero:
   text: "Advanced Agentic Coding Environment Orchestrator"
   tagline: "Unifying Podman VMs, Ephemeral Databases, Cloudflare Tunnels, and AI Agents."
   image:
-    src: /hero.png
+    light: /hero-light.png
+    dark: /hero-dark.png
     alt: devx Abstract Tech Architecture Illustration
   actions:
     - theme: brand

@@ -1,0 +1,14 @@
+/* Overriding VitePress hero image default max-width to render our diagram much larger */
+.VPHero .image-src {
+  max-width: 650px !important;
+  width: 135% !important;
+  margin-left: -15%;
+}
+
+@media (max-width: 768px) {
+  .VPHero .image-src {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0;
+  }
+}
