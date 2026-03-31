@@ -24,7 +24,7 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 
 ## Developer Productivity & Extensibility
 
-### 5. Backend Pluggability (OrbStack / Docker Support)
+### 5. Backend Pluggability (OrbStack / Docker Support) (DONE)
 * **The Problem:** Hardcoding Fedora CoreOS + Podman Machine is highly opinionated. Some devs might already have Docker Desktop or OrbStack running and don't want to run two VMs.
 * **The Solution:** Abstract the `internal/podman` package into a `VirtualizationProvider` interface. Allow developers to map `devx` networking (Cloudflare + Tailscale) directly on top of their existing hypervisor (`--provider=orbstack`).
 

@@ -10,7 +10,6 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
-	"github.com/VitruvianSoftware/devx/internal/podman"
 	"github.com/VitruvianSoftware/devx/internal/tailscale"
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
@@ -22,6 +21,11 @@ var statusCmd = &cobra.Command{
 }
 
 func runStatus(_ *cobra.Command, _ []string) error {
+	vm, err := getVMProvider()
+	if err != nil {
+		return err
+	}
+
 	devName := os.Getenv("USER")
 	if devName == "" {
 		devName = "developer"
@@ -34,7 +38,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	vmStatus := "not created"
 	vmStyle := tui.StyleMuted
 	
-	if info, err := podman.Inspect(cfg.DevHostname); err == nil {
+	if info, err := vm.Inspect(cfg.DevHostname); err == nil {
 		vmStatus = info.State
 		if vmStatus == "" {
 			vmStatus = "stopped"
@@ -45,7 +49,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 			vmStyle = tui.StyleDetailError
 		}
 	}
-	printStatusRow("VM", cfg.DevHostname, vmStyle.Render(vmStatus))
+	printStatusRow("VM", cfg.DevHostname+" ("+vm.Name()+")", vmStyle.Render(vmStatus))
 
 	// Cloudflare tunnel
 	cfStatus, err := cloudflare.TunnelStatus(cfg.TunnelName)
@@ -61,8 +65,11 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	// Tailscale (only if VM is running)
 	tsStatus := "vm not running"
 	tsStyle := tui.StyleMuted
-	if podman.IsRunning(cfg.DevHostname) {
-		tsStatus = tailscale.Status(cfg.DevHostname)
+	if vm.IsRunning(cfg.DevHostname) {
+		sshFn := func(machine, command string) (string, error) {
+			return vm.SSH(machine, command)
+		}
+		tsStatus = tailscale.StatusWithSSH(cfg.DevHostname, sshFn)
 		tsStyle = tui.StyleDetailDone
 	}
 	printStatusRow("Tailscale", cfg.DevHostname, tsStyle.Render(tsStatus))

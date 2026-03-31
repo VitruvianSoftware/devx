@@ -160,9 +160,37 @@ Commands:
 | Command | Description |
 |---------|-------------|
 | `devx vm init` | Full first-time provisioning with interactive TUI |
+| `devx vm init --provider docker` | Provision using Docker Desktop instead of Podman |
+| `devx vm init --provider orbstack` | Provision using OrbStack |
 | `devx vm status` | Show health of VM, Cloudflare tunnel, and Tailscale |
 | `devx vm teardown` | Stop and permanently remove the VM (prompts for confirmation) |
 | `devx vm ssh` | Drop into an SSH shell inside the VM |
+
+### 🔌 Backend Pluggability (`--provider`)
+
+`devx` is not locked to Podman. Use whatever virtualization backend you prefer by passing the `--provider` flag on any `devx vm` subcommand.
+
+**Supported providers:**
+
+| Provider | CLI Value | Description |
+|----------|-----------|-------------|
+| Podman Machine | `podman` (default) | Fedora CoreOS + rootful containers |
+| Docker Desktop | `docker` | Uses `docker` CLI; auto-detects Docker Desktop VM |
+| OrbStack | `orbstack` | Lightweight macOS-native Docker using `orb` CLI |
+
+```bash
+# Initialize with Docker Desktop
+devx vm init --provider docker
+
+# Check status using OrbStack
+devx vm status --provider orbstack
+
+# SSH into the OrbStack VM
+devx vm ssh --provider orbstack
+
+# Teardown a Docker-backed environment
+devx vm teardown --provider docker
+```
 
 ### Tunnel & Port Exposure (`devx tunnel`)
 

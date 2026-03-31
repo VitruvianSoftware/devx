@@ -8,7 +8,6 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/podman"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 )
 
@@ -24,6 +23,11 @@ func init() {
 }
 
 func runUpdateTunnel(_ *cobra.Command, _ []string) error {
+	vm, err := getVMProvider()
+	if err != nil {
+		return err
+	}
+
 	devName := os.Getenv("USER")
 	if devName == "" {
 		devName = "developer"
@@ -37,7 +41,7 @@ func runUpdateTunnel(_ *cobra.Command, _ []string) error {
 	}
 	cfg.DevHostname = s.DevHostname
 
-	if !podman.IsRunning(cfg.DevHostname) {
+	if !vm.IsRunning(cfg.DevHostname) {
 		return fmt.Errorf("VM %q is not running — use 'devx init' to provision it first", cfg.DevHostname)
 	}
 
@@ -52,12 +56,12 @@ func runUpdateTunnel(_ *cobra.Command, _ []string) error {
 		`sudo sed -i 's|CF_TUNNEL_TOKEN=.*|CF_TUNNEL_TOKEN=%s|' /etc/dev-secrets.env`,
 		token,
 	)
-	if _, err := podman.SSH(cfg.DevHostname, updateCmd); err != nil {
+	if _, err := vm.SSH(cfg.DevHostname, updateCmd); err != nil {
 		return fmt.Errorf("updating token in VM: %w", err)
 	}
 
 	fmt.Println("Restarting cloudflared service...")
-	if _, err := podman.SSH(cfg.DevHostname, "sudo systemctl restart cloudflared"); err != nil {
+	if _, err := vm.SSH(cfg.DevHostname, "sudo systemctl restart cloudflared"); err != nil {
 		return fmt.Errorf("restarting cloudflared: %w", err)
 	}
 
