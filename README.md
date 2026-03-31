@@ -172,6 +172,26 @@ Commands:
 | `devx tunnel expose [port] --name myapp` | Use a static subdomain (`myapp.you.ipv1337.dev`) |
 | `devx tunnel expose [port] --basic-auth "user:pass"` | Protect your exposed URL with Basic Authentication |
 | `devx tunnel inspect [port]` | Live TUI to inspect and replay HTTP traffic (like ngrok inspect) |
+| `devx tunnel up` | Expose multiple mapping routes via a `devx.yaml` topology |
+| `devx tunnel list` | List all active port exposures with URLs and ports |
+| `devx tunnel unexpose` | Clean up all exposed tunnels |
+| `devx tunnel update` | Rotate Cloudflare credentials without rebuilding the VM |
+
+### 🗂️ Multi-Port Mapping (`devx.yaml`)
+
+Manage complex projects that require multiple services (like a backend API, a frontend web app, and a webhook consumer) simultaneously via a unified single file.
+
+Just create a `devx.yaml` in your project root:
+```yaml
+name: my-project
+tunnels:
+  - name: api
+    port: 8080
+    basic_auth: "admin:pass"
+  - name: web
+    port: 3000
+```
+Then run **`devx tunnel up`**. Your local services will automatically map under contiguous domains like `api-my-project-you.ipv1337.dev` via a singular, highly efficient Cloudflare connection.
 
 ### 🔒 Built-in Authentication (`--basic-auth`)
 

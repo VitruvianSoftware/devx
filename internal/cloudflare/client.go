@@ -180,3 +180,30 @@ ingress:
 	err = os.WriteFile(configFile, []byte(configContent), 0644)
 	return configFile, err
 }
+
+// IngressEntry maps a domain to a port.
+type IngressEntry struct {
+	Hostname   string
+	TargetPort string
+}
+
+// WriteMultiIngressConfig writes a configuration file with multiple routing destinations.
+func WriteMultiIngressConfig(tunnelID string, entries []IngressEntry) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	credFile := fmt.Sprintf("%s/.cloudflared/%s.json", home, tunnelID)
+	configFile := fmt.Sprintf("%s/.cloudflared/%s-config.yml", home, tunnelID)
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("tunnel: %s\ncredentials-file: %s\n\ningress:\n", tunnelID, credFile))
+
+	for _, entry := range entries {
+		sb.WriteString(fmt.Sprintf("  - hostname: %s\n    service: http://localhost:%s\n", entry.Hostname, entry.TargetPort))
+	}
+	sb.WriteString("  - service: http_status:404\n")
+
+	err = os.WriteFile(configFile, []byte(sb.String()), 0644)
+	return configFile, err
+}
