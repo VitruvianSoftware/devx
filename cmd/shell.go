@@ -71,7 +71,10 @@ func runShell(_ *cobra.Command, _ []string) error {
 		fmt.Println("🔧 devx CLI mounted into container at /usr/local/bin/devx")
 	}
 
-	// Share host network so devx tunnel commands work seamlessly from inside
+	// Share host network so devx tunnel commands work seamlessly from inside.
+	// This gives the container direct access to the host's network stack,
+	// which is critical for tunnel commands to work consistently across
+	// all providers (podman, docker, orbstack).
 	args = append(args, "--network", "host")
 
 	// Apply environment variables
@@ -79,16 +82,22 @@ func runShell(_ *cobra.Command, _ []string) error {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 	}
 
-	// Forward ports (skipped when using host networking, but kept for documentation)
-	for _, port := range cfg.ForwardPorts {
-		args = append(args, "-p", fmt.Sprintf("%d:%d", port, port))
-	}
+	// Note: port forwarding (-p) is intentionally skipped when using host
+	// networking. The host network mode already exposes all container ports
+	// directly, and combining -p with --network host causes warnings or
+	// errors on Docker Desktop and OrbStack.
 
-	// Mount cloudflared credentials so tunnel commands work inside the container
+	// Mount cloudflared credentials so tunnel commands work inside the container.
+	// We resolve the correct home directory based on remoteUser to ensure
+	// consistent behavior across all runtimes and user configurations.
 	if home, err := os.UserHomeDir(); err == nil {
 		cfDir := filepath.Join(home, ".cloudflared")
 		if _, statErr := os.Stat(cfDir); statErr == nil {
-			args = append(args, "-v", fmt.Sprintf("%s:/root/.cloudflared:ro", cfDir))
+			containerHome := "/root"
+			if cfg.RemoteUser != "" && cfg.RemoteUser != "root" {
+				containerHome = fmt.Sprintf("/home/%s", cfg.RemoteUser)
+			}
+			args = append(args, "-v", fmt.Sprintf("%s:%s/.cloudflared:ro", cfDir, containerHome))
 		}
 	}
 
