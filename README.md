@@ -9,6 +9,10 @@
   </p>
 </p>
 
+<p align="center">
+  <img src=".github/assets/hero.png" alt="devx — Supercharged Local Development" width="600">
+</p>
+
 ---
 
 `devx` provisions a customized **Fedora CoreOS** VM via Podman Machine and automatically configures **Cloudflare Tunnels** (instant public HTTPS) and **Tailscale** (zero-trust corporate network access) — all from a single command.
