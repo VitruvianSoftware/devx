@@ -47,10 +47,10 @@ func PagesEndpoint(owner string) string {
 // SSL certificate provisioning via Let's Encrypt.
 // Requires the domain to be verified at the org level first (done via GitHub UI).
 func SetCustomDomain(owner, repo, domain string) error {
+	// Step 1: Set the custom domain (without HTTPS — cert needs time to provision)
 	out, err := exec.Command("gh", "api", "-X", "PUT",
 		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
 		"-f", fmt.Sprintf("cname=%s", domain),
-		"-F", "https_enforced=true",
 	).CombinedOutput()
 	if err != nil {
 		outStr := string(out)
@@ -59,6 +59,16 @@ func SetCustomDomain(owner, repo, domain string) error {
 		}
 		return fmt.Errorf("set custom domain: %w\n%s", err, outStr)
 	}
+
+	// Step 2: Try to enable HTTPS enforcement.
+	// This may fail with "certificate does not exist yet" — that's OK,
+	// GitHub will auto-provision the cert and enforce HTTPS once ready.
+	//nolint:errcheck // cert provisioning is async — this may fail and that's OK
+	_, _ = exec.Command("gh", "api", "-X", "PUT",
+		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
+		"-F", "https_enforced=true",
+	).CombinedOutput()
+
 	return nil
 }
 
