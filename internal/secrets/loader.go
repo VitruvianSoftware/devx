@@ -15,6 +15,9 @@ type Secrets struct {
 	DevHostname   string
 }
 
+// NonInteractive bypasses the interactive terminal prompts and fails directly if required secrets are missing
+var NonInteractive bool
+
 // Load reads secrets from the given .env file. If any required value is
 // missing, it falls back to an interactive huh form. Writes back to the
 // .env file after a successful form submission.
@@ -30,6 +33,9 @@ func Load(envFile string) (*Secrets, error) {
 	}
 
 	if s.CFTunnelToken == "" || s.DevHostname == "" {
+		if NonInteractive {
+			return nil, fmt.Errorf("required secrets missing (CF_TUNNEL_TOKEN or DEV_HOSTNAME) but --non-interactive is set")
+		}
 		if err := s.promptAndSave(envFile); err != nil {
 			return nil, err
 		}

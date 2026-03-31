@@ -56,18 +56,18 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** AI dev agents (like GitHub Copilot Workspaces, Devin, or local CLIs) drop state tracking when parsing messy human-formatted ascii tables or colored output.
 * **The Solution:** Implemented a global `--json` flag to export machine-readable deterministic JSON output across all major informational commands like `devx vm status`, `devx tunnel list`, and `devx db list`.
 
-### 12. Non-blocking UI Bypass (`--non-interactive`)
+### 12. Non-blocking UI Bypass (`--non-interactive`) (DONE)
 * **The Problem:** AI agents easily get stuck forever waiting on invisible TUI/CLI prompts (like survey forms or confirmation warnings) that they have no mechanism to "press enter" on.
-* **The Solution:** Add a strict `--non-interactive` (or `-y`) flag globally. This will force `devx` to instantly accept safe defaults, run teardown commands without human confirmation, or hard-fail immediately if requirements aren't met without stalling.
+* **The Solution:** Added a strict `--non-interactive` (or `-y`) flag globally. This forces `devx` to instantly accept safe defaults, bypass teardown/deletion confirmation warnings automatically, or hard-fail immediately if requirements aren't met rather than stalling inside the hidden `huh` TUI forms.
 
-### 13. Official Agent Tool Manifest (`.agent/skills/devx`)
-* **The Problem:** When an AI drops into a repository, it has to guess what `devx` does or blindly run `devx --help` over and over, consuming expensive tokens.
-* **The Solution:** Create an official `.agent/skills/devx.md` Agent Skill manifest in the codebase so any standard agent architecture instantly understands the tool's composition, workflows, and strict rules.
-
-### 14. Destructive Action Preflight (`--dry-run`)
+### 13. Destructive Action Preflight (`--dry-run`)
 * **The Problem:** Agents are prone to hallucinating or misunderstanding their scope. If an agent calls `devx vm teardown` or `devx db rm`, it could wipe out gigabytes of critical developer state irreversibly.
 * **The Solution:** Add a `--dry-run` flag to destructive actions so the agent can safely request a dry-run confirmation and echo what would be deleted to the developer before execution.
 
-### 15. Standardized Predictable Exit Codes
+### 14. Standardized Predictable Exit Codes
 * **The Problem:** Command Line tools typically just return `exit status 1` for every single failure under the sun, forcing AI agents to parse raw English stderr logs to figure out what broke.
 * **The Solution:** Map specific internal devx errors into specific exit status codes (e.g. `Exit Code 12: Port Address in Use`, `Exit Code 15: VM Dormant`). This allows agents to write tight deterministic programmatic rescue paths.
+
+### 15. Official Agent Tool Manifest (`.agent/skills/devx`)
+* **The Problem:** When an AI drops into a repository, it has to guess what `devx` does or blindly run `devx --help` over and over, consuming expensive tokens.
+* **The Solution:** Create an official `.agent/skills/devx.md` Agent Skill manifest in the codebase so any standard agent architecture instantly understands the tool's composition, workflows, and strict rules.

@@ -35,7 +35,7 @@ func runTeardown(_ *cobra.Command, _ []string) error {
 	}
 	cfg := config.New(devName, "", "", "")
 
-	if !forceFlag {
+	if !forceFlag && !NonInteractive {
 		var confirmed bool
 		form := huh.NewForm(
 			huh.NewGroup(
