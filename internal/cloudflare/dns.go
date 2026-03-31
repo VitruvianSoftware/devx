@@ -140,3 +140,33 @@ func CreateCNAME(zoneID, recordName, target string, proxied bool) error {
 	_, err = cfRequest("POST", fmt.Sprintf("/zones/%s/dns_records", zoneID), payload)
 	return err
 }
+
+// CreateTXT creates or updates a TXT record in the given zone.
+// Used for domain verification (e.g., GitHub Pages challenge records).
+func CreateTXT(zoneID, recordName, value string) error {
+	// Check for existing TXT record
+	resp, err := cfRequest("GET", fmt.Sprintf("/zones/%s/dns_records?type=TXT&name=%s", zoneID, recordName), nil)
+	if err != nil {
+		return err
+	}
+
+	var existing []cfDNSRecord
+	if err := json.Unmarshal(resp.Result, &existing); err != nil {
+		return fmt.Errorf("parse existing TXT records: %w", err)
+	}
+
+	payload := map[string]interface{}{
+		"type":    "TXT",
+		"name":    recordName,
+		"content": value,
+		"ttl":     1, // Auto
+	}
+
+	if len(existing) > 0 {
+		_, err = cfRequest("PUT", fmt.Sprintf("/zones/%s/dns_records/%s", zoneID, existing[0].ID), payload)
+		return err
+	}
+
+	_, err = cfRequest("POST", fmt.Sprintf("/zones/%s/dns_records", zoneID), payload)
+	return err
+}

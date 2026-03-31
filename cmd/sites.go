@@ -103,6 +103,8 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("│    Name:        %s\n", subdomain)
 	fmt.Printf("│    Target:      %s\n", pagesTarget)
 	fmt.Printf("│\n")
+	fmt.Printf("│  SSL:           Let's Encrypt certificate (auto-provisioned)\n")
+	fmt.Printf("│\n")
 	fmt.Printf("│  Live URL:      https://%s\n", subdomain)
 	if sitesNameFlag == "" {
 		fmt.Printf("│\n")
@@ -159,7 +161,49 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	}
 	fmt.Println("✓")
 
-	// ── Step 8: Write the CNAME file locally ──────────────────────────────
+	// ── Step 8: Domain verification + SSL ─────────────────────────────────
+	fmt.Print("⏳ Requesting GitHub domain verification... ")
+	verification, err := github.RequestDomainVerification(owner, subdomain)
+	if err != nil {
+		fmt.Println("✗")
+		return err
+	}
+
+	if verification != nil {
+		fmt.Println("pending")
+		// Create the TXT record in Cloudflare
+		fmt.Print("⏳ Creating DNS TXT verification record... ")
+		if err := cfapi.CreateTXT(zoneID, verification.Host, verification.Value); err != nil {
+			fmt.Println("✗")
+			return err
+		}
+		fmt.Println("✓")
+
+		fmt.Println()
+		fmt.Println("┌─────────────────────────────────────────────────────────────")
+		fmt.Println("│  ℹ️  Domain Verification Pending")
+		fmt.Println("├─────────────────────────────────────────────────────────────")
+		fmt.Printf("│  TXT Record:    %s\n", verification.Host)
+		fmt.Printf("│  TXT Value:     %s\n", verification.Value)
+		fmt.Println("│")
+		fmt.Println("│  GitHub will verify the TXT record automatically.")
+		fmt.Println("│  DNS propagation typically takes 1-5 minutes.")
+		fmt.Println("│")
+		fmt.Println("│  Once verified, run this command again to finish SSL setup.")
+		fmt.Println("└─────────────────────────────────────────────────────────────")
+	} else {
+		fmt.Println("✓ (already verified)")
+
+		// Domain is verified — set custom domain + SSL
+		fmt.Print("⏳ Configuring custom domain & SSL certificate... ")
+		if err := github.SetCustomDomain(owner, repo, subdomain); err != nil {
+			fmt.Println("✗")
+			return err
+		}
+		fmt.Println("✓")
+	}
+
+	// ── Step 9: Write the CNAME file locally ──────────────────────────────
 	cnamePath := "docs/public/CNAME"
 	if _, statErr := os.Stat("docs/public"); os.IsNotExist(statErr) {
 		cnamePath = "CNAME"
@@ -178,7 +222,12 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("  Next steps:\n")
 	fmt.Printf("    1. Add a deploy-docs.yml GitHub Action (if not already present)\n")
 	fmt.Printf("    2. Push to main to trigger the first deployment\n")
-	fmt.Printf("    3. DNS propagation may take up to 5 minutes\n\n")
+	if verification != nil {
+		fmt.Printf("    3. Wait for domain verification, then re-run this command\n")
+	} else {
+		fmt.Printf("    3. SSL certificate may take up to 15 minutes to provision\n")
+	}
+	fmt.Println()
 
 	return nil
 }
