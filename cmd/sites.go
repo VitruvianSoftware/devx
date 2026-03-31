@@ -376,6 +376,114 @@ func runSitesVerify(cmd *cobra.Command, _ []string) error {
 	return runVerificationWizard(domain, zoneID)
 }
 
+// ── devx sites status ────────────────────────────────────────────────────────
+
+var sitesStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Check GitHub Pages deployment and SSL certificate status",
+	Long: `Shows the current state of GitHub Pages for this repository,
+including custom domain configuration, SSL certificate provisioning
+status, and HTTPS enforcement.
+
+Example:
+  devx sites status`,
+	RunE: runSitesStatus,
+}
+
+func runSitesStatus(_ *cobra.Command, _ []string) error {
+	owner, repo, err := github.RepoInfo()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("📦 Repository: %s/%s\n\n", owner, repo)
+
+	status, err := github.GetPagesStatus(owner, repo)
+	if err != nil {
+		return err
+	}
+
+	// Domain
+	domainDisplay := "(none)"
+	if status.CNAME != "" {
+		domainDisplay = status.CNAME
+	}
+
+	// Domain verification
+	domainState := "—"
+	if status.DomainState != "" {
+		switch status.DomainState {
+		case "verified":
+			domainState = "✅ verified"
+		case "pending":
+			domainState = "⏳ pending"
+		default:
+			domainState = "⚠ " + status.DomainState
+		}
+	}
+
+	// HTTPS enforcement
+	httpsStatus := "❌ disabled"
+	if status.HTTPSEnforced {
+		httpsStatus = "✅ enforced"
+	}
+
+	// SSL Certificate
+	certState := "—"
+	certExpiry := "—"
+	certDomains := "—"
+	if status.HTTPSCert != nil {
+		switch status.HTTPSCert.State {
+		case "approved":
+			certState = "✅ " + status.HTTPSCert.Description
+		case "pending", "new":
+			certState = "⏳ " + status.HTTPSCert.Description
+		case "errored":
+			certState = "❌ " + status.HTTPSCert.Description
+		default:
+			certState = status.HTTPSCert.State + ": " + status.HTTPSCert.Description
+		}
+		if status.HTTPSCert.ExpiresAt != "" {
+			certExpiry = status.HTTPSCert.ExpiresAt
+		}
+		if len(status.HTTPSCert.Domains) > 0 {
+			certDomains = strings.Join(status.HTTPSCert.Domains, ", ")
+		}
+	}
+
+	// Build status
+	buildStatus := "—"
+	if status.Status != "" {
+		switch status.Status {
+		case "built":
+			buildStatus = "✅ built"
+		case "building":
+			buildStatus = "⏳ building"
+		default:
+			buildStatus = status.Status
+		}
+	}
+
+	fmt.Println("┌─────────────────────────────────────────────────────────────")
+	fmt.Println("│  📊 GitHub Pages Status")
+	fmt.Println("├─────────────────────────────────────────────────────────────")
+	fmt.Printf("│  Custom Domain:   %s\n", domainDisplay)
+	fmt.Printf("│  Domain State:    %s\n", domainState)
+	fmt.Printf("│  Build Status:    %s\n", buildStatus)
+	fmt.Println("│")
+	fmt.Printf("│  HTTPS:           %s\n", httpsStatus)
+	fmt.Printf("│  SSL Certificate: %s\n", certState)
+	fmt.Printf("│  SSL Domains:     %s\n", certDomains)
+	fmt.Printf("│  SSL Expiry:      %s\n", certExpiry)
+	if status.HTMLURL != "" {
+		fmt.Println("│")
+		fmt.Printf("│  Live URL:        %s\n", status.HTMLURL)
+	}
+	fmt.Println("└─────────────────────────────────────────────────────────────")
+	fmt.Println()
+
+	return nil
+}
+
 func init() {
 	sitesInitCmd.Flags().StringVar(&sitesDomainFlag, "domain", "",
 		"Root domain for the site (e.g., vitruviansoftware.dev)")
@@ -387,6 +495,6 @@ func init() {
 
 	sitesCmd.AddCommand(sitesInitCmd)
 	sitesCmd.AddCommand(sitesVerifyCmd)
+	sitesCmd.AddCommand(sitesStatusCmd)
 	rootCmd.AddCommand(sitesCmd)
 }
-
