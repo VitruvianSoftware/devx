@@ -7,6 +7,7 @@ import (
 )
 
 var envFile string
+var outputJSON bool
 
 var rootCmd = &cobra.Command{
 	Use:   "devx",
@@ -31,6 +32,8 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringVar(&envFile, "env-file", ".env",
 		"Path to secrets file (default: .env in current directory)")
+	rootCmd.PersistentFlags().BoolVar(&outputJSON, "json", false,
+		"Output results in machine-readable JSON format for AI agents")
 
 	rootCmd.AddCommand(vmCmd)
 	rootCmd.AddCommand(tunnelCmd)
