@@ -4,11 +4,11 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 
 ## The "Ngrok Alternatives" (Paywall Breakers)
 
-### 1. Local Request Inspector & Webhook Replay (TUI)
+### 1. Local Request Inspector & Webhook Replay (TUI) (DONE)
 * **The Problem:** Ngrok's web inspector allows devs to see incoming HTTP requests and manually replay them. This is crucial for webhook development but is heavily commercialized.
 * **The Solution:** Build a beautiful Bubble Tea terminal UI (`devx tunnel inspect`). It acts as a local proxy that intercepts, displays, and allows one-click replaying of HTTP requests coming through the Cloudflare tunnel—right in your terminal.
 
-### 2. Built-in Authentication & Access Control
+### 2. Built-in Authentication & Access Control (DONE)
 * **The Problem:** Putting Basic Auth, OAuth, or IP whitelisting on an exposed tunnel usually requires an expensive subscription.
 * **The Solution:** Add simple flags like `devx tunnel expose 8080 --basic-auth "user:pass"` or `--github-org "VitruvianSoftware"`. Because we leverage Cloudflare, we can automatically configure Cloudflare Access API to enforce zero-trust policies dynamically on edge URLs for free.
 

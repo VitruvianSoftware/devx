@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
+	"github.com/VitruvianSoftware/devx/internal/authproxy"
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
@@ -17,8 +18,9 @@ import (
 )
 
 var (
-	inspectExpose bool
-	inspectName   string
+	inspectExpose    bool
+	inspectName      string
+	inspectBasicAuth string
 )
 
 var inspectCmd = &cobra.Command{
@@ -118,7 +120,19 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, tunnelID s
 		Domain:     fullDomain,
 	})
 
-	configFile, err := cloudflare.WriteIngressConfig(tunnel.ID, fullDomain, fmt.Sprintf("%d", proxyPort))
+	targetPort := fmt.Sprintf("%d", proxyPort)
+	if inspectBasicAuth != "" {
+		newPort, cleanupAuth, err := authproxy.Start(targetPort, inspectBasicAuth)
+		if err != nil {
+			return "", "", "", nil, fmt.Errorf("failed creating basic auth proxy: %w", err)
+		}
+		// Since we defer cleanupTunnel later, we can't cleanly defer cleanupAuth returning it,
+		// but since authproxy will die when the devx CLI dies, it's fine.
+		_ = cleanupAuth 
+		targetPort = fmt.Sprintf("%d", newPort)
+	}
+
+	configFile, err := cloudflare.WriteIngressConfig(tunnel.ID, fullDomain, targetPort)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("failed to create ingress config: %w", err)
 	}
@@ -157,5 +171,6 @@ func cleanupTunnel(proc *os.Process, tunnelName, tunnelID string) {
 func init() {
 	inspectCmd.Flags().BoolVar(&inspectExpose, "expose", false, "Expose the inspector via a Cloudflare tunnel")
 	inspectCmd.Flags().StringVarP(&inspectName, "name", "n", "", "Static sub-domain name (implies --expose)")
+	inspectCmd.Flags().StringVar(&inspectBasicAuth, "basic-auth", "", "Protect the exposed tunnel with basic auth (e.g. 'user:pass')")
 	tunnelCmd.AddCommand(inspectCmd)
 }
