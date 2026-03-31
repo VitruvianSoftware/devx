@@ -1,6 +1,7 @@
 package github
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -80,4 +81,42 @@ type DomainNotVerifiedError struct {
 
 func (e *DomainNotVerifiedError) Error() string {
 	return fmt.Sprintf("domain %q is not verified for the %s organization", e.Domain, e.Owner)
+}
+
+// PagesStatus holds the current state of GitHub Pages for a repository.
+type PagesStatus struct {
+	CNAME          string `json:"cname"`
+	Status         string `json:"status"`          // "built", "building", etc.
+	HTMLURL        string `json:"html_url"`
+	HTTPSEnforced  bool   `json:"https_enforced"`
+	DomainState    string `json:"protected_domain_state"` // "verified", "unverified", "pending"
+	HTTPSCert      *HTTPSCert `json:"https_certificate"`
+}
+
+// HTTPSCert holds the SSL certificate details.
+type HTTPSCert struct {
+	State       string   `json:"state"`       // "approved", "pending", "new", "errored"
+	Description string   `json:"description"` // Human-readable status
+	Domains     []string `json:"domains"`
+	ExpiresAt   string   `json:"expires_at"`
+}
+
+// GetPagesStatus retrieves the current GitHub Pages configuration and SSL status.
+func GetPagesStatus(owner, repo string) (*PagesStatus, error) {
+	out, err := exec.Command("gh", "api",
+		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
+	).CombinedOutput()
+	if err != nil {
+		outStr := string(out)
+		if strings.Contains(outStr, "404") || strings.Contains(outStr, "Not Found") {
+			return nil, fmt.Errorf("GitHub Pages is not enabled on %s/%s", owner, repo)
+		}
+		return nil, fmt.Errorf("get pages status: %w\n%s", err, outStr)
+	}
+
+	var status PagesStatus
+	if err := json.Unmarshal(out, &status); err != nil {
+		return nil, fmt.Errorf("parse pages status: %w", err)
+	}
+	return &status, nil
 }
