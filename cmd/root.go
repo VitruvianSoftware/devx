@@ -3,11 +3,13 @@ package cmd
 import (
 	"os"
 
+	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/spf13/cobra"
 )
 
 var envFile string
 var outputJSON bool
+var NonInteractive bool
 
 var rootCmd = &cobra.Command{
 	Use:   "devx",
@@ -30,10 +32,16 @@ func Execute() {
 }
 
 func init() {
+	cobra.OnInitialize(func() {
+		secrets.NonInteractive = NonInteractive
+	})
+
 	rootCmd.PersistentFlags().StringVar(&envFile, "env-file", ".env",
 		"Path to secrets file (default: .env in current directory)")
 	rootCmd.PersistentFlags().BoolVar(&outputJSON, "json", false,
 		"Output results in machine-readable JSON format for AI agents")
+	rootCmd.PersistentFlags().BoolVarP(&NonInteractive, "non-interactive", "y", false,
+		"Bypass interactive prompts and auto-confirm destructive actions")
 
 	rootCmd.AddCommand(vmCmd)
 	rootCmd.AddCommand(tunnelCmd)
