@@ -200,7 +200,9 @@ func runInit(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("  Then visit:       https://%s\n\n", cfg.CFDomain)
 	fmt.Printf("  Troubleshoot:\n")
 	fmt.Printf("    devx vm ssh            — SSH into VM\n")
-	fmt.Printf("    devx vm status         — Check service health\n")
+	fmt.Printf("    devx vm status         — Check service health\n\n")
+	fmt.Printf("  AI Integration:\n")
+	fmt.Printf("    devx agent init        — Configure agents (.cursorrules, CLAUDE.md, etc)\n")
 
 	return nil
 }
