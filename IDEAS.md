@@ -47,3 +47,27 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 ### 10. Global Secret Sync & `.env` Management (DONE)
 * **The Problem:** Sharing `.env` files across a team securely is a massive pain, often resulting in Slack DMs and out-of-sync configurations.
 * **The Solution:** Integrated with native vault providers (1Password CLI, Bitwarden, and GCP Secret Manager). Define your vaults in `devx.yaml: env:` and they will instantly and transparently inject into the Podman/Docker app memory during `devx shell`, bypassing plaintext files on the Macbook disk. If local `.env` values are preferred, developers can mix-and-match multiple vaults or just fall back to `file://.env`. Running `devx config pull` fetches all references into local variables.
+
+---
+
+## Support Agentic AI Development
+
+### 11. Agentic Output Context (`--json`) (DONE)
+* **The Problem:** AI dev agents (like GitHub Copilot Workspaces, Devin, or local CLIs) drop state tracking when parsing messy human-formatted ascii tables or colored output.
+* **The Solution:** Implemented a global `--json` flag to export machine-readable deterministic JSON output across all major informational commands like `devx vm status`, `devx tunnel list`, and `devx db list`.
+
+### 12. Non-blocking UI Bypass (`--non-interactive`)
+* **The Problem:** AI agents easily get stuck forever waiting on invisible TUI/CLI prompts (like survey forms or confirmation warnings) that they have no mechanism to "press enter" on.
+* **The Solution:** Add a strict `--non-interactive` (or `-y`) flag globally. This will force `devx` to instantly accept safe defaults, run teardown commands without human confirmation, or hard-fail immediately if requirements aren't met without stalling.
+
+### 13. Official Agent Tool Manifest (`.agent/skills/devx`)
+* **The Problem:** When an AI drops into a repository, it has to guess what `devx` does or blindly run `devx --help` over and over, consuming expensive tokens.
+* **The Solution:** Create an official `.agent/skills/devx.md` Agent Skill manifest in the codebase so any standard agent architecture instantly understands the tool's composition, workflows, and strict rules.
+
+### 14. Destructive Action Preflight (`--dry-run`)
+* **The Problem:** Agents are prone to hallucinating or misunderstanding their scope. If an agent calls `devx vm teardown` or `devx db rm`, it could wipe out gigabytes of critical developer state irreversibly.
+* **The Solution:** Add a `--dry-run` flag to destructive actions so the agent can safely request a dry-run confirmation and echo what would be deleted to the developer before execution.
+
+### 15. Standardized Predictable Exit Codes
+* **The Problem:** Command Line tools typically just return `exit status 1` for every single failure under the sun, forcing AI agents to parse raw English stderr logs to figure out what broke.
+* **The Solution:** Map specific internal devx errors into specific exit status codes (e.g. `Exit Code 12: Port Address in Use`, `Exit Code 15: VM Dormant`). This allows agents to write tight deterministic programmatic rescue paths.

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -42,12 +43,26 @@ func runDbList(_ *cobra.Command, _ []string) error {
 
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
+		if outputJSON {
+			fmt.Println("[]")
+			return nil
+		}
 		fmt.Println(tui.StyleMuted.Render("  No databases running. Use 'devx db spawn <engine>' to start one."))
 		fmt.Printf("  Supported: %s\n", strings.Join(database.SupportedEngines(), ", "))
 		return nil
 	}
 
-	fmt.Println(tui.StyleTitle.Render("devx — Databases") + "\n")
+	if !outputJSON {
+		fmt.Println(tui.StyleTitle.Render("devx — Databases") + "\n")
+	}
+
+	type dbJSON struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
+		Ports  string `json:"ports"`
+		Engine string `json:"engine"`
+	}
+	var dbList []dbJSON
 
 	for _, line := range lines {
 		parts := strings.SplitN(line, "\t", 4)
@@ -70,6 +85,16 @@ func runDbList(_ *cobra.Command, _ []string) error {
 			displayName = engine.Name
 		}
 
+		if outputJSON {
+			dbList = append(dbList, dbJSON{
+				Name:   name,
+				Status: status,
+				Ports:  ports,
+				Engine: displayName,
+			})
+			continue
+		}
+
 		fmt.Printf("  %s  %s  %s  %s\n",
 			tui.StyleLabel.Render(displayName),
 			tui.StyleStepName.Render(name),
@@ -77,7 +102,13 @@ func runDbList(_ *cobra.Command, _ []string) error {
 			tui.StyleMuted.Render(ports),
 		)
 	}
-	fmt.Println()
+
+	if outputJSON {
+		enc, _ := json.MarshalIndent(dbList, "", "  ")
+		fmt.Println(string(enc))
+	} else {
+		fmt.Println()
+	}
 
 	return nil
 }
