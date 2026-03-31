@@ -11,9 +11,9 @@ import (
 var EmbedFS embed.FS
 
 var ManifestPaths = map[string]string{
-	"cursor":      ".cursorrules",
-	"claude":      "CLAUDE.md",
-	"copilot":     ".github/copilot-instructions.md",
+	"cursor":      ".cursor/skills/devx/SKILL.md",
+	"claude":      ".claude/skills/devx/SKILL.md",
+	"copilot":     ".github/skills/devx/SKILL.md",
 	"antigravity": ".agent/skills/devx/SKILL.md", // Standard format based on UI
 }
 
