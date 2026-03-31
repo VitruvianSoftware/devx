@@ -53,6 +53,29 @@ devx db rm myapp-db              # Keep the volume
 devx db rm myapp-db --volumes    # Delete everything
 ```
 
+### `devx db snapshot`
+
+Create, restore, list, and delete zero-SQL point-in-time snapshots of devx-managed volumes. Snapshots are stored as ultra-fast compressed tar archives in `~/.devx/snapshots/`.
+
+Useful before running destructive migrations or testing complex state changes — restore to a known-good state in seconds without re-running SQL seed scripts.
+
+```bash
+# Export the current state of your local database
+devx db snapshot create postgres before-migration
+
+# Run your destructive migrations...
+# Reset back to the clean snapshot in seconds
+devx db snapshot restore postgres before-migration
+
+# View existing snapshots and their sizes
+devx db snapshot list postgres
+
+# Clean up
+devx db snapshot rm postgres before-migration
+```
+
+Snapshots respect `--json` output for AI agents, and destructive restorations ask for confirmation unless bypassed with `-y`.
+
 ## Declarative Mode
 
 For projects with multiple services, define your databases in `devx.yaml`:
