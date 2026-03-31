@@ -81,6 +81,9 @@ func RequestDomainVerification(owner, domain string) (*DomainVerification, error
 		if strings.Contains(outStr, "already") || strings.Contains(outStr, "409") {
 			return nil, nil // Already verified
 		}
+		if strings.Contains(outStr, "admin:org") {
+			return nil, fmt.Errorf("missing GitHub OAuth scope.\n\n  Run this once to grant org-level access:\n\n    gh auth refresh -h github.com -s admin:org\n\n  Then re-run this command")
+		}
 		return nil, fmt.Errorf("request domain verification: %w\n%s", err, outStr)
 	}
 
