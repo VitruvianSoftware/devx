@@ -191,13 +191,15 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 
 ## Advanced Local Development Experience (Next Gen)
 
-### 17. Unified Container Log Multiplexer (TUI)
+### 17. Unified Container Log Multiplexer (TUI) (DONE)
 * **The Problem:** When running a microservices architecture locally, developers have to open 5-10 terminal tabs running `docker logs -f` just to trace a single request through the API, worker, and database.
-* **The Solution:** Implement a `devx logs` Bubble Tea TUI that automatically discovers all running containers in the `devx` VM, multiplexes their stdout/stderr into a single unified stream, color-codes them by service name, and allows advanced filtering/searching across the entire local stack simultaneously.
+* **The Solution:** Implemented `devx logs` — a Bubble Tea TUI that automatically discovers all running Podman containers and any native host processes started via `devx run`, multiplexes their stdout/stderr into a single unified stream, and color-codes them by service name. Also supports `--json` for AI agent consumption.
+* **Key files:** `cmd/logs.go`, `cmd/run.go`, `internal/logs/streamer.go`, `internal/logs/tui.go`
 
-### 18. Instant Database Snapshot & Restore
+### 18. Instant Database Snapshot & Restore (DONE)
 * **The Problem:** Developers often need to test destructive database migrations or complex state changes. If they mess up, resetting the local DB to a clean state takes too long (dropping tables, running seeds).
-* **The Solution:** Add `devx db snapshot create <name>` and `devx db snapshot restore <name>`. This leverages underlying Podman volume snapshots or filesystem-level cow (copy-on-write) mechanisms to instantly freeze and rollback database states in milliseconds without running SQL scripts.
+* **The Solution:** Implemented `devx db snapshot create <engine> <name>` and `devx db snapshot restore <engine> <name>`. Uses `podman volume export/import` (tar archives) for instant, zero-SQL snapshots. For Docker, falls back to a lightweight Alpine helper container. Full subcommand tree: `create`, `restore`, `list`, `rm`. Respects `--dry-run`, `-y`, and `--json` flags.
+* **Key files:** `cmd/db_snapshot.go`, `internal/database/snapshot.go`
 
 ### 19. Local S3 & Cloud Emulation
 * **The Problem:** Modern apps depend on cloud services (S3 for file uploads, SQS for queues). Testing these locally requires complex LocalStack setups or pointing to shared dev environments that get polluted.
