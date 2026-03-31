@@ -22,23 +22,30 @@ with automatic Cloudflare DNS configuration.`,
 	},
 }
 
-var sitesDomainFlag string
+var (
+	sitesDomainFlag string
+	sitesNameFlag   string
+)
 
 var sitesInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Enable GitHub Pages and configure Cloudflare DNS for this repository",
 	Long: `Enables GitHub Pages (workflow-based) on the current repository and creates
-a CNAME record in Cloudflare DNS pointing <repo>.<domain> to <org>.github.io.
+a CNAME record in Cloudflare DNS pointing <name>.<domain> to <org>.github.io.
+
+By default, <name> is derived from the repository name. Use --name to override.
 
 Prerequisites:
   - gh CLI authenticated (gh auth login)
   - CLOUDFLARE_API_TOKEN env var set with DNS edit permissions
   - Domain zone must exist in your Cloudflare account
 
-Example:
+Examples:
   devx sites init --domain vitruviansoftware.dev
-  # → Enables Pages on current repo
-  # → Creates CNAME: <repo>.vitruviansoftware.dev → <org>.github.io`,
+  # → Creates CNAME: devx.vitruviansoftware.dev (derived from repo name)
+
+  devx sites init --domain vitruviansoftware.dev --name platform
+  # → Creates CNAME: platform.vitruviansoftware.dev (explicit override)`,
 	RunE: runSitesInit,
 }
 
@@ -53,13 +60,12 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	// ── Step 2: Resolve the domain ────────────────────────────────────────
 	domain := sitesDomainFlag
 	if domain == "" {
-		// Interactive prompt if no flag was provided
 		if NonInteractive {
 			return fmt.Errorf("--domain is required in non-interactive mode")
 		}
 		err := huh.NewInput().
 			Title("What domain should this site live under?").
-			Description("e.g., vitruviansoftware.dev → creates <repo>.vitruviansoftware.dev").
+			Description("e.g., vitruviansoftware.dev → creates <name>.vitruviansoftware.dev").
 			Placeholder("example.dev").
 			Value(&domain).
 			Run()
@@ -72,19 +78,59 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("domain cannot be empty")
 	}
 
-	subdomain := fmt.Sprintf("%s.%s", strings.ToLower(repo), domain)
+	// ── Step 3: Resolve the subdomain name ────────────────────────────────
+	siteName := sitesNameFlag
+	if siteName == "" {
+		siteName = strings.ToLower(repo)
+	}
+
+	subdomain := fmt.Sprintf("%s.%s", siteName, domain)
 	pagesTarget := github.PagesEndpoint(owner)
 
-	fmt.Printf("\n🔧 Plan:\n")
-	fmt.Printf("   GitHub Pages:  enabled (workflow mode) on %s/%s\n", owner, repo)
-	fmt.Printf("   DNS CNAME:     %s → %s\n", subdomain, pagesTarget)
+	// ── Step 4: Explicit impact summary ───────────────────────────────────
+	fmt.Println()
+	fmt.Println("┌─────────────────────────────────────────────────────────────")
+	fmt.Println("│  ⚠️  DNS Change Summary")
+	fmt.Println("├─────────────────────────────────────────────────────────────")
+	fmt.Printf("│  Repository:    %s/%s\n", owner, repo)
+	fmt.Printf("│  GitHub Pages:  ENABLED (workflow deployment mode)\n")
+	fmt.Printf("│\n")
+	fmt.Printf("│  DNS Record:    CNAME (DNS-only, not proxied)\n")
+	fmt.Printf("│    Name:        %s\n", subdomain)
+	fmt.Printf("│    Target:      %s\n", pagesTarget)
+	fmt.Printf("│\n")
+	fmt.Printf("│  Live URL:      https://%s\n", subdomain)
+	if sitesNameFlag == "" {
+		fmt.Printf("│\n")
+		fmt.Printf("│  ℹ️  Subdomain \"%s\" was derived from the repo name.\n", siteName)
+		fmt.Printf("│     Use --name <custom> to override.\n")
+	}
+	fmt.Println("└─────────────────────────────────────────────────────────────")
 
 	if DryRun {
-		fmt.Println("\n🏁 Dry run — no changes made.")
+		fmt.Println("\n🏁 Dry run — no changes were made.")
 		return nil
 	}
 
-	// ── Step 3: Enable GitHub Pages ───────────────────────────────────────
+	// ── Step 5: Confirmation gate ─────────────────────────────────────────
+	if !NonInteractive {
+		var confirmed bool
+		err := huh.NewConfirm().
+			Title("Proceed with these DNS and GitHub changes?").
+			Affirmative("Yes, apply changes").
+			Negative("No, abort").
+			Value(&confirmed).
+			Run()
+		if err != nil {
+			return fmt.Errorf("confirmation prompt: %w", err)
+		}
+		if !confirmed {
+			fmt.Println("\n❌ Aborted. No changes were made.")
+			return nil
+		}
+	}
+
+	// ── Step 6: Enable GitHub Pages ───────────────────────────────────────
 	fmt.Print("\n⏳ Enabling GitHub Pages... ")
 	if err := github.EnablePages(owner, repo); err != nil {
 		fmt.Println("✗")
@@ -92,7 +138,7 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	}
 	fmt.Println("✓")
 
-	// ── Step 4: Create Cloudflare CNAME ───────────────────────────────────
+	// ── Step 7: Create Cloudflare CNAME ───────────────────────────────────
 	fmt.Print("⏳ Looking up Cloudflare zone... ")
 	zoneID, err := cfapi.LookupZoneID(domain)
 	if err != nil {
@@ -109,7 +155,7 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	}
 	fmt.Println("✓")
 
-	// ── Step 5: Write the CNAME file locally ──────────────────────────────
+	// ── Step 8: Write the CNAME file locally ──────────────────────────────
 	cnamePath := "docs/public/CNAME"
 	if _, statErr := os.Stat("docs/public"); os.IsNotExist(statErr) {
 		cnamePath = "CNAME"
@@ -136,6 +182,8 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 func init() {
 	sitesInitCmd.Flags().StringVar(&sitesDomainFlag, "domain", "",
 		"Root domain for the site (e.g., vitruviansoftware.dev)")
+	sitesInitCmd.Flags().StringVar(&sitesNameFlag, "name", "",
+		"Subdomain name (defaults to repository name)")
 
 	sitesCmd.AddCommand(sitesInitCmd)
 	rootCmd.AddCommand(sitesCmd)
