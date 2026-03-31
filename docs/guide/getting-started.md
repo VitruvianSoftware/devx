@@ -2,13 +2,31 @@
 
 ## Prerequisites
 
-Install these tools before running `devx`:
+The fastest way to set up your environment is with the built-in health check:
 
-| Tool | Install | Purpose |
-|------|---------|---------|
-| [Podman](https://podman.io) | `brew install podman` | VM and container runtime |
-| [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `brew install cloudflare/cloudflare/cloudflared` | Cloudflare tunnel daemon |
-| [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler |
+```bash
+devx doctor            # audit tools, credentials, and feature readiness
+devx doctor install    # install any missing tools via your package manager
+devx doctor auth       # walk through authenticating required services
+```
+
+`devx doctor` checks for all 9 CLI tools and 7 credentials that devx uses, and tells you exactly what's ready and what needs attention.
+
+### Manual Setup
+
+If you prefer to install manually:
+
+| Tool | Install | Purpose | Required? |
+|------|---------|---------| --------- |
+| [Podman](https://podman.io) | `brew install podman` | VM and container runtime | Yes |
+| [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `brew install cloudflare/cloudflare/cloudflared` | Cloudflare tunnel daemon | Yes |
+| [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler | Yes |
+| [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`) | Yes |
+| [docker](https://docker.com) | `brew install docker` | Alternative VM backend | Optional |
+| [orbstack](https://orbstack.dev) | `brew install orbstack` | Alternative VM backend | Optional |
+| [1Password CLI](https://1password.com/downloads/command-line) | `brew install 1password-cli` | Vault secret sync | Optional |
+| [Bitwarden CLI](https://bitwarden.com/help/cli/) | `brew install bitwarden-cli` | Vault secret sync | Optional |
+| [gcloud](https://cloud.google.com/sdk) | `brew install google-cloud-sdk` | GCP Secret Manager | Optional |
 
 ## Installation
 
@@ -36,15 +54,15 @@ go install github.com/VitruvianSoftware/devx@latest
 
 ## Quick Start
 
-### 1. Authenticate with Cloudflare (one-time)
+### 0. Check your environment (one-time)
 
 ```bash
-cloudflared login
+devx doctor
 ```
 
-This opens a browser to authorize `cloudflared` against your Cloudflare account. The generated certificate is stored at `~/.cloudflared/cert.pem`.
+This audits all prerequisites — tools, credentials, and authentication sessions — and tells you exactly what's ready and what needs fixing. If anything is missing, follow the prompts or run `devx doctor install`.
 
-### 2. Provision your dev environment
+### 1. Provision your dev environment
 
 ```bash
 devx vm init
@@ -52,7 +70,7 @@ devx vm init
 
 This creates a Fedora CoreOS VM via Podman Machine with Cloudflare Tunnel and Tailscale pre-configured. The process takes about 2-3 minutes on the first run.
 
-### 3. Verify everything is running
+### 2. Verify everything is running
 
 ```bash
 devx vm status
@@ -60,7 +78,7 @@ devx vm status
 
 You should see all three components — VM, Cloudflare Tunnel, and Tailscale — reporting as healthy.
 
-### 4. Expose a port
+### 3. Expose a port
 
 ```bash
 # Start a web server inside the VM
@@ -71,7 +89,7 @@ devx tunnel expose 8080 --name demo
 # → https://demo.your-name.ipv1337.dev
 ```
 
-### 5. Spin up a database
+### 4. Spin up a database
 
 ```bash
 devx db spawn postgres --name mydb
@@ -84,9 +102,14 @@ devx db spawn postgres --name mydb
 
 ```bash
 # .env
-CLOUDFLARE_API_TOKEN=your-token-here
-TAILSCALE_AUTH_KEY=tskey-auth-...
+CF_API_TOKEN=your-cloudflare-api-token
+CF_TUNNEL_TOKEN=your-tunnel-token
+DEV_HOSTNAME=your-machine-name
 ```
+
+::: tip
+Run `devx doctor auth` to set up your `.env` interactively — it will prompt for tokens and save them automatically.
+:::
 
 Global flags available on all commands:
 

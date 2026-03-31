@@ -178,8 +178,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
       ⚠️  devx config pull      needs: op or bw or gcloud
     ```
 
-#### Task 16g: Update README & Documentation
-* **Status:** TODO
+#### Task 16g: Update README & Documentation (DONE)
+* **Status:** DONE
 * **What:** Update the README prerequisites section and the docs site to reference `devx doctor` instead of manual install instructions.
 * **Details:**
   - README Quick Start: `devx doctor` as step 0 before `devx vm init`
