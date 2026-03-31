@@ -2,7 +2,8 @@
 # Example topology configuration for running multiple interconnected services
 # locally and exposing them through a single devx Cloudflare tunnel.
 #
-# Run 'devx tunnel up' in the same directory as this file to start the services.
+# Run 'devx up' in the same directory as this file to provision dependencies 
+# and expose services.
 
 # Project name determines the base subdomain for all nested services below.
 # E.g. If your dev name is 'james', the base domain is 'james-prj-demo-app'
@@ -11,6 +12,14 @@ name: demo-app
 # Optional: Override the fallback `.ipv1337.dev` domain with your own custom domain (BYOD).
 # Ensure you are logged into a Cloudflare account that has permissions over this zone.
 domain: mycompany.dev
+
+# Define local databases to provision. When running 'devx up', devx will 
+# spin up containers with persistent volumes for each defined database.
+databases:
+  # Supported engines: postgres, redis, mysql, mongo
+  - engine: postgres
+    port: 5432
+  - engine: redis
 
 tunnels:
   # The 'name' field defines the subdomain for this specific service.

@@ -22,17 +22,23 @@ type DevxConfigTunnel struct {
 	BasicAuth string `yaml:"basic_auth"` // basic auth literal value 'user:pass'
 }
 
+type DevxConfigDatabase struct {
+	Engine string `yaml:"engine"`
+	Port   int    `yaml:"port"`
+}
+
 type DevxConfig struct {
-	Name    string             `yaml:"name"`    // Project name 
-	Domain  string             `yaml:"domain"`  // Custom domain (BYOD)
-	Tunnels []DevxConfigTunnel `yaml:"tunnels"` // List of ports to expose
+	Name      string               `yaml:"name"`      // Project name 
+	Domain    string               `yaml:"domain"`    // Custom domain (BYOD)
+	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`   // List of ports to expose
+	Databases []DevxConfigDatabase `yaml:"databases"` // List of databases to provision
 }
 
 var upDomain string
 
 var upCmd = &cobra.Command{
 	Use:   "up",
-	Short: "Simultaneously expose all ports defined in devx.yaml locally under a unified namespace.",
+	Short: "Provision databases and expose ports defined in devx.yaml.",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		yamlPath := "devx.yaml"
@@ -50,8 +56,8 @@ var upCmd = &cobra.Command{
 			return fmt.Errorf("failed parsing YAML file block: %w", err)
 		}
 
-		if len(cfgYaml.Tunnels) == 0 {
-			return fmt.Errorf("devx.yaml has no 'tunnels' defined")
+		if len(cfgYaml.Tunnels) == 0 && len(cfgYaml.Databases) == 0 {
+			return fmt.Errorf("devx.yaml has no 'tunnels' or 'databases' defined")
 		}
 
 		projectName := cfgYaml.Name
@@ -59,6 +65,34 @@ var upCmd = &cobra.Command{
 			projectName = filepath.Base(mustGetwd())
 		}
 		
+		if len(cfgYaml.Databases) > 0 {
+			fmt.Printf("🏗️ Bootstrapping Project '%s' Databases...\n", projectName)
+			devxBin, err := os.Executable()
+			if err != nil {
+				return fmt.Errorf("resolving devx binary: %w", err)
+			}
+			for _, db := range cfgYaml.Databases {
+				if db.Engine == "" {
+					continue
+				}
+				args := []string{"db", "spawn", db.Engine}
+				if db.Port > 0 {
+					args = append(args, "--port", fmt.Sprintf("%d", db.Port))
+				}
+				cmd := exec.Command(devxBin, args...)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("failed provisioning %s: %w", db.Engine, err)
+				}
+			}
+		}
+
+		if len(cfgYaml.Tunnels) == 0 {
+			fmt.Printf("\n🎉 Project '%s' databases are up!\n\n", projectName)
+			return nil
+		}
+
 		devName := os.Getenv("USER")
 		cfg := config.New(devName, "", "", "")
 		if s, err := secrets.Load(envFile); err == nil && s.DevHostname != "" {
@@ -166,4 +200,5 @@ func mustGetwd() string {
 func init() {
 	upCmd.Flags().StringVar(&upDomain, "domain", "", "Custom Cloudflare domain (BYOD) to override setting in devx.yaml")
 	tunnelCmd.AddCommand(upCmd)
+	rootCmd.AddCommand(upCmd) // Aliased at the root level as a top-level command
 }

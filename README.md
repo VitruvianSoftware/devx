@@ -148,6 +148,7 @@ flowchart TB
 devx — Supercharged local dev environment
 
 Commands:
+  up          Provision databases and expose ports defined in devx.yaml
   vm          Manage the local development VM
   tunnel      Manage Cloudflare tunnels and port exposure
   shell       Launch a dev container from devcontainer.json
@@ -291,7 +292,7 @@ devx vm teardown --provider docker
 | `devx tunnel expose [port] --name myapp` | Use a static subdomain (`myapp.you.ipv1337.dev`) |
 | `devx tunnel expose [port] --basic-auth "user:pass"` | Protect your exposed URL with Basic Authentication |
 | `devx tunnel inspect [port]` | Live TUI to inspect and replay HTTP traffic (like ngrok inspect) |
-| `devx tunnel up` | Expose multiple mapping routes via a `devx.yaml` topology |
+| `devx up` | Provision databases & expose routes via a `devx.yaml` topology |
 | `devx tunnel list` | List all active port exposures with URLs and ports |
 | `devx tunnel unexpose` | Clean up all exposed tunnels |
 | `devx tunnel update` | Rotate Cloudflare credentials without rebuilding the VM |
@@ -310,7 +311,24 @@ tunnels:
   - name: web
     port: 3000
 ```
-Then run **`devx tunnel up`**. Your local services will automatically map under contiguous domains like `api-my-project-you.ipv1337.dev` via a singular, highly efficient Cloudflare connection.
+Then run **`devx up`**. Your local databases will be securely spawned and your defined services will automatically map under contiguous domains like `api-my-project-you.ipv1337.dev` via a singular, highly efficient Cloudflare connection.
+
+```yaml
+# devx.yaml
+name: "demo-app"
+
+databases:
+  - engine: postgres
+    port: 5432
+  - engine: redis
+
+tunnels:
+  - name: api
+    port: 8080
+    basic_auth: "admin:supersecret"
+  - name: web
+    port: 3000
+```
 
 ### 🔒 Built-in Authentication (`--basic-auth`)
 
@@ -337,8 +355,10 @@ As long as you are logged into a Cloudflare account that owns the zone, Cloudfla
 devx tunnel expose 8000 --domain mycompany.dev --name api
 # → https://api.mycompany.dev
 
-# Or use it globally across an entire YAML topology
-devx tunnel up --domain mycompany.dev
+# To force devx to map tunnels under your own domain instead of `.ipv1337.dev`:
+
+```bash
+devx up --domain mycompany.dev
 ```
 
 ### Configuration (`devx config`)
