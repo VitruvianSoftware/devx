@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/VitruvianSoftware/devx/internal/authproxy"
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
@@ -14,6 +15,7 @@ import (
 )
 
 var exposeName string
+var basicAuth string
 
 var exposeCmd = &cobra.Command{
 	Use:   "expose [port]",
@@ -73,7 +75,18 @@ var exposeCmd = &cobra.Command{
 		fmt.Printf("Traffic is being securely routed to localhost:%s.\n", port)
 		fmt.Printf("Press Ctrl+C to stop exposing your app.\n\n")
 
-		configFile, err := cloudflare.WriteIngressConfig(tunnel.ID, fullDomain, port)
+		targetPort := port
+		if basicAuth != "" {
+			proxyPort, cleanupAuth, err := authproxy.Start(port, basicAuth)
+			if err != nil {
+				return fmt.Errorf("failed starting auth proxy: %w", err)
+			}
+			defer cleanupAuth()
+			targetPort = fmt.Sprintf("%d", proxyPort)
+			fmt.Printf("🔒 Basic Auth enabled for this tunnel.\n\n")
+		}
+
+		configFile, err := cloudflare.WriteIngressConfig(tunnel.ID, fullDomain, targetPort)
 		if err != nil {
 			return fmt.Errorf("failed to create ingress config: %w", err)
 		}
@@ -96,5 +109,6 @@ var exposeCmd = &cobra.Command{
 
 func init() {
 	exposeCmd.Flags().StringVarP(&exposeName, "name", "n", "", "Static sub-domain name to use (e.g. 'api' -> api.james.ipv1337.dev)")
+	exposeCmd.Flags().StringVar(&basicAuth, "basic-auth", "", "Protect the exposed tunnel with basic auth (e.g. 'user:pass')")
 	tunnelCmd.AddCommand(exposeCmd)
 }
