@@ -44,6 +44,6 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** VMs reserve RAM and CPU constantly, draining Macbook batteries when sitting idle.
 * **The Solution:** Implemented auto-pause/deep-sleep (`devx vm sleep-watch`) when no containers are active. We also added seamless JIT wake-ups. VM will automatically resume the moment you invoke any `devx` commands that require infrastructure. Finally, we added support to dynamically resize the VM (`devx vm resize --cpus 4 --memory 8192`) without destroying the machine context.
 
-### 10. Global Secret Sync & `.env` Management
+### 10. Global Secret Sync & `.env` Management (DONE)
 * **The Problem:** Sharing `.env` files across a team securely is a massive pain, often resulting in Slack DMs and out-of-sync configurations.
-* **The Solution:** Integrate with a vault provider (1Password CLI, Bitwarden, or GCP Secret Manager). Running `devx config pull` fetches the secure, team-managed `.env` for the current project automatically and injects it securely without storing plaintext on the Mac's disk.
+* **The Solution:** Integrated with native vault providers (1Password CLI, Bitwarden, and GCP Secret Manager). Define your vaults in `devx.yaml: env:` and they will instantly and transparently inject into the Podman/Docker app memory during `devx shell`, bypassing plaintext files on the Macbook disk. If local `.env` values are preferred, developers can mix-and-match multiple vaults or just fall back to `file://.env`. Running `devx config pull` fetches all references into local variables.

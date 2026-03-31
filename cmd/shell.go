@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/VitruvianSoftware/devx/internal/devcontainer"
+	"github.com/VitruvianSoftware/devx/internal/envvault"
 )
 
 var shellProviderFlag string
@@ -81,9 +83,42 @@ func runShell(_ *cobra.Command, _ []string) error {
 	// all providers (podman, docker, orbstack).
 	args = append(args, "--network", "host")
 
-	// Apply environment variables
+	// Apply environment variables from devcontainer.json
 	for k, v := range cfg.ContainerEnv {
 		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+	}
+
+	// Dynamic secret injection from devx.yaml (1password, gcp, bitwarden, etc.)
+	if yamlData, err := os.ReadFile("devx.yaml"); err == nil {
+		type envConfig struct {
+			Env []string `yaml:"env"`
+		}
+		var devxCfg envConfig
+		_ = yaml.Unmarshal(yamlData, &devxCfg)
+		
+		// "mix and match which ones, multiple, or none which will default back to using plain .env"
+		if len(devxCfg.Env) == 0 {
+			devxCfg.Env = []string{"file://.env"}
+		}
+
+		if len(devxCfg.Env) > 0 {
+			if secrets, sErr := envvault.PullAll(devxCfg.Env); sErr == nil {
+				for k, v := range secrets {
+					args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+				}
+				fmt.Printf("🔒 Injected %d secrets from remote vaults seamlessly.\n", len(secrets))
+			} else {
+				fmt.Fprintf(os.Stderr, "⚠️ Warning: Failed to fetch secrets from vault: %v\n", sErr)
+			}
+		}
+	} else if _, sErr := os.Stat(".env"); sErr == nil {
+		// Fallback straight to .env if devx.yaml doesn't even exist
+		if secrets, err := envvault.PullAll([]string{"file://.env"}); err == nil {
+			for k, v := range secrets {
+				args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+			}
+			fmt.Printf("🔒 Injected %d secrets from .env natively.\n", len(secrets))
+		}
 	}
 
 	// Note: port forwarding (-p) is intentionally skipped when using host
