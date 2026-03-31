@@ -170,9 +170,32 @@ Commands:
 |---------|-------------|
 | `devx tunnel expose [port]` | Expose a local port to the internet via `*.ipv1337.dev` |
 | `devx tunnel expose [port] --name myapp` | Use a static subdomain (`myapp.you.ipv1337.dev`) |
+| `devx tunnel inspect [port]` | Live TUI to inspect and replay HTTP traffic (like ngrok inspect) |
 | `devx tunnel list` | List all active port exposures with URLs and ports |
 | `devx tunnel unexpose` | Clean up all exposed tunnels |
 | `devx tunnel update` | Rotate Cloudflare credentials without rebuilding the VM |
+
+### 🔍 Request Inspector (`devx tunnel inspect`)
+
+A free, open-source replacement for ngrok's paid web inspector. Captures every HTTP request and response flowing through your tunnel in a live terminal UI.
+
+```bash
+# Inspect traffic to a local app (local-only, no tunnel)
+devx tunnel inspect 8080
+
+# Inspect AND expose via Cloudflare tunnel
+devx tunnel inspect 3000 --expose
+
+# With a static subdomain
+devx tunnel inspect 8080 --name myapi
+```
+
+**Features:**
+- 📋 Live scrollable request list with method, path, status, and duration
+- 🔎 Detailed view showing full request/response headers and bodies
+- 🔁 One-key replay (`r`) to resend any captured request
+- 🏷️ Replay tagging so you can compare original vs replayed responses
+- 🧹 Clear captured requests with `c`
 
 ### Configuration (`devx config`)
 
