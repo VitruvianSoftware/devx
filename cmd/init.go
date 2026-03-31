@@ -11,7 +11,6 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/ignition"
-	"github.com/VitruvianSoftware/devx/internal/podman"
 	"github.com/VitruvianSoftware/devx/internal/prereqs"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/tailscale"
@@ -23,11 +22,17 @@ const butaneTemplatePath = "dev-machine.template.bu"
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Provision the local dev environment",
-	Long:  `Full first-time setup: Cloudflare tunnel, Podman VM, Tailscale.`,
+	Long:  `Full first-time setup: Cloudflare tunnel, VM, Tailscale.`,
 	RunE:  runInit,
 }
 
 func runInit(cmd *cobra.Command, _ []string) error {
+	// ── Resolve the virtualization provider ──────────────────────────────────
+	vm, err := getVMProvider()
+	if err != nil {
+		return err
+	}
+
 	// ── Load secrets (prompt via huh if .env is missing/incomplete) ──────────
 	s, err := secrets.Load(envFile)
 	if err != nil {
@@ -51,12 +56,17 @@ func runInit(cmd *cobra.Command, _ []string) error {
 		"Set up Cloudflare tunnel",
 		"Route DNS",
 		"Build Ignition config",
-		"Prepare Podman machine",
+		fmt.Sprintf("Prepare %s VM", vm.Name()),
 		"Provision VM",
 		"Start VM",
 		"Deploy Configuration via SSH",
 		"Wait for Tailscale daemon",
 		"Authenticate Tailscale",
+	}
+
+	// Create an SSH function that delegates to the resolved provider
+	sshFn := func(machine, command string) (string, error) {
+		return vm.SSH(machine, command)
 	}
 
 	fns := []func() (string, error){
@@ -107,22 +117,22 @@ func runInit(cmd *cobra.Command, _ []string) error {
 			return "compiled from " + butaneTemplatePath, nil
 		},
 		func() (string, error) {
-			_ = podman.StopAll()
-			_ = podman.Remove(cfg.DevHostname)
+			_ = vm.StopAll()
+			_ = vm.Remove(cfg.DevHostname)
 			return "stopped and removed " + cfg.DevHostname, nil
 		},
 		func() (string, error) {
-			err := podman.Init(cfg.DevHostname)
+			err := vm.Init(cfg.DevHostname)
 			if err != nil {
 				return "", err
 			}
-			return cfg.DevHostname + " initialized", nil
+			return cfg.DevHostname + " initialized (" + vm.Name() + ")", nil
 		},
 		func() (string, error) {
-			if err := podman.Start(cfg.DevHostname); err != nil {
+			if err := vm.Start(cfg.DevHostname); err != nil {
 				return "", err
 			}
-			if err := podman.SetDefault(cfg.DevHostname); err != nil {
+			if err := vm.SetDefault(cfg.DevHostname); err != nil {
 				return "", err
 			}
 			return "running, set as default connection", nil
@@ -134,19 +144,19 @@ func runInit(cmd *cobra.Command, _ []string) error {
 					state.ignPath = ""
 				}
 			}()
-			if err := ignition.Deploy(state.ignPath, cfg.DevHostname); err != nil {
+			if err := ignition.DeployWithSSH(state.ignPath, cfg.DevHostname, sshFn); err != nil {
 				return "", err
 			}
 			return "ignition config pushed via SSH", nil
 		},
 		func() (string, error) {
-			if err := tailscale.WaitForDaemon(cfg.DevHostname, 3*time.Minute); err != nil {
+			if err := tailscale.WaitForDaemonWithSSH(cfg.DevHostname, 3*time.Minute, sshFn); err != nil {
 				return "", err
 			}
 			return "tailscaled container running", nil
 		},
 		func() (string, error) {
-			authURL, err := tailscale.Up(cfg.DevHostname, cfg.DevHostname)
+			authURL, err := tailscale.UpWithSSH(cfg.DevHostname, cfg.DevHostname, sshFn)
 			if err != nil {
 				return "", err
 			}
@@ -182,7 +192,7 @@ func runInit(cmd *cobra.Command, _ []string) error {
 	}
 
 	// ── Success summary ───────────────────────────────────────────────────────
-	fmt.Printf("\n🎉 Setup complete!\n\n")
+	fmt.Printf("\n🎉 Setup complete! (provider: %s)\n\n", vm.Name())
 	fmt.Printf("  Public endpoint:  https://%s → :8080\n", cfg.CFDomain)
 	fmt.Printf("  VM hostname:      %s\n", cfg.DevHostname)
 	fmt.Printf("  Tailnet:          connected\n\n")

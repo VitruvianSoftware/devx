@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/podman"
 )
 
 var teardownCmd = &cobra.Command{
@@ -25,6 +24,11 @@ func init() {
 }
 
 func runTeardown(_ *cobra.Command, _ []string) error {
+	vm, err := getVMProvider()
+	if err != nil {
+		return err
+	}
+
 	devName := os.Getenv("USER")
 	if devName == "" {
 		devName = "developer"
@@ -37,7 +41,7 @@ func runTeardown(_ *cobra.Command, _ []string) error {
 			huh.NewGroup(
 				huh.NewConfirm().
 					Title(fmt.Sprintf("Destroy %q?", cfg.DevHostname)).
-					Description("This will stop and permanently delete the VM and all its data.\nTailscale re-authentication will be required on next setup.").
+					Description(fmt.Sprintf("This will stop and permanently delete the VM (%s) and all its data.\nTailscale re-authentication will be required on next setup.", vm.Name())).
 					Affirmative("Yes, destroy it").
 					Negative("Cancel").
 					Value(&confirmed),
@@ -50,11 +54,11 @@ func runTeardown(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	fmt.Printf("Stopping %s...\n", cfg.DevHostname)
-	_ = podman.StopAll()
+	fmt.Printf("Stopping %s (%s)...\n", cfg.DevHostname, vm.Name())
+	_ = vm.StopAll()
 
 	fmt.Printf("Removing %s...\n", cfg.DevHostname)
-	_ = podman.Remove(cfg.DevHostname)
+	_ = vm.Remove(cfg.DevHostname)
 
 	fmt.Println("✓ VM removed.")
 	return nil

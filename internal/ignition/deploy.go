@@ -34,9 +34,18 @@ type ignConfig struct {
 	} `json:"systemd"`
 }
 
-// Deploy applies the Ignition config by SSH-ing into the VM rather than
-// using --ignition-path, dodging Podman 5's networking breakage.
+// SSHFunc is a function that executes a command on a remote machine via SSH.
+type SSHFunc func(machineName, command string) (string, error)
+
+// Deploy applies the Ignition config using the legacy podman.SSH call.
+// Deprecated: Use DeployWithSSH for provider-agnostic deployments.
 func Deploy(ignPath, machineName string) error {
+	return DeployWithSSH(ignPath, machineName, podman.SSH)
+}
+
+// DeployWithSSH applies the Ignition config by executing commands on the
+// VM through the provided SSH function. This supports any virtualization backend.
+func DeployWithSSH(ignPath, machineName string, sshFn SSHFunc) error {
 	data, err := os.ReadFile(ignPath)
 	if err != nil {
 		return fmt.Errorf("reading ign path %s: %w", ignPath, err)
@@ -48,7 +57,7 @@ func Deploy(ignPath, machineName string) error {
 	}
 
 	// Make necessary paths First
-	_, _ = podman.SSH(machineName, "sudo mkdir -p /etc/cloudflared /var/lib/tailscale /etc/sysctl.d")
+	_, _ = sshFn(machineName, "sudo mkdir -p /etc/cloudflared /var/lib/tailscale /etc/sysctl.d")
 
 	for _, f := range conf.Storage.Files {
 		content := f.Contents.Source
@@ -75,18 +84,18 @@ func Deploy(ignPath, machineName string) error {
 		}
 		
 		script := fmt.Sprintf("sudo tee %s >/dev/null <<'EOF'\n%s\nEOF\nsudo chmod %o %s", f.Path, content, f.Mode, f.Path)
-		if _, err := podman.SSH(machineName, script); err != nil {
+		if _, err := sshFn(machineName, script); err != nil {
 			return fmt.Errorf("deploying file %s: %w", f.Path, err)
 		}
 	}
     // Re-evaluate sysctls
-	_, _ = podman.SSH(machineName, "sudo sysctl --system")
+	_, _ = sshFn(machineName, "sudo sysctl --system")
 
 	var enabledUnits []string
 	for _, u := range conf.Systemd.Units {
 		path := fmt.Sprintf("/etc/systemd/system/%s", u.Name)
 		script := fmt.Sprintf("sudo tee %s >/dev/null <<'EOF'\n%s\nEOF\n", path, strings.TrimSpace(u.Contents))
-		if _, err := podman.SSH(machineName, script); err != nil {
+		if _, err := sshFn(machineName, script); err != nil {
 			return fmt.Errorf("deploying unit %s: %w", u.Name, err)
 		}
 		if u.Enabled {
@@ -94,15 +103,15 @@ func Deploy(ignPath, machineName string) error {
 		}
 	}
 	
-	if _, err := podman.SSH(machineName, "sudo systemctl daemon-reload"); err != nil {
+	if _, err := sshFn(machineName, "sudo systemctl daemon-reload"); err != nil {
 		return fmt.Errorf("systemctl daemon-reload: %w", err)
 	}
 	
 	for _, u := range enabledUnits {
-		if _, err := podman.SSH(machineName, "sudo systemctl enable --now "+u); err != nil {
+		if _, err := sshFn(machineName, "sudo systemctl enable --now "+u); err != nil {
 			return fmt.Errorf("systemctl enable --now %s: %w", u, err)
 		}
-		_, _ = podman.SSH(machineName, "sudo systemctl restart "+u)
+		_, _ = sshFn(machineName, "sudo systemctl restart "+u)
 	}
 
 	return nil

@@ -8,11 +8,21 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/podman"
 )
 
+// SSHFunc is a function that executes a command on a remote machine.
+type SSHFunc func(machineName, command string) (string, error)
+
 // WaitForDaemon polls until the tailscaled container is running inside the VM.
+// Uses the legacy podman.SSH call for backward compatibility.
 func WaitForDaemon(machineName string, timeout time.Duration) error {
+	return WaitForDaemonWithSSH(machineName, timeout, podman.SSH)
+}
+
+// WaitForDaemonWithSSH polls until the tailscaled container is running,
+// using the provided SSH function for provider-agnostic execution.
+func WaitForDaemonWithSSH(machineName string, timeout time.Duration, sshFn SSHFunc) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		_, err := podman.SSH(machineName, "sudo podman inspect tailscaled > /dev/null 2>&1")
+		_, err := sshFn(machineName, "sudo podman inspect tailscaled > /dev/null 2>&1")
 		if err == nil {
 			return nil
 		}
@@ -22,9 +32,14 @@ func WaitForDaemon(machineName string, timeout time.Duration) error {
 }
 
 // Up runs tailscale up inside the VM and returns the auth URL if one is
-// printed. When already authenticated, returns an empty string.
+// printed. Uses the legacy podman.SSH call.
 func Up(machineName, hostname string) (string, error) {
-	out, err := podman.SSH(machineName,
+	return UpWithSSH(machineName, hostname, podman.SSH)
+}
+
+// UpWithSSH runs tailscale up using the provided SSH function.
+func UpWithSSH(machineName, hostname string, sshFn SSHFunc) (string, error) {
+	out, err := sshFn(machineName,
 		fmt.Sprintf("sudo podman exec tailscaled timeout 5 tailscale up --accept-routes --hostname=%s 2>&1 || true", hostname))
 
 	authURL := ExtractAuthURL(out)
@@ -35,8 +50,14 @@ func Up(machineName, hostname string) (string, error) {
 }
 
 // Status returns a brief status string from tailscale inside the VM.
+// Uses the legacy podman.SSH call.
 func Status(machineName string) string {
-	out, err := podman.SSH(machineName,
+	return StatusWithSSH(machineName, podman.SSH)
+}
+
+// StatusWithSSH returns a brief status string using the provided SSH function.
+func StatusWithSSH(machineName string, sshFn SSHFunc) string {
+	out, err := sshFn(machineName,
 		"sudo podman exec tailscaled tailscale status --self 2>/dev/null | head -1")
 	if err != nil {
 		return "unknown"

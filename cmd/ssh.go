@@ -14,6 +14,11 @@ var sshCmd = &cobra.Command{
 	Short:              "Drop into an SSH shell inside the VM.",
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		vm, err := getVMProvider()
+		if err != nil {
+			return err
+		}
+
 		// Load env safely to get the VM name
 		devName := os.Getenv("USER")
 		cfg := config.New(devName, "", "", "")
@@ -21,8 +26,31 @@ var sshCmd = &cobra.Command{
 			cfg.DevHostname = s.DevHostname
 		}
 
-		sshArgs := append([]string{"machine", "ssh", cfg.DevHostname}, args...)
-		pCmd := exec.Command("podman", sshArgs...)
+		// For podman, use native 'podman machine ssh'.
+		// For docker/orbstack, drop into the VM shell.
+		if vm.Name() == "podman" {
+			sshArgs := append([]string{"machine", "ssh", cfg.DevHostname}, args...)
+			pCmd := exec.Command("podman", sshArgs...)
+			pCmd.Stdin = os.Stdin
+			pCmd.Stdout = os.Stdout
+			pCmd.Stderr = os.Stderr
+			return pCmd.Run()
+		}
+
+		// Docker / OrbStack: try orb first, then docker run
+		if orbPath, lookErr := exec.LookPath("orb"); lookErr == nil && orbPath != "" {
+			orbArgs := append([]string{"sh"}, args...)
+			pCmd := exec.Command("orb", orbArgs...)
+			pCmd.Stdin = os.Stdin
+			pCmd.Stdout = os.Stdout
+			pCmd.Stderr = os.Stderr
+			return pCmd.Run()
+		}
+
+		// Fallback: privileged nsenter into Docker Desktop VM
+		dockerArgs := []string{"run", "--rm", "-it", "--privileged", "--pid=host",
+			"alpine:latest", "nsenter", "-t", "1", "-m", "-u", "-n", "-i", "sh"}
+		pCmd := exec.Command("docker", dockerArgs...)
 		pCmd.Stdin = os.Stdin
 		pCmd.Stdout = os.Stdout
 		pCmd.Stderr = os.Stderr
