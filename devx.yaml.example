@@ -35,6 +35,10 @@ tunnels:
   - name: web
     port: 3000
 
+    # You can simulate poor network conditions to test your frontend.
+    # Supported profiles: '3g', 'edge', 'slow'
+    throttle: "3g"
+
   # Example output: https://webhooks-demo-app-james.ipv1337.dev
   - name: webhooks
     port: 8000
