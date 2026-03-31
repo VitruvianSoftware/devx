@@ -35,6 +35,10 @@ func runShell(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("getting cwd: %w", err)
 	}
 
+	if err := ensureVMRunning(); err != nil {
+		return err
+	}
+
 	cfg, cfgPath, err := devcontainer.Load(cwd)
 	if err != nil {
 		return fmt.Errorf("devcontainer: %w", err)

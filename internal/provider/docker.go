@@ -48,6 +48,14 @@ func (d *DockerProvider) StopAll() error {
 	return exec.Command("docker", args...).Run()
 }
 
+func (d *DockerProvider) Sleep(_ string) error {
+	return fmt.Errorf("Docker Desktop and OrbStack manage their own VM sleep state natively via macOS.")
+}
+
+func (d *DockerProvider) Resize(_ string, _, _ int) error {
+	return fmt.Errorf("Docker Desktop and OrbStack manage their hardware limits dynamically or via GUI. Native CLI resizing is only supported on Podman.")
+}
+
 func (d *DockerProvider) Remove(name string) error {
 	_ = exec.Command("docker", "rm", "-f", name).Run()
 	return nil

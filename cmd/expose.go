@@ -28,6 +28,10 @@ var exposeCmd = &cobra.Command{
 		port := args[0]
 		devName := os.Getenv("USER")
 
+		if err := ensureVMRunning(); err != nil {
+			return err
+		}
+
 		cfg := config.New(devName, "", "", "")
 		if s, err := secrets.Load(envFile); err == nil {
 			if s.DevHostname != "" {

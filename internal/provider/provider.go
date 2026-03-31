@@ -27,6 +27,12 @@ type VMProvider interface {
 	// Remove force-removes a VM by name.
 	Remove(name string) error
 
+	// Sleep suspends the VM to save memory/battery.
+	Sleep(name string) error
+
+	// Resize modifies the VM's hardware limits (cpus, memory).
+	Resize(name string, cpus int, memoryMB int) error
+
 	// SetDefault sets the active connection context to the named VM.
 	SetDefault(name string) error
 

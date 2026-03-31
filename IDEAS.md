@@ -40,9 +40,9 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** Testing how your local app handles high latency, dropped packets, or 3G network speeds is extremely tedious.
 * **The Solution:** Add `--throttle=3g` or `--latency=200ms` flags to the `expose` command. We leveraged a native Go TCP proxy (`internal/trafficproxy`) to intercept the Cloudflare tunnel and artificially shape incoming Edge traffic. This allows cross-platform simulation (macOS/Docker/OrbStack) for frontend/mobile testing without OS-level `tc` limits.
 
-### 9. Automated Resource Scaling & Deep Sleep
+### 9. Automated Resource Scaling & Deep Sleep (DONE)
 * **The Problem:** VMs reserve RAM and CPU constantly, draining Macbook batteries when sitting idle.
-* **The Solution:** Implement auto-pause/deep-sleep when no containers are active. Automatically resume the VM when `devx` or `podman` commands are invoked. Add support to dynamically resize the VM (`devx vm resize --ram 16g`) without tearing down the existing data.
+* **The Solution:** Implemented auto-pause/deep-sleep (`devx vm sleep-watch`) when no containers are active. We also added seamless JIT wake-ups. VM will automatically resume the moment you invoke any `devx` commands that require infrastructure. Finally, we added support to dynamically resize the VM (`devx vm resize --cpus 4 --memory 8192`) without destroying the machine context.
 
 ### 10. Global Secret Sync & `.env` Management
 * **The Problem:** Sharing `.env` files across a team securely is a massive pain, often resulting in Slack DMs and out-of-sync configurations.
