@@ -170,7 +170,23 @@ Commands:
 |---------|-------------|
 | `devx tunnel expose [port]` | Expose a local port to the internet via `*.ipv1337.dev` |
 | `devx tunnel expose [port] --name myapp` | Use a static subdomain (`myapp.you.ipv1337.dev`) |
+| `devx tunnel expose [port] --basic-auth "user:pass"` | Protect your exposed URL with Basic Authentication |
 | `devx tunnel inspect [port]` | Live TUI to inspect and replay HTTP traffic (like ngrok inspect) |
+
+### 🔒 Built-in Authentication (`--basic-auth`)
+
+Exposing local ports to the public internet securely shouldn't require premium subscriptions to external services. `devx` comes with a highly-performant built-in reverse proxy in Go.
+
+Simply pass the `--basic-auth` flag to instantly protect your active development environment with encrypted basic authentication at the edge proxy layer.
+
+```bash
+# Expose your Next.js app but require credentials
+devx tunnel expose 3000 --basic-auth "admin:supersecret"
+
+# Inspect webhooks while restricting access
+devx tunnel inspect 8080 --name stripe-test --basic-auth "webhook:testing123"
+```
+
 | `devx tunnel list` | List all active port exposures with URLs and ports |
 | `devx tunnel unexpose` | Clean up all exposed tunnels |
 | `devx tunnel update` | Rotate Cloudflare credentials without rebuilding the VM |
