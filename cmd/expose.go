@@ -15,6 +15,7 @@ import (
 )
 
 var exposeName string
+var exposeDomain string
 var basicAuth string
 
 var exposeCmd = &cobra.Command{
@@ -32,7 +33,10 @@ var exposeCmd = &cobra.Command{
 			}
 		}
 
-		if cfg.CFDomain == "" {
+		baseDomain := cfg.CFDomain
+		if exposeDomain != "" {
+			baseDomain = exposeDomain
+		} else if baseDomain == "" {
 			return fmt.Errorf("CFDomain is not configured. Run `devx init` or `devx secrets` first")
 		}
 
@@ -47,7 +51,7 @@ var exposeCmd = &cobra.Command{
 			exposeID = fmt.Sprintf("app-%x", int(rand.Int31()&0xfffff))
 		}
 
-		fullDomain := exposure.GenerateDomain(exposeID, cfg.CFDomain)
+		fullDomain := exposure.GenerateDomain(exposeID, baseDomain)
 		tunnelName := fmt.Sprintf("devx-expose-%s-%s", devName, exposeID)
 
 		fmt.Printf("🚀 Organizing explicit tunnel '%s'...\n", tunnelName)
@@ -109,6 +113,7 @@ var exposeCmd = &cobra.Command{
 
 func init() {
 	exposeCmd.Flags().StringVarP(&exposeName, "name", "n", "", "Static sub-domain name to use (e.g. 'api' -> api.james.ipv1337.dev)")
+	exposeCmd.Flags().StringVar(&exposeDomain, "domain", "", "Custom Cloudflare domain (BYOD) (e.g. 'mycompany.dev')")
 	exposeCmd.Flags().StringVar(&basicAuth, "basic-auth", "", "Protect the exposed tunnel with basic auth (e.g. 'user:pass')")
 	tunnelCmd.AddCommand(exposeCmd)
 }

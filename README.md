@@ -207,9 +207,26 @@ devx tunnel expose 3000 --basic-auth "admin:supersecret"
 devx tunnel inspect 8080 --name stripe-test --basic-auth "webhook:testing123"
 ```
 
-| `devx tunnel list` | List all active port exposures with URLs and ports |
-| `devx tunnel unexpose` | Clean up all exposed tunnels |
-| `devx tunnel update` | Rotate Cloudflare credentials without rebuilding the VM |
+### 🌍 Custom Domain Support (BYOD)
+
+Want to use your own company domain instead of the free `.ipv1337.dev` sandbox? Any `devx tunnel` command supports the `--domain` override!
+
+As long as you are logged into a Cloudflare account that owns the zone, Cloudflared will dynamically configure the requested DNS edge dynamically.
+
+```bash
+# Provision a branded tunnel endpoint on your own custom domain
+devx tunnel expose 8000 --domain mycompany.dev --name api
+# → https://api.mycompany.dev
+
+# Or use it globally across an entire YAML topology
+devx tunnel up --domain mycompany.dev
+```
+
+### Configuration (`devx config`)
+
+| Command | Description |
+|---------|-------------|
+| `devx config secrets` | Interactive credential setup / rotation for `.env` |
 
 ### 🔍 Request Inspector (`devx tunnel inspect`)
 
