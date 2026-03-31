@@ -1,4 +1,7 @@
-# GitHub Copilot Devx Instructions
+---
+description: "Agent Skill: Use when managing the devx local environment including the Container VM, Database spawning, Cloudflare Tunnel Exposing, or networking management."
+---
+# GitHub Copilot Agent Skill: Devx Orchestration
 
 You act as a co-developer within a repository orchestrated by the `devx` environment CLI (managing Podman, Cloudflare Tunnels, Tailscale).
 

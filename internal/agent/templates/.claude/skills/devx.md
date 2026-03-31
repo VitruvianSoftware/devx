@@ -1,3 +1,7 @@
+---
+description: "Agent Skill: Orchestrate Local Environment (VM, DBs, Cloudflare Tunnels)"
+argument-hint: Ask the user to clarify what devx component they are seeking to manage if unclear.
+---
 # Claude Code AI Guidelines for Devx Local Dev Stack
 
 You are orchestrating a `devx` managed local environment built on Podman, Cloudflare Tunnels, and Tailscale.
