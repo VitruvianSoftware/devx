@@ -1,0 +1,29 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+)
+
+// ensureVMRunning is a lifecycle hook invoked by devx CLI commands
+// that require the local hypervisor/provider to be un-suspended.
+func ensureVMRunning() error {
+	prov, err := getVMProvider()
+	if err != nil {
+		return err
+	}
+
+	// Orbital/Docker Desktop manages sleep state natively.
+	if prov.Name() != "podman" {
+		return nil
+	}
+
+	if !prov.IsRunning("devx") {
+		fmt.Fprintln(os.Stderr, "😴 VM is asleep. Waking it up...")
+		if err := prov.Start("devx"); err != nil {
+			return fmt.Errorf("auto-resume failed: %w", err)
+		}
+	}
+
+	return nil
+}

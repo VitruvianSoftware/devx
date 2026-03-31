@@ -39,6 +39,42 @@ func (p *PodmanProvider) StopAll() error {
 	return nil
 }
 
+func (p *PodmanProvider) Sleep(name string) error {
+	cmd := exec.Command("podman", "machine", "stop", name)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("podman machine stop: %w\n%s", err, string(out))
+	}
+	return nil
+}
+
+func (p *PodmanProvider) Resize(name string, cpus int, memoryMB int) error {
+	wasRunning := p.IsRunning(name)
+	if wasRunning {
+		fmt.Println("Stopping machine to resize...")
+		_ = p.Sleep(name)
+	}
+
+	args := []string{"machine", "set"}
+	if cpus > 0 {
+		args = append(args, "--cpus", fmt.Sprintf("%d", cpus))
+	}
+	if memoryMB > 0 {
+		args = append(args, "--memory", fmt.Sprintf("%d", memoryMB))
+	}
+	args = append(args, name)
+
+	cmd := exec.Command("podman", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("podman machine set: %w\n%s", err, string(out))
+	}
+
+	if wasRunning {
+		fmt.Println("Restarting machine...")
+		return p.Start(name)
+	}
+	return nil
+}
+
 func (p *PodmanProvider) Remove(name string) error {
 	cmd := exec.Command("podman", "machine", "rm", "-f", name)
 	_ = cmd.Run()

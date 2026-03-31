@@ -43,6 +43,10 @@ var upCmd = &cobra.Command{
 	Short: "Provision databases and expose ports defined in devx.yaml.",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := ensureVMRunning(); err != nil {
+			return err
+		}
+
 		yamlPath := "devx.yaml"
 		if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
 			return fmt.Errorf("could not find devx.yaml in the current directory. Please create one to use 'devx tunnel up'")

@@ -255,7 +255,10 @@ This means you can run `devx tunnel expose 8080` **from inside the dev container
 | `devx vm init --provider docker` | Provision using Docker Desktop instead of Podman |
 | `devx vm init --provider orbstack` | Provision using OrbStack |
 | `devx vm status` | Show health of VM, Cloudflare tunnel, and Tailscale |
-| `devx vm teardown` | Stop and permanently remove the VM (prompts for confirmation) |
+| `devx vm sleep` | Instantly pause the VM (saves RAM/battery) |
+| `devx vm sleep-watch` | Run background daemon to auto-pause idle VMs |
+| `devx vm resize --cpus 4 --memory 8192` | Dynamically resize VM hardware limits |
+| `devx vm teardown` | Stop and permanently remove the VM |
 | `devx vm ssh` | Drop into an SSH shell inside the VM |
 
 ### 🔌 Backend Pluggability (`--provider`)
@@ -282,6 +285,22 @@ devx vm ssh --provider orbstack
 
 # Teardown a Docker-backed environment
 devx vm teardown --provider docker
+```
+
+### 🔋 Automated Scaling & Deep Sleep
+
+VMs can reserve RAM and CPU constantly, draining Macbook batteries when sitting idle. `devx` natively manages deep sleep for Podman environments natively (Docker and Orbstack handle this directly via macOS). 
+
+Run the background daemon to automatically put the machine to sleep when 0 containers are active:
+```bash
+devx vm sleep-watch --interval 60
+```
+
+`devx` features seamless **JIT (Just-In-Time) VM wake-ups**. If your VM goes to sleep, simply run `devx up`, `devx expose`, `devx shell`, or `devx db spawn`. The CLI detects the dormant VM and instantly wakes it up before executing your commands.
+
+You can also dynamically resize a Podman machine without having to rebuild the developer context:
+```bash
+devx vm resize --cpus 4 --memory 8192
 ```
 
 ### Tunnel & Port Exposure (`devx tunnel`)
