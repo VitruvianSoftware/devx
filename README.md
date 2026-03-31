@@ -150,10 +150,53 @@ devx — Supercharged local dev environment
 Commands:
   vm          Manage the local development VM
   tunnel      Manage Cloudflare tunnels and port exposure
+  shell       Launch a dev container from devcontainer.json
   config      Manage devx configuration and credentials
   exec        Run low-level infrastructure tools directly
   version     Print the devx version
 ```
+
+### 🐳 Dev Containers (`devx shell`)
+
+Drop into a fully isolated development environment powered by your project's `devcontainer.json` — no VS Code required.
+
+`devx shell` reads your existing `devcontainer.json`, pulls the specified container image, mounts your local workspace, applies environment variables, forwards ports, runs post-create commands, and drops you into an interactive shell.
+
+**Supported `devcontainer.json` locations:**
+- `.devcontainer/devcontainer.json` (standard)
+- `.devcontainer.json` (root level)
+- `.devcontainer/<name>/devcontainer.json` (named configs)
+
+```bash
+# Launch a dev shell using your project's devcontainer.json
+devx shell
+
+# Use Docker instead of Podman as the container runtime
+devx shell --runtime docker
+```
+
+**Example `devcontainer.json`:**
+```json
+{
+  "name": "Go Dev Environment",
+  "image": "mcr.microsoft.com/devcontainers/go:1.22",
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspace",
+  "containerEnv": {
+    "GOPATH": "/home/vscode/go"
+  },
+  "postCreateCommand": "go mod tidy",
+  "forwardPorts": [8080, 3000]
+}
+```
+
+Running `devx shell` in a project with the above config will:
+1. Pull the Go 1.22 dev container image
+2. Mount your project at `/workspace`
+3. Set `GOPATH` inside the container
+4. Expose ports 8080 and 3000 on your host
+5. Run `go mod tidy` on first launch
+6. Drop you into an interactive shell as the `vscode` user
 
 ### VM Management (`devx vm`)
 

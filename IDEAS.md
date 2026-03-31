@@ -28,7 +28,7 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** Hardcoding Fedora CoreOS + Podman Machine is highly opinionated. Some devs might already have Docker Desktop or OrbStack running and don't want to run two VMs.
 * **The Solution:** Abstract the `internal/podman` package into a `VirtualizationProvider` interface. Allow developers to map `devx` networking (Cloudflare + Tailscale) directly on top of their existing hypervisor (`--provider=orbstack`).
 
-### 6. Built-in Dev Containers (`devcontainer.json`) Integration
+### 6. Built-in Dev Containers (`devcontainer.json`) Integration (DONE)
 * **The Problem:** The VM gives you an OS, but you still need node, go, rust, etc. for your specific project.
 * **The Solution:** Add native support for `devcontainer.json`. Running `devx shell` reads the config, spins up the exact container inside the Podman VM, mounts your code, and drops you into a shell with completely isolated tooling.
 
