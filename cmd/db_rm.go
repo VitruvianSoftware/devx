@@ -41,6 +41,16 @@ func runDbRm(_ *cobra.Command, args []string) error {
 	containerName := fmt.Sprintf("devx-db-%s", engineName)
 	volumeName := fmt.Sprintf("devx-data-%s", engineName)
 
+	if DryRun {
+		fmt.Printf("DRY RUN: Would stop and remove container %s\n", containerName)
+		if !rmKeepVolume {
+			fmt.Printf("DRY RUN: Would permanently delete data volume %s\n", volumeName)
+		} else {
+			fmt.Printf("DRY RUN: Would preserve data volume %s\n", volumeName)
+		}
+		return nil
+	}
+
 	if !rmKeepVolume && !NonInteractive {
 		var confirmed bool
 		form := huh.NewForm(

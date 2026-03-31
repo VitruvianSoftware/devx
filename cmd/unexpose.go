@@ -20,6 +20,12 @@ var unexposeCmd = &cobra.Command{
 		}
 
 		fmt.Println("🧹 Cleaning up exposed Cloudflare applications...")
+
+		if DryRun {
+			fmt.Println("DRY RUN: Would list and delete all active tunnels matching devx-expose-" + devName + "-*")
+			return nil
+		}
+		
 		count, err := cloudflare.CleanupExposedTunnels(devName)
 		if err != nil {
 			return fmt.Errorf("failed cleaning tunnels: %w", err)
