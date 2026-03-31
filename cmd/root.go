@@ -10,6 +10,7 @@ import (
 var envFile string
 var outputJSON bool
 var NonInteractive bool
+var DryRun bool
 
 var rootCmd = &cobra.Command{
 	Use:   "devx",
@@ -42,6 +43,8 @@ func init() {
 		"Output results in machine-readable JSON format for AI agents")
 	rootCmd.PersistentFlags().BoolVarP(&NonInteractive, "non-interactive", "y", false,
 		"Bypass interactive prompts and auto-confirm destructive actions")
+	rootCmd.PersistentFlags().BoolVar(&DryRun, "dry-run", false,
+		"Print what destructive actions would do without executing them")
 
 	rootCmd.AddCommand(vmCmd)
 	rootCmd.AddCommand(tunnelCmd)

@@ -35,6 +35,12 @@ func runTeardown(_ *cobra.Command, _ []string) error {
 	}
 	cfg := config.New(devName, "", "", "")
 
+	if DryRun {
+		fmt.Printf("DRY RUN: Would completely destroy the VM '%s' (%s)\n", cfg.DevHostname, vm.Name())
+		fmt.Println("DRY RUN: Tailscale re-authentication will be required on next setup.")
+		return nil
+	}
+
 	if !forceFlag && !NonInteractive {
 		var confirmed bool
 		form := huh.NewForm(

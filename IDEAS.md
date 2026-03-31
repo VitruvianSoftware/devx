@@ -60,9 +60,9 @@ This document outlines the top 10 planned features to make `devx` the undisputed
 * **The Problem:** AI agents easily get stuck forever waiting on invisible TUI/CLI prompts (like survey forms or confirmation warnings) that they have no mechanism to "press enter" on.
 * **The Solution:** Added a strict `--non-interactive` (or `-y`) flag globally. This forces `devx` to instantly accept safe defaults, bypass teardown/deletion confirmation warnings automatically, or hard-fail immediately if requirements aren't met rather than stalling inside the hidden `huh` TUI forms.
 
-### 13. Destructive Action Preflight (`--dry-run`)
+### 13. Destructive Action Preflight (`--dry-run`) (DONE)
 * **The Problem:** Agents are prone to hallucinating or misunderstanding their scope. If an agent calls `devx vm teardown` or `devx db rm`, it could wipe out gigabytes of critical developer state irreversibly.
-* **The Solution:** Add a `--dry-run` flag to destructive actions so the agent can safely request a dry-run confirmation and echo what would be deleted to the developer before execution.
+* **The Solution:** Added a global `--dry-run` flag wired into destructive actions (`vm teardown`, `db rm`, `tunnel unexpose`) so the agent can safely perform a preflight dry-run check and deterministically echo what records, VMs, and data would be deleted BEFORE actually taking action or bypassing the interactive prompts.
 
 ### 14. Standardized Predictable Exit Codes
 * **The Problem:** Command Line tools typically just return `exit status 1` for every single failure under the sun, forcing AI agents to parse raw English stderr logs to figure out what broke.

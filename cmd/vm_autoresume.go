@@ -8,6 +8,10 @@ import (
 // ensureVMRunning is a lifecycle hook invoked by devx CLI commands
 // that require the local hypervisor/provider to be un-suspended.
 func ensureVMRunning() error {
+	if DryRun {
+		return nil
+	}
+
 	prov, err := getVMProvider()
 	if err != nil {
 		return err
