@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/joho/godotenv"
@@ -189,26 +190,59 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	// ── Domain verification instructions ──────────────────────────────────
 	if needsVerification {
 		verifyURL := fmt.Sprintf("https://github.com/organizations/%s/settings/pages", owner)
+
+		if NonInteractive {
+			// Non-interactive: just print instructions and exit
+			fmt.Println()
+			fmt.Println("┌─────────────────────────────────────────────────────────────")
+			fmt.Println("│  ⚠️  One-Time Domain Verification Required")
+			fmt.Println("├─────────────────────────────────────────────────────────────")
+			fmt.Println("│")
+			fmt.Printf("│  Verify your domain at:\n")
+			fmt.Printf("│    %s\n", verifyURL)
+			fmt.Println("│")
+			fmt.Println("│  Then run: devx sites verify --domain " + domain)
+			fmt.Println("│  followed by: devx sites init --domain " + domain)
+			fmt.Println("└─────────────────────────────────────────────────────────────")
+			fmt.Println()
+			return nil
+		}
+
+		// Interactive: walk the developer through it
 		fmt.Println()
 		fmt.Println("┌─────────────────────────────────────────────────────────────")
-		fmt.Println("│  ⚠️  One-Time Domain Verification Required")
+		fmt.Println("│  🔐 One-Time Domain Verification (interactive)")
 		fmt.Println("├─────────────────────────────────────────────────────────────")
 		fmt.Println("│")
-		fmt.Println("│  GitHub requires org-level domain verification before")
-		fmt.Println("│  it will provision an SSL certificate for custom domains.")
+		fmt.Println("│  GitHub requires domain verification before issuing SSL.")
+		fmt.Println("│  devx will handle the Cloudflare DNS side for you.")
 		fmt.Println("│")
-		fmt.Println("│  Steps:")
-		fmt.Printf("│    1. Open: %s\n", verifyURL)
-		fmt.Printf("│    2. Click \"Add a domain\" → enter: %s\n", domain)
-		fmt.Println("│    3. GitHub will show a TXT record to add")
-		fmt.Println("│    4. Add the TXT record in your Cloudflare DNS dashboard")
-		fmt.Println("│    5. Click \"Verify\" in GitHub")
-		fmt.Println("│    6. Re-run: devx sites init --domain " + domain)
-		fmt.Println("│")
-		fmt.Println("│  This only needs to be done once per domain per org.")
+		fmt.Printf("│  1. Open: %s\n", verifyURL)
+		fmt.Printf("│  2. Click \"Add a domain\" → enter: %s\n", domain)
+		fmt.Println("│  3. GitHub will show a TXT record name and value")
+		fmt.Println("│  4. Paste them below — devx will create the DNS record")
 		fmt.Println("└─────────────────────────────────────────────────────────────")
 		fmt.Println()
-		return nil
+
+		if err := runVerificationWizard(domain, zoneID); err != nil {
+			return err
+		}
+
+		// Retry the custom domain setup
+		fmt.Println()
+		fmt.Println("⏳ Waiting 10 seconds for DNS propagation...")
+		time.Sleep(10 * time.Second)
+
+		fmt.Print("⏳ Retrying custom domain & SSL setup... ")
+		if err := github.SetCustomDomain(owner, repo, subdomain); err != nil {
+			fmt.Println("⚠")
+			fmt.Println()
+			fmt.Println("  Domain may still be verifying. Click \"Verify\" in GitHub,")
+			fmt.Println("  then re-run: devx sites init --domain " + domain)
+			fmt.Println()
+			return nil
+		}
+		fmt.Println("✓")
 	}
 
 	// ── Summary ──────────────────────────────────────────────────────────
@@ -225,12 +259,134 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
+// runVerificationWizard interactively collects TXT record details and creates
+// the record in Cloudflare.
+func runVerificationWizard(domain, zoneID string) error {
+	var txtHost, txtValue string
+
+	err := huh.NewInput().
+		Title("TXT Record Name").
+		Description("Copy the record name from GitHub (e.g., _github-pages-challenge-YourOrg)").
+		Placeholder("_github-pages-challenge-YourOrg").
+		Value(&txtHost).
+		Run()
+	if err != nil {
+		return fmt.Errorf("TXT host prompt: %w", err)
+	}
+
+	err = huh.NewInput().
+		Title("TXT Record Value").
+		Description("Copy the verification code from GitHub").
+		Placeholder("abc123def456...").
+		Value(&txtValue).
+		Run()
+	if err != nil {
+		return fmt.Errorf("TXT value prompt: %w", err)
+	}
+
+	txtHost = strings.TrimSpace(txtHost)
+	txtValue = strings.TrimSpace(txtValue)
+
+	if txtHost == "" || txtValue == "" {
+		return fmt.Errorf("both TXT record name and value are required")
+	}
+
+	// If they didn't include the full domain, append it
+	if !strings.Contains(txtHost, ".") {
+		txtHost = txtHost + "." + domain
+	}
+
+	fmt.Println()
+	fmt.Printf("⏳ Creating TXT record: %s → %s ... ", txtHost, txtValue)
+	if err := cfapi.CreateTXT(zoneID, txtHost, txtValue); err != nil {
+		fmt.Println("✗")
+		return err
+	}
+	fmt.Println("✓")
+	fmt.Println()
+	fmt.Println("  ✅ TXT record created in Cloudflare!")
+	fmt.Println("  👉 Go back to GitHub and click \"Verify\"")
+
+	// Wait for user to verify
+	fmt.Println()
+	fmt.Println("  Press Enter after you've clicked Verify in GitHub...")
+	_, _ = fmt.Scanln()
+
+	return nil
+}
+
+// ── devx sites verify ────────────────────────────────────────────────────────
+
+var sitesVerifyCmd = &cobra.Command{
+	Use:   "verify",
+	Short: "Create a DNS TXT record for GitHub Pages domain verification",
+	Long: `Interactive wizard to create the TXT record required by GitHub for
+domain verification. Use this when setting up a custom domain for the
+first time.
+
+devx handles the Cloudflare DNS side — you just paste the TXT record
+details from GitHub's verification page.
+
+Example:
+  devx sites verify --domain vitruviansoftware.dev`,
+	RunE: runSitesVerify,
+}
+
+func runSitesVerify(cmd *cobra.Command, _ []string) error {
+	_ = godotenv.Load(envFile)
+
+	domain := sitesDomainFlag
+	if domain == "" {
+		if NonInteractive {
+			return fmt.Errorf("--domain is required in non-interactive mode")
+		}
+		err := huh.NewInput().
+			Title("What domain are you verifying?").
+			Placeholder("example.dev").
+			Value(&domain).
+			Run()
+		if err != nil {
+			return fmt.Errorf("domain prompt: %w", err)
+		}
+	}
+	domain = strings.TrimSpace(domain)
+	if domain == "" {
+		return fmt.Errorf("domain cannot be empty")
+	}
+
+	fmt.Print("⏳ Looking up Cloudflare zone... ")
+	zoneID, err := cfapi.LookupZoneID(domain)
+	if err != nil {
+		fmt.Println("✗")
+		return err
+	}
+	fmt.Printf("✓ (%s)\n", zoneID[:8]+"...")
+
+	owner, _, _ := github.RepoInfo()
+	if owner == "" {
+		owner = "YourOrg"
+	}
+	verifyURL := fmt.Sprintf("https://github.com/organizations/%s/settings/pages", owner)
+
+	fmt.Println()
+	fmt.Printf("  Open: %s\n", verifyURL)
+	fmt.Printf("  Add domain: %s\n", domain)
+	fmt.Println()
+
+	return runVerificationWizard(domain, zoneID)
+}
+
 func init() {
 	sitesInitCmd.Flags().StringVar(&sitesDomainFlag, "domain", "",
 		"Root domain for the site (e.g., vitruviansoftware.dev)")
 	sitesInitCmd.Flags().StringVar(&sitesNameFlag, "name", "",
 		"Subdomain name (defaults to repository name)")
 
+	sitesVerifyCmd.Flags().StringVar(&sitesDomainFlag, "domain", "",
+		"Domain to verify (e.g., vitruviansoftware.dev)")
+
 	sitesCmd.AddCommand(sitesInitCmd)
+	sitesCmd.AddCommand(sitesVerifyCmd)
 	rootCmd.AddCommand(sitesCmd)
 }
+
