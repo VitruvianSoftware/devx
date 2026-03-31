@@ -233,9 +233,7 @@ func CheckCredentials(envFile string) []CredentialStatus {
 
 		checkGHAuth(),
 
-		checkEnvVarSingle("Tailscale Auth Key", "vm init (Tailnet join)",
-			"TAILSCALE_AUTH_KEY", envVars,
-			"Generate at: https://login.tailscale.com/admin/settings/keys"),
+		checkTailscale(),
 
 		checkEnvVarSingle("CF Tunnel Token", "tunnel expose",
 			"CF_TUNNEL_TOKEN", envVars,
@@ -256,9 +254,7 @@ func CheckCredentials(envFile string) []CredentialStatus {
 	}
 
 	if _, err := exec.LookPath("gcloud"); err == nil {
-		results = append(results, checkCommandSuccess("GCP auth", "config pull (GCP)",
-			"gcloud", []string{"auth", "print-access-token"},
-			"Run: gcloud auth login"))
+		results = append(results, checkGCloudAuth())
 	}
 
 	return results
@@ -454,6 +450,78 @@ func checkCommandSuccess(name, requiredBy, binary string, args []string, howToFi
 	} else {
 		cs.Configured = true
 		cs.Detail = "authenticated"
+	}
+	return cs
+}
+
+// checkTailscale checks for Tailscale authentication.
+// Tailscale uses interactive browser auth via `tailscale up`, not an env var.
+// We check if the VM is already provisioned (Tailscale is baked into Ignition).
+func checkTailscale() CredentialStatus {
+	cs := CredentialStatus{
+		Name:       "Tailscale auth",
+		RequiredBy: "vm init (Tailnet join)",
+		HowToFix:   "Handled interactively during: devx vm init",
+	}
+
+	// Check if a devx VM already exists (Tailscale is configured inside it)
+	out, err := exec.Command("podman", "machine", "list", "--format", "{{.Name}}").Output()
+	if err == nil {
+		names := strings.TrimSpace(string(out))
+		if names != "" {
+			cs.Configured = true
+			cs.Detail = "configured via VM (interactive browser auth)"
+			return cs
+		}
+	}
+
+	cs.Detail = "will authenticate during vm init (browser flow)"
+	cs.Configured = true // Not a blocker — auth happens interactively at init time
+	return cs
+}
+
+// checkGCloudAuth checks for any credentialed GCP accounts.
+// Supports multiple accounts — reports the active one.
+func checkGCloudAuth() CredentialStatus {
+	cs := CredentialStatus{
+		Name:       "GCP auth",
+		RequiredBy: "config pull (GCP)",
+		HowToFix:   "Run: gcloud auth login",
+	}
+
+	out, err := exec.Command("gcloud", "auth", "list", "--format=value(account,status)").Output()
+	if err != nil {
+		cs.Detail = "not authenticated"
+		return cs
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	var activeAccount string
+	var totalAccounts int
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		totalAccounts++
+		// Format: "account@example.com\t*" (active) or "account@example.com\t" (inactive)
+		parts := strings.Split(line, "\t")
+		account := strings.TrimSpace(parts[0])
+		if len(parts) >= 2 && strings.TrimSpace(parts[1]) == "*" {
+			activeAccount = account
+		}
+	}
+
+	if totalAccounts == 0 {
+		cs.Detail = "no accounts configured"
+		return cs
+	}
+
+	cs.Configured = true
+	if activeAccount != "" {
+		cs.Detail = fmt.Sprintf("%s (%d account(s))", activeAccount, totalAccounts)
+	} else {
+		cs.Detail = fmt.Sprintf("%d account(s), no active default", totalAccounts)
 	}
 	return cs
 }
