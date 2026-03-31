@@ -20,6 +20,7 @@ import (
 var (
 	inspectExpose    bool
 	inspectName      string
+	inspectDomain    string
 	inspectBasicAuth string
 )
 
@@ -87,7 +88,10 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, tunnelID s
 		}
 	}
 
-	if cfg.CFDomain == "" {
+	baseDomain := cfg.CFDomain
+	if inspectDomain != "" {
+		baseDomain = inspectDomain
+	} else if baseDomain == "" {
 		return "", "", "", nil, fmt.Errorf("CFDomain is not configured. Run `devx vm init` or `devx config secrets` first")
 	}
 
@@ -100,7 +104,7 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, tunnelID s
 		exposeID = fmt.Sprintf("inspect-%x", int(rand.Int31()&0xfffff))
 	}
 
-	fullDomain := exposure.GenerateDomain(exposeID, cfg.CFDomain)
+	fullDomain := exposure.GenerateDomain(exposeID, baseDomain)
 	tunnelName = fmt.Sprintf("devx-expose-%s-%s", devName, exposeID)
 
 	tunnel, err := cloudflare.EnsureTunnel(tunnelName)
@@ -169,8 +173,9 @@ func cleanupTunnel(proc *os.Process, tunnelName, tunnelID string) {
 }
 
 func init() {
-	inspectCmd.Flags().BoolVar(&inspectExpose, "expose", false, "Expose the inspector via a Cloudflare tunnel")
-	inspectCmd.Flags().StringVarP(&inspectName, "name", "n", "", "Static sub-domain name (implies --expose)")
+	inspectCmd.Flags().BoolVarP(&inspectExpose, "expose", "e", false, "Expose the inspected port via Cloudflare tunnel")
+	inspectCmd.Flags().StringVarP(&inspectName, "name", "n", "", "Static sub-domain name to use if exposing")
+	inspectCmd.Flags().StringVar(&inspectDomain, "domain", "", "Custom Cloudflare domain (BYOD) (e.g. 'mycompany.dev')")
 	inspectCmd.Flags().StringVar(&inspectBasicAuth, "basic-auth", "", "Protect the exposed tunnel with basic auth (e.g. 'user:pass')")
 	tunnelCmd.AddCommand(inspectCmd)
 }

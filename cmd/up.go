@@ -24,8 +24,11 @@ type DevxConfigTunnel struct {
 
 type DevxConfig struct {
 	Name    string             `yaml:"name"`    // Project name 
+	Domain  string             `yaml:"domain"`  // Custom domain (BYOD)
 	Tunnels []DevxConfigTunnel `yaml:"tunnels"` // List of ports to expose
 }
+
+var upDomain string
 
 var upCmd = &cobra.Command{
 	Use:   "up",
@@ -62,7 +65,14 @@ var upCmd = &cobra.Command{
 			cfg.DevHostname = s.DevHostname
 		}
 
-		if cfg.CFDomain == "" {
+		baseDomain := cfg.CFDomain
+		if upDomain != "" {
+			baseDomain = upDomain
+		} else if cfgYaml.Domain != "" {
+			baseDomain = cfgYaml.Domain
+		}
+
+		if baseDomain == "" {
 			return fmt.Errorf("CFDomain is not configured. Run `devx init` or `devx config secrets` first")
 		}
 
@@ -89,7 +99,7 @@ var upCmd = &cobra.Command{
 				exposeID = fmt.Sprintf("port-%d", tConfig.Port) // fallbacks
 			}
 			composedDomainID := fmt.Sprintf("%s-%s", exposeID, projectName)
-			domain := exposure.GenerateDomain(composedDomainID, cfg.CFDomain)
+			domain := exposure.GenerateDomain(composedDomainID, baseDomain)
 			
 			fmt.Printf("🌍 Routing %s to port %d...\n", domain, tConfig.Port)
 			if err := cloudflare.RouteDNS(tunnelName, domain); err != nil {
@@ -154,5 +164,6 @@ func mustGetwd() string {
 }
 
 func init() {
+	upCmd.Flags().StringVar(&upDomain, "domain", "", "Custom Cloudflare domain (BYOD) to override setting in devx.yaml")
 	tunnelCmd.AddCommand(upCmd)
 }
