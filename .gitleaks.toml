@@ -1,0 +1,21 @@
+# .gitleaks.toml
+# Gitleaks configuration for the devx project.
+#
+# The files listed below are intentionally excluded from secret scanning
+# because they are gitignored and never committed to the repository.
+# They are local-only developer configuration files that legitimately
+# contain real credentials (e.g. Cloudflare tokens, tunnel secrets).
+#
+# Do NOT add files here that are tracked by git — fix those properly
+# by rotating the secret and removing it from history.
+
+[allowlist]
+  description = "Gitignored local developer config files"
+  paths = [
+    # Local developer secrets — gitignored, never committed
+    ".env",
+    ".env.local",
+    ".env.keys",
+    # devx snapshot metadata (may contain env var names)
+    ".devx/",
+  ]
