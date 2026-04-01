@@ -232,9 +232,10 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** Implemented `devx webhook catch`. A native Go HTTP server (no container needed) that accepts every request and displays it in a live Bubble Tea TUI with per-method colour coding (GET/POST/PUT/PATCH/DELETE), timestamp + duration, important signature header extraction (Stripe-Signature, X-Hub-Signature, X-Twilio-Signature, etc.), and pretty-printed syntax-highlighted JSON. Falls back to streaming JSON lines when not in a TTY (CI/jq). `--expose` wraps via Cloudflare tunnel for a public HTTPS URL.
 * **Key files:** `cmd/webhook_catch.go`, `internal/webhook/server.go`, `internal/webhook/tui.go`
 
-### 25. Secure Production Data Anonymization & Pull
+### 25. Secure Production Data Anonymization & Pull (DONE)
 * **The Problem:** `devx db spawn` offers a blank database, which is useless for fixing a bug that only occurs with specific production data shapes. Dumping production data locally is a massive security/compliance risk.
-* **The Solution:** Add `devx db pull <env>`. This integrates with cloud platforms (like custom GCP/AWS scripts) to trigger an automated, ephemeral staging job that dumps the requested database, runs a configured anonymization script (masking PII, emails, passwords), downloads the sanitized dump via the Tailnet, and streams it directly into the local `devx db spawn` instance.
+* **The Solution:** Implemented `devx db pull <engine>`. Instead of re-implementing an insecure local scrubbing engine, `devx` delegates to the cloud: it parses a simple shell command defined in `devx.yaml` (e.g., pulling a nightly scrubbed dump from an S3 bucket). It ensures the local database is running and securely streams the pre-anonymized output straight into the database container's ingestion tool (`psql`, `mysql`, `mongorestore`, `redis-cli`) without writing massive temp files to disk.
+* **Key files:** `cmd/db_pull.go`, `devx.yaml.example`
 
 ### 26. Instant Vulnerability & Secret Scanning
 * **The Problem:** Developers accidentally commit `.env` files or introduce NPM/Go vulnerabilities, which are only caught much later by GitHub Actions CI, breaking the build and requiring a context-switching PR fix.

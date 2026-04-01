@@ -53,9 +53,45 @@ devx db rm myapp-db              # Keep the volume
 devx db rm myapp-db --volumes    # Delete everything
 ```
 
+### `devx db pull`
+
+Pull a pre-scrubbed production/staging dataset and stream it directly into your local container:
+
+```bash
+devx db pull postgres
+```
+
+#### Why it's secure
+Dumping real production databases locally is a massive security risk. Instead of connecting your laptop directly to production or pulling unscrubbed PII, `devx` delegates to a shell command defined in your `devx.yaml`. 
+
+The standard approach is configuring your cloud environment to generate a nightly, anonymized dump (scrubbing emails, passwords, and PII) and storing it in a secure bucket. `devx db pull` simply downloads that safe artifact and pipes it directly into the container's ingestion tool (`psql`, `mysql`, etc.) without writing massive temporary files to your disk.
+
+#### Configuration
+
+Add a `pull.command` to your `devx.yaml`:
+
+```yaml
+databases:
+  - engine: postgres
+    port: 5432
+    pull:
+      # A shell command that outputs raw SQL to stdout
+      command: "gcloud storage cat gs://acme-scrubbed-dumps/nightly.sql.gz | gunzip"
+```
+
+When you run `devx db pull postgres`, `devx` will:
+1. Ensure the `postgres` container is running.
+2. Prompt for confirmation (unless `-y` is passed).
+3. Execute your `command` and pipe it directly into `podman exec -i devx-db-postgres psql -U devx -d devx`.
+
+::: warning Drop commands
+Ensure your SQL dump includes `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` or `DROP TABLE IF EXISTS` statements. `devx` streams the dump sequentially; it does not automatically drop the database beforehand. This prevents accidental data loss if the pull command fails midway or lacks data.
+:::
+
 ### `devx db snapshot`
 
 Create, restore, list, and delete zero-SQL point-in-time snapshots of devx-managed volumes. Snapshots are stored as ultra-fast compressed tar archives in `~/.devx/snapshots/`.
+
 
 Useful before running destructive migrations or testing complex state changes — restore to a known-good state in seconds without re-running SQL seed scripts.
 
