@@ -111,6 +111,30 @@ DEV_HOSTNAME=your-machine-name
 Run `devx doctor auth` to set up your `.env` interactively — it will prompt for tokens and save them automatically.
 :::
 
+### Validating Your Environment Variables
+
+Before starting your app, use `devx config validate` to catch missing or empty secrets early — before they cause cryptic runtime crashes:
+
+```bash
+devx config validate
+```
+
+```
+📋 Schema: .env.example
+🔑 Secret source: devx.yaml (op://my-vault/myapp/...)
+
+  ✓ CF_API_TOKEN
+  ✓ CF_TUNNEL_TOKEN
+  ✗ STRIPE_SECRET_KEY  (missing — not found in any vault source)
+  ⚠ OPENAI_API_KEY     (present but empty)
+
+  2 of 4 keys failed validation
+
+  Run 'devx config pull' to sync secrets from your vault.
+```
+
+`devx config validate` reads the required keys from `.env.example` (or `.env.schema`), fetches the actual values from your configured vault sources in `devx.yaml`, and reports any gaps. Use `--json` for CI pipelines or AI agents.
+
 Global flags available on all commands:
 
 | Flag | Description |

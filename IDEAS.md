@@ -207,13 +207,15 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **TODO:** AWS S3 emulation via MinIO (`devx cloud spawn s3`) planned for a future release.
 * **Key files:** `cmd/cloud.go`, `cmd/cloud_spawn.go`, `cmd/cloud_list.go`, `cmd/cloud_rm.go`, `internal/cloud/emulator.go`
 
-### 20. Zero-Config Local HTTPS / TLS Certificates
-* **The Problem:** Dealing with mixed-content unsecure warnings (`http://localhost`) when integrating with APIs (like Stripe webhooks or OAuth flows) that strictly require `https://`. Setting up `mkcert` and passing certificates to containers is tedious friction.
-* **The Solution:** Add `devx certs provision`. This command automatically generates a trusted local Certificate Authority, issues wildcard certificates for `*.devx.local`, configures the host machine's trust store, and automatically mounts the certs into all `devx` managed containers and tunnels.
+### 20. Zero-Config Local HTTPS / TLS Certificates _(SUPERSEDED)_
+* **The Problem:** Dealing with mixed-content unsecure warnings (`http://localhost`) when integrating with APIs (like Stripe webhooks or OAuth flows) that strictly require `https://`.
+* **Why it's superseded:** `devx tunnel expose` already solves the primary use case. Every exposed port gets a CA-signed `*.ipv1337.dev` public URL with HTTPS managed entirely by Cloudflare — no `mkcert`, no local CA, no certificate rotation. Stripe, OAuth providers, GitHub webhooks, and any other service requiring HTTPS can all use the tunnel URL directly.
+* **Remaining edge case:** Pure local service-to-service mTLS (no public hop) is not covered by tunnels. If this becomes a real developer pain point, `devx certs provision` (local CA + wildcard `*.devx.local` certs) can be revisited as a scoped addition. For now the Cloudflare tunnel is the recommended path.
 
-### 21. Automated Environment Variable Validation
+### 21. Automated Environment Variable Validation (DONE)
 * **The Problem:** Developers pull `.env` files using `devx config pull`, start the app, and it crashes 3 minutes later because a new required variable was added by another developer but wasn't synced to their vault or local file.
-* **The Solution:** Add `devx config validate`. This command cross-references an `.env.example`, `.env.schema`, or Zod validation schema directly against the active `devx.yaml` / Vault secrets *before* starting the VM or application. It immediately halts and explains exactly which key is missing or incorrectly formatted.
+* **The Solution:** Implemented `devx config validate`. Reads required keys from `.env.example` or `.env.schema`, fetches actual values from vault sources in `devx.yaml` (1Password, Bitwarden, GCP) or falls back to `.env`, and reports each key as ✓ ok / ✗ missing / ⚠ empty. Exits non-zero on failure so it integrates cleanly into CI. Respects `--json` for AI agents.
+* **Key files:** `cmd/config_validate.go`
 
 ### 22. The "Nuke It" Button (Hard Project Reset)
 * **The Problem:** "Have you tried turning it off and on again?" When local caches become deeply corrupted (node_modules, Go caches, Podman dangling images, corrupted DB volumes), developers waste hours manually deleting directories.

@@ -100,6 +100,30 @@ devx tunnel expose 3000 --name mobile-test
 # Open https://mobile-test.james.ipv1337.dev on your phone
 ```
 
+### OAuth Callbacks & Stripe Webhooks (No Local TLS Needed)
+
+Many third-party services — Stripe, GitHub OAuth, Google OAuth, Slack — require a **verified HTTPS callback URL** and reject `http://localhost` outright.
+
+`devx tunnel expose` solves this completely. Your public tunnel URL is backed by Cloudflare's edge with a CA-signed TLS certificate. **No `mkcert`, no local CA, no certificate management required.**
+
+```bash
+devx tunnel expose 3000 --name myapp
+
+# Configure in Stripe Dashboard:
+# Webhook URL: https://myapp.james.ipv1337.dev/webhooks/stripe
+
+# Configure in Google OAuth:
+# Authorized redirect URI: https://myapp.james.ipv1337.dev/auth/callback
+
+# Configure in GitHub OAuth App:
+# Callback URL: https://myapp.james.ipv1337.dev/auth/github/callback
+```
+
+::: tip No mkcert needed
+Cloudflare manages TLS at the edge. Your local app still runs on plain `http://localhost` —
+the HTTPS is handled for you end-to-end.
+:::
+
 ## Declarative Mode
 
 Define port exposures in `devx.yaml` alongside your databases:
