@@ -21,10 +21,7 @@ To propose a new feature, copy the template below and add it to the **Proposed I
 
 ## Proposed Ideas
 
-### 27. Service Scaffolding & Internal Developer Platforms (IDPs)
-* **The Problem:** `devx doctor` sets up the prerequisite tools, but getting a new microservice off the ground (frameworks, Dockerfiles, linting, CI config) requires manually copying from other repos, slowing down new development.
-* **The Solution:** Implement `devx scaffold <template>`. Using a community or internal Template Registry, instantly generate a paved-path repository pre-wired with standard pipelines, Tailscale connectivity, and `devx.yaml` configurations.
-* **Key files:** `cmd/scaffold.go`, `internal/scaffold/engine.go`
+
 
 ### 28. Zero-Friction Local AI Inference
 * **The Problem:** Developers building AI applications struggle with the overhead of running models locally (configuring Ollama, vLLM, passing through GPU drivers) to avoid massive OpenAI API costs during dev/test loops.

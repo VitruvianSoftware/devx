@@ -240,3 +240,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** Developers accidentally commit `.env` files or introduce NPM/Go vulnerabilities, which are only caught much later by GitHub Actions CI, breaking the build and requiring a context-switching PR fix.
 * **The Solution:** Implemented `devx audit`. Runs Gitleaks (secret detection) and Trivy (CVE dependency scanning) against the working directory. Both tools auto-detect whether to run natively (if installed) or via an ephemeral read-only container mount — zero installation required. `devx audit install-hooks` wires it into `git pre-push` so pushes are blocked if issues are found. Supports `--secrets`, `--vulns`, `--json`, and `--runtime` flags.
 * **Key files:** `cmd/audit.go`, `internal/audit/audit.go`
+
+### 27. Service Scaffolding & Internal Developer Platforms (IDPs) (DONE)
+* **The Problem:** `devx doctor` sets up the prerequisite tools, but getting a new microservice off the ground (frameworks, Dockerfiles, linting, CI config) requires manually copying from other repos, slowing down new development.
+* **The Solution:** Implemented `devx scaffold <template>`. Using an embedded Template Registry, instantly generates a paved-path repository (e.g. `go-api`, `node-api`, `python-api`) pre-wired with standard CI pipelines, database migrations, dev seed data, and `devx.yaml` configurations. Fully supports interactive TUI forms (`huh`), non-interactive agent execution (`-y`), JSON output (`--json`), and idempotent re-executions.
+* **Key files:** `cmd/scaffold.go`, `internal/scaffold/engine.go`
