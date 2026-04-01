@@ -3,9 +3,11 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
@@ -183,13 +185,53 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 	}
 
 	start := time.Now()
-	out, found, err := audit.Run(tool, cwd, runtime, format)
-	elapsed := time.Since(start)
+	out, found, runErr := audit.Run(tool, cwd, runtime, format)
 
-	if err != nil {
-		fmt.Printf("  %s  %s\n\n", auditStyleFail.Render("ERROR"), err.Error())
-		return false, err
+	// ── VM not running: offer to start it and retry ────────────────────────
+	if runErr == audit.ErrVMNotRunning {
+		fmt.Printf("  %s  Podman VM is not running.\n", auditStyleFail.Render("!"))
+		if NonInteractive {
+			return false, fmt.Errorf("podman VM is sleeping — run 'podman machine start' first")
+		}
+
+		var startVM bool
+		form := huh.NewForm(
+			huh.NewGroup(
+				huh.NewConfirm().
+					Title("Start Podman VM?").
+					Description("devx audit needs the Podman VM to run the scanner container. Start it now?").
+					Affirmative("Yes, start it").
+					Negative("Skip this scan").
+					Value(&startVM),
+			),
+		).WithTheme(huh.ThemeCatppuccin())
+		_ = form.Run()
+
+		if !startVM {
+			fmt.Printf("  %s Skipped (VM not started)\n\n", auditStyleMuted.Render("—"))
+			return false, nil
+		}
+
+		fmt.Printf("  %s Starting Podman VM...\n", auditStyleMuted.Render("→"))
+		startCmd := exec.Command("podman", "machine", "start")
+		startCmd.Stdout = os.Stdout
+		startCmd.Stderr = os.Stderr
+		if err := startCmd.Run(); err != nil {
+			return false, fmt.Errorf("failed to start Podman VM: %w", err)
+		}
+		fmt.Println()
+
+		// Retry the scan now that the VM is up
+		start = time.Now()
+		out, found, runErr = audit.Run(tool, cwd, runtime, format)
 	}
+
+	if runErr != nil {
+		fmt.Printf("  %s  %s\n\n", auditStyleFail.Render("ERROR"), runErr.Error())
+		return false, runErr
+	}
+
+	elapsed := time.Since(start)
 
 	// Print the tool output, indented nicely
 	lines := strings.Split(strings.TrimSpace(out), "\n")
