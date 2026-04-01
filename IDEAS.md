@@ -237,6 +237,7 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** Implemented `devx db pull <engine>`. Instead of re-implementing an insecure local scrubbing engine, `devx` delegates to the cloud: it parses a simple shell command defined in `devx.yaml` (e.g., pulling a nightly scrubbed dump from an S3 bucket). It ensures the local database is running and securely streams the pre-anonymized output straight into the database container's ingestion tool (`psql`, `mysql`, `mongorestore`, `redis-cli`) without writing massive temp files to disk.
 * **Key files:** `cmd/db_pull.go`, `devx.yaml.example`
 
-### 26. Instant Vulnerability & Secret Scanning
+### 26. Instant Vulnerability & Secret Scanning (DONE)
 * **The Problem:** Developers accidentally commit `.env` files or introduce NPM/Go vulnerabilities, which are only caught much later by GitHub Actions CI, breaking the build and requiring a context-switching PR fix.
-* **The Solution:** Add `devx audit`. Before pushing code, developers can run this command to spin up an ephemeral container equipped with tools like Trivy or Gitleaks. It mounts the current directory read-only, performs a blisteringly fast local scan for leaked secrets or CVEs, and prevents the "CI walk of shame."
+* **The Solution:** Implemented `devx audit`. Runs Gitleaks (secret detection) and Trivy (CVE dependency scanning) against the working directory. Both tools auto-detect whether to run natively (if installed) or via an ephemeral read-only container mount — zero installation required. `devx audit install-hooks` wires it into `git pre-push` so pushes are blocked if issues are found. Supports `--secrets`, `--vulns`, `--json`, and `--runtime` flags.
+* **Key files:** `cmd/audit.go`, `internal/audit/audit.go`
