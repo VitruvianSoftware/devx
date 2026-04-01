@@ -1,0 +1,28 @@
+# {{.ProjectName}}
+
+> {{.Description}}
+
+**Author:** {{.Author}}
+
+## Usage
+
+```bash
+{{.ProjectName}} --help
+```
+
+## Development
+
+```bash
+go run . --help
+go test ./...
+```
+
+## Release
+
+Push a semver tag to trigger GoReleaser:
+
+```bash
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+Generated with `devx scaffold go-cli`.

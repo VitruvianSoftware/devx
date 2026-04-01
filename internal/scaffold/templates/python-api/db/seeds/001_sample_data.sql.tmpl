@@ -1,0 +1,13 @@
+-- Seeds: 001_sample_data.sql
+-- {{.ProjectName}} development seed data
+--
+-- WHY SEEDS MATTER: Seeded databases catch real-world bugs that an empty
+-- database never surfaces — NULL handling, pagination, and rendering issues.
+
+BEGIN;
+INSERT INTO items (name, description) VALUES
+    ('Sample One',   'First development seed record'),
+    ('Sample Two',   'Second development seed record'),
+    ('Sample Three', 'Third development seed record')
+ON CONFLICT DO NOTHING;
+COMMIT;
