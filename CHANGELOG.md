@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0](https://github.com/VitruvianSoftware/devx/compare/v0.20.1...v0.21.0) (2026-04-01)
+
+
+### Features
+
+* **ai:** zero-friction local AI bridge and agentic workflow mounts ([#80](https://github.com/VitruvianSoftware/devx/issues/80)) ([c8f1812](https://github.com/VitruvianSoftware/devx/commit/c8f1812c8753fad951ef5c24a985285d1040c63d))
+* **scaffold:** new devx scaffold command with 6 built-in templates ([#74](https://github.com/VitruvianSoftware/devx/issues/74)) ([ca2163f](https://github.com/VitruvianSoftware/devx/commit/ca2163f45e265cc22f0e8b70f0193084e1e0712d))
+
+
+### Bug Fixes
+
+* **scaffold:** make scaffold idempotent by default ([#76](https://github.com/VitruvianSoftware/devx/issues/76)) ([8ef7098](https://github.com/VitruvianSoftware/devx/commit/8ef70985c9c5f90539bdca4e8e2cf7990958106c))
+* **scaffold:** resolve go vet warning for redundant newlines in Println ([#78](https://github.com/VitruvianSoftware/devx/issues/78)) ([a50646e](https://github.com/VitruvianSoftware/devx/commit/a50646e3aebf54d0efa977240a1073c025966042))
+
 ## [0.20.1](https://github.com/VitruvianSoftware/devx/compare/v0.20.0...v0.20.1) (2026-04-01)
 
 
