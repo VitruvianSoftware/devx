@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1](https://github.com/VitruvianSoftware/devx/compare/v0.20.0...v0.20.1) (2026-04-01)
+
+
+### Bug Fixes
+
+* **ci:** actually merge goreleaser into release-please ([#73](https://github.com/VitruvianSoftware/devx/issues/73)) ([3dd18e8](https://github.com/VitruvianSoftware/devx/commit/3dd18e80f27476332cbdc846e1252955559c182c))
+* **ci:** wire goreleaser directly into release-please pipeline ([#71](https://github.com/VitruvianSoftware/devx/issues/71)) ([29006dd](https://github.com/VitruvianSoftware/devx/commit/29006dd2514f8e53cd9ff1b4fc31d96ff8555650))
+
 ## [0.20.0](https://github.com/VitruvianSoftware/devx/compare/v0.19.0...v0.20.0) (2026-04-01)
 
 
