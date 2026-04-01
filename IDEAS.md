@@ -23,10 +23,7 @@ To propose a new feature, copy the template below and add it to the **Proposed I
 
 
 
-### 28. Zero-Friction Local AI Inference
-* **The Problem:** Developers building AI applications struggle with the overhead of running models locally (configuring Ollama, vLLM, passing through GPU drivers) to avoid massive OpenAI API costs during dev/test loops.
-* **The Solution:** Implement `devx ai spawn`. Automatically handles downloading, caching, and serving models (via `ollama` or similar containerized inference engines) inside the VM with proper GPU acceleration logic mapped. Auto-injects `OPENAI_API_BASE` into `devx shell` to route SDKs locally.
-* **Key files:** `cmd/ai.go`, `internal/ai/inference.go`
+
 
 ### 29. Shift-Left Distributed Observability
 * **The Problem:** When running 5 microservices locally via `devx.yaml`, figuring out *where* a request failed requires tailing 5 sets of logs. Full distributed tracing is currently reserved for cloud/production because setting up an OTLP collector + Jaeger locally is too tedious.

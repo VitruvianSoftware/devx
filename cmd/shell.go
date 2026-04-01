@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/VitruvianSoftware/devx/internal/ai"
 	"github.com/VitruvianSoftware/devx/internal/devcontainer"
 	"github.com/VitruvianSoftware/devx/internal/envvault"
 )
@@ -89,12 +90,21 @@ func runShell(_ *cobra.Command, _ []string) error {
 	}
 
 	// Dynamic secret injection from devx.yaml (1password, gcp, bitwarden, etc.)
+	userSecrets := make(map[string]string)
+	aiBridgeEnabled := true // Enabled by default
 	if yamlData, err := os.ReadFile("devx.yaml"); err == nil {
-		type envConfig struct {
+		type devxConfig struct {
 			Env []string `yaml:"env"`
+			AI  struct {
+				Bridge *bool `yaml:"bridge"`
+			} `yaml:"ai"`
 		}
-		var devxCfg envConfig
+		var devxCfg devxConfig
 		_ = yaml.Unmarshal(yamlData, &devxCfg)
+		
+		if devxCfg.AI.Bridge != nil && !*devxCfg.AI.Bridge {
+			aiBridgeEnabled = false
+		}
 		
 		// "mix and match which ones, multiple, or none which will default back to using plain .env"
 		if len(devxCfg.Env) == 0 {
@@ -104,6 +114,7 @@ func runShell(_ *cobra.Command, _ []string) error {
 		if len(devxCfg.Env) > 0 {
 			if secrets, sErr := envvault.PullAll(devxCfg.Env); sErr == nil {
 				for k, v := range secrets {
+					userSecrets[k] = v
 					args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 				}
 				fmt.Printf("🔒 Injected %d secrets from remote vaults seamlessly.\n", len(secrets))
@@ -115,9 +126,29 @@ func runShell(_ *cobra.Command, _ []string) error {
 		// Fallback straight to .env if devx.yaml doesn't even exist
 		if secrets, err := envvault.PullAll([]string{"file://.env"}); err == nil {
 			for k, v := range secrets {
+				userSecrets[k] = v
 				args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 			}
 			fmt.Printf("🔒 Injected %d secrets from .env natively.\n", len(secrets))
+		}
+	}
+
+	// AI Bridge: Discover native host LLMs and inject into the container unless overridden.
+	if aiBridgeEnabled {
+		if aiEnv := ai.DiscoverHostLLMs(runtime); aiEnv.Active {
+			injectedAny := false
+			for k, v := range aiEnv.EnvVars {
+				// Prevent overwriting if the user explicitly defined this variable in .env or a remote vault
+				if _, userOverridden := userSecrets[k]; !userOverridden {
+					args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+					injectedAny = true
+				}
+			}
+			if injectedAny {
+				fmt.Printf("🤖 Local AI Detected (%s).\n", aiEnv.EngineName)
+				fmt.Printf("↳ Injected OPENAI_API_BASE / ANTHROPIC_BASE_URL to route local agents (claude, opencode, codex)\n")
+				fmt.Printf("  to your host engine. To disable this override, set 'ai: bridge: false' in devx.yaml.\n")
+			}
 		}
 	}
 
@@ -144,17 +175,74 @@ func runShell(_ *cobra.Command, _ []string) error {
 	// directly, and combining -p with --network host causes warnings or
 	// errors on Docker Desktop and OrbStack.
 
-	// Mount cloudflared credentials so tunnel commands work inside the container.
+	// Bridge core configurations and advanced agent workflows into the container.
 	// We resolve the correct home directory based on remoteUser to ensure
 	// consistent behavior across all runtimes and user configurations.
 	if home, err := os.UserHomeDir(); err == nil {
+		containerHome := "/root"
+		if cfg.RemoteUser != "" && cfg.RemoteUser != "root" {
+			containerHome = fmt.Sprintf("/home/%s", cfg.RemoteUser)
+		}
+
+		// 1. Cloudflare Credentials
 		cfDir := filepath.Join(home, ".cloudflared")
 		if _, statErr := os.Stat(cfDir); statErr == nil {
-			containerHome := "/root"
-			if cfg.RemoteUser != "" && cfg.RemoteUser != "root" {
-				containerHome = fmt.Sprintf("/home/%s", cfg.RemoteUser)
-			}
 			args = append(args, "-v", fmt.Sprintf("%s:%s/.cloudflared:ro", cfDir, containerHome))
+		}
+
+		// 2. Global Git Configuration (enables agents to push/pull via HTTP)
+		gitCfg := filepath.Join(home, ".gitconfig")
+		if _, statErr := os.Stat(gitCfg); statErr == nil {
+			args = append(args, "-v", fmt.Sprintf("%s:%s/.gitconfig:ro", gitCfg, containerHome))
+		}
+
+		// 3. AI / Agent Identity dotfiles (RW as agents frequently refresh tokens)
+		agentPaths := []string{
+			".claude.json",
+			".config/claude",
+			".config/opencode",
+			".config/gemini-cli",
+			".codex",
+			".openai",
+			".agent",      // Global skills vault
+			".gemini",     // Common gemini state / antigravity
+		}
+
+		mountedAgents := 0
+		for _, p := range agentPaths {
+			hostPath := filepath.Join(home, p)
+			if _, statErr := os.Stat(hostPath); statErr == nil {
+				args = append(args, "-v", fmt.Sprintf("%s:%s/%s", hostPath, containerHome, p))
+				mountedAgents++
+			}
+		}
+		if mountedAgents > 0 {
+			fmt.Printf("🧠 Ported %d agent identities & skill vaults natively into the workspace.\n", mountedAgents)
+		}
+	}
+
+	// 4. SSH Agent forwarding (enables agents to authenticate against Git over SSH)
+	if sshAuthSock := os.Getenv("SSH_AUTH_SOCK"); sshAuthSock != "" {
+		if _, statErr := os.Stat(sshAuthSock); statErr == nil {
+			// Mount the socket file identically so it's queryable at the same path 
+			// and inject the matching environment variable.
+			args = append(args, "-v", fmt.Sprintf("%s:%s", sshAuthSock, sshAuthSock))
+			args = append(args, "-e", fmt.Sprintf("SSH_AUTH_SOCK=%s", sshAuthSock))
+			fmt.Println("🔑 Forwarded SSH_AUTH_SOCK securely to enable agent operations.")
+		}
+	}
+
+	// 5. Docker Socket for Agentic Sandboxing (Docker-in-Docker)
+	// Checks default host locations for sockets that could allow agents to spin up containers.
+	// We map it generically to /var/run/docker.sock to appease most open-source CLI agents.
+	dockerSockets := []string{"/var/run/docker.sock", filepath.Join(os.Getenv("HOME"), ".docker/run/docker.sock")}
+	for _, sock := range dockerSockets {
+		if sock != "" {
+			if _, statErr := os.Stat(sock); statErr == nil {
+				args = append(args, "-v", fmt.Sprintf("%s:/var/run/docker.sock", sock))
+				fmt.Println("🐳 Mounted docker.sock for AI Agent sandboxing privileges.")
+				break
+			}
 		}
 	}
 
