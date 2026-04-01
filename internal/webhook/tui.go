@@ -12,8 +12,6 @@ import (
 // requestMsg is sent to the Bubble Tea program when a new request arrives.
 type requestMsg Request
 
-// quitMsg signals clean shutdown.
-type quitMsg struct{}
 
 // Model is the Bubble Tea model for the webhook catch TUI.
 type Model struct {
