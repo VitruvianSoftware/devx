@@ -32,4 +32,5 @@ Behind the scenes, `devx` provisions a **Podman Machine** running Fedora CoreOS,
 - **One CLI, everything** — VM, tunnels, databases, agent skills, and site hosting are all subcommands of `devx`
 - **Convention over configuration** — Sensible defaults (`devx vm init` works with zero flags), but everything is overridable
 - **Transparency** — Destructive operations show an impact summary and require confirmation
+- **Idempotency** — Commands are designed to be run repeatedly safely. Existing configurations and files are skipped or patched contextually to preserve developer intent.
 - **AI-native** — Agent skill files and `--json` output make `devx` controllable by AI coding assistants
