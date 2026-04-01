@@ -93,6 +93,10 @@ func Detect(t Tool) (ToolMode, string) {
 	return ModeContainer, ""
 }
 
+// ErrVMNotRunning is returned when the container runtime is present but the
+// underlying VM (podman machine) is not started.
+var ErrVMNotRunning = fmt.Errorf("podman VM is not running")
+
 // Run executes the tool against the given directory, returning combined output
 // and any error. exitCode 1 from the scanner is treated as "found issues".
 func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
@@ -112,9 +116,21 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 		args := t.BuildArgs(cwd, format)
 		cmd = exec.Command(t.BinaryName, args...)
 	} else {
-		// Run in an ephemeral container with the project mounted read-only.
-		// We pull the image silently first so the run output is clean.
-		_ = exec.Command(rt, "pull", "--quiet", t.Image).Run()
+		// ── Pre-check: verify the container daemon is actually reachable ──────
+		// This catches the "podman machine not started" case before we attempt
+		// a pull and get a wall of confusing daemon error text.
+		if err := checkContainerRuntime(rt); err != nil {
+			return "", false, err
+		}
+
+		// Pull the image silently. We bypass the gcloud Docker credential helper
+		// (which intercepts ALL registries, including public docker.io) by
+		// setting REGISTRY_AUTH_FILE to /dev/null. This tells podman to use
+		// anonymous auth for this pull, which is all we need for public images.
+		// Your existing gcloud credentials are NOT needed for these public images.
+		pullCmd := exec.Command(rt, "pull", "--quiet", t.Image)
+		pullCmd.Env = append(os.Environ(), "REGISTRY_AUTH_FILE=/dev/null")
+		_ = pullCmd.Run()
 
 		containerArgs := append([]string{
 			"run", "--rm", "--network", "none",
@@ -122,6 +138,8 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 		}, t.Image)
 		containerArgs = append(containerArgs, t.ContainerArgs(cwd, format)...)
 		cmd = exec.Command(rt, containerArgs...)
+		// Same bypass for the run command in case the image is not cached yet
+		cmd.Env = append(os.Environ(), "REGISTRY_AUTH_FILE=/dev/null")
 	}
 
 	cmd.Stdin = os.Stdin
@@ -133,11 +151,29 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 			// Exit code 1 = issues found (not a tool crash) — not an error condition
 			foundIssues = true
 		} else {
+			// Surface the raw output so the user can see exactly what went wrong
 			return string(out), false, fmt.Errorf("%s failed: %w\n%s", t.Name, err, string(out))
 		}
 	}
 	return string(out), foundIssues, nil
 }
+
+// checkContainerRuntime pings the runtime daemon and returns a descriptive
+// error if it's not reachable (e.g. podman machine is sleeping).
+func checkContainerRuntime(rt string) error {
+	out, err := exec.Command(rt, "info", "--format", "{{.Host.OS}}").CombinedOutput()
+	if err == nil {
+		return nil // daemon is up
+	}
+	// Detect the "VM not started" case specifically
+	if strings.Contains(string(out), "Cannot connect to Podman") ||
+		strings.Contains(string(out), "connection refused") ||
+		strings.Contains(string(out), "no such file or directory") {
+		return ErrVMNotRunning
+	}
+	return fmt.Errorf("container runtime %q is not reachable: %w", rt, err)
+}
+
 
 // InstallPrePushHook writes a git pre-push hook to .git/hooks/pre-push.
 func InstallPrePushHook(cwd string) error {
