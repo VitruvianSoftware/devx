@@ -36,6 +36,7 @@ export default defineConfig({
           { text: 'The Nuke Button', link: '/guide/nuke' },
           { text: 'Email Catcher', link: '/guide/mail' },
           { text: 'Webhook Catcher', link: '/guide/webhook' },
+          { text: 'Security Auditing', link: '/guide/audit' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }
