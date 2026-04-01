@@ -5,6 +5,8 @@ export default defineConfig({
   title: "devx",
   description: "Advanced Agentic Coding Environment Orchestrator",
   server: { port: 5173 },
+  // localhost URLs in docs are intentional (they're local dev addresses, not broken links)
+  ignoreDeadLinks: [/^http:\/\/localhost/],
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: 'https://github.com/VitruvianSoftware.png',
