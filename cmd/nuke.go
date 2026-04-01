@@ -15,11 +15,12 @@ var nukeRuntime string
 
 var nukeCmd = &cobra.Command{
 	Use:   "nuke",
-	Short: "Hard reset: purge all caches, builds, and devx resources for this project",
-	Long: `Scans the current project directory for language-specific caches and build
-artefacts, lists all devx-managed databases and containers, shows you exactly
-what will be deleted with disk sizes, and asks for confirmation before touching
-anything.
+	Short: "Hard reset: purge caches, builds, and devx resources for this project",
+	Long: `Scans the current project directory for language-specific caches, build
+artefacts, and devx-managed containers/volumes.
+
+Presents an interactive multi-select so you can choose exactly what to delete
+while leaving things that are still working untouched.
 
 Does NOT delete your source code, .env files, or devx.yaml.
 
@@ -48,32 +49,76 @@ func runNuke(_ *cobra.Command, _ []string) error {
 	}
 
 	if len(manifest.Items) == 0 {
-		fmt.Println("✓ Nothing to nuke — your project is already clean!")
+		fmt.Printf("%s Nothing to nuke — your project is already clean!\n", tui.IconDone)
 		return nil
 	}
 
-	// Print the manifest grouped by category
-	printNukeManifest(manifest)
+	// Print the "safe" zone header once so the user has context.
+	printSafeZone()
 
 	if DryRun {
-		fmt.Printf("\n[dry-run] Would delete %d items (%s total).\n",
+		printNukeManifest(manifest, manifest.Items)
+		fmt.Printf("[dry-run] Would delete %d items (%s total).\n",
 			len(manifest.Items), nuke.FormatBytes(manifest.TotalSize))
 		return nil
 	}
 
-	// Confirmation
+	// ── Phase 1: multi-select ────────────────────────────────────────────────
+	// Build all options, pre-selected by default.
+	var selectedIndices []int
+	if !NonInteractive {
+		options := make([]huh.Option[int], len(manifest.Items))
+		for i, item := range manifest.Items {
+			label := nukeOptionLabel(item)
+			options[i] = huh.NewOption(label, i).Selected(true)
+		}
+
+		multiSelect := huh.NewMultiSelect[int]().
+			Title("Select items to nuke  (Space to toggle, Enter to confirm)").
+			Description("All items are pre-selected. Deselect anything you want to keep.").
+			Options(options...).
+			Value(&selectedIndices)
+
+		if err := huh.NewForm(huh.NewGroup(multiSelect)).
+			WithTheme(huh.ThemeCatppuccin()).Run(); err != nil {
+			fmt.Println("\nCancelled — nothing was deleted.")
+			return nil
+		}
+
+		if len(selectedIndices) == 0 {
+			fmt.Println("\nNothing selected — nothing was deleted.")
+			return nil
+		}
+	} else {
+		// -y: select all
+		for i := range manifest.Items {
+			selectedIndices = append(selectedIndices, i)
+		}
+	}
+
+	// Build the filtered item list from selected indices
+	selected := make([]nuke.Item, 0, len(selectedIndices))
+	var selectedSize int64
+	for _, idx := range selectedIndices {
+		selected = append(selected, manifest.Items[idx])
+		selectedSize += manifest.Items[idx].SizeBytes
+	}
+
+	// ── Phase 2: final confirmation ──────────────────────────────────────────
+	fmt.Println()
+	printNukeManifest(manifest, selected)
+
 	if !NonInteractive {
 		var confirmed bool
-		warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7B72")).Bold(true)
+		dangerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7B72")).Bold(true)
+		confirmTitle := dangerStyle.Render(fmt.Sprintf("⚠  Delete %d item(s) (%s)?  This cannot be undone.",
+			len(selected), nuke.FormatBytes(selectedSize)))
+
 		form := huh.NewForm(
 			huh.NewGroup(
 				huh.NewConfirm().
-					Title(warningStyle.Render("⚠ This cannot be undone.")).
-					Description(fmt.Sprintf(
-						"Delete %d items (%s) from your project?\n\nDatabases, containers, caches, and build artefacts will be permanently removed.\nYour source code and config files (.env, devx.yaml) are safe.",
-						len(manifest.Items), nuke.FormatBytes(manifest.TotalSize),
-					)).
-					Affirmative("Yes, nuke it all").
+					Title(confirmTitle).
+					Affirmative("Yes, nuke selected").
 					Negative("Cancel").
 					Value(&confirmed),
 			),
@@ -86,16 +131,23 @@ func runNuke(_ *cobra.Command, _ []string) error {
 		fmt.Println()
 	}
 
-	// Execute deletions, reporting progress for each item
+	// ── Phase 3: execute ─────────────────────────────────────────────────────
 	fmt.Println(tui.StyleTitle.Render("Nuking...") + "\n")
-	errors := 0
-	manifest.Execute(func(item nuke.Item, err error) {
+	errCount := 0
+
+	// Execute only the selected subset
+	selectedManifest := &nuke.Manifest{
+		Items:     selected,
+		TotalSize: selectedSize,
+		Runtime:   manifest.Runtime,
+	}
+	selectedManifest.Execute(func(item nuke.Item, err error) {
 		icon := tui.IconDone
 		detail := ""
 		if err != nil {
 			icon = tui.IconFailed
 			detail = tui.StyleDetailError.Render(fmt.Sprintf("  error: %v", err))
-			errors++
+			errCount++
 		}
 		category := tui.StyleMuted.Render(fmt.Sprintf("%-10s", item.Category))
 		label := tui.StyleValue.Render(item.Label)
@@ -104,17 +156,12 @@ func runNuke(_ *cobra.Command, _ []string) error {
 	})
 
 	fmt.Println()
-	if errors > 0 {
-		fmt.Printf("%s %d items could not be deleted (see above).\n",
-			tui.IconFailed, errors)
+	if errCount > 0 {
+		fmt.Printf("%s %d item(s) could not be deleted (see above).\n", tui.IconFailed, errCount)
 		fmt.Println("  Some items may require sudo — run: sudo devx nuke")
 	} else {
-		deletedCount := len(manifest.Items)
-		fmt.Printf("%s Nuked %d items (%s freed).\n",
-			tui.IconDone,
-			deletedCount,
-			nuke.FormatBytes(manifest.TotalSize),
-		)
+		fmt.Printf("%s Nuked %d item(s) (%s freed).\n",
+			tui.IconDone, len(selected), nuke.FormatBytes(selectedSize))
 		fmt.Printf("\n  Run %s to get a fresh environment.\n",
 			tui.StyleURL.Render("devx up"))
 	}
@@ -122,23 +169,35 @@ func runNuke(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-// printNukeManifest displays the grouped manifest with sizes before confirmation.
-func printNukeManifest(manifest *nuke.Manifest) {
-	// Group by category
+// nukeOptionLabel builds the multi-select display string for a single item.
+// Format: [Category] label  (size)
+func nukeOptionLabel(item nuke.Item) string {
+	catStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#79C0FF"))
+	sizeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E"))
+	cat := catStyle.Render(fmt.Sprintf("[%-8s]", item.Category))
+	size := sizeStyle.Render(fmt.Sprintf("(%s)", item.SizeDisplay))
+	return fmt.Sprintf("%s  %-42s  %s", cat, item.Label, size)
+}
+
+// printNukeManifest displays the filtered selection grouped by category.
+func printNukeManifest(manifest *nuke.Manifest, selected []nuke.Item) {
+	// Group selected items by category
 	categoryOrder := []string{}
 	byCategory := map[string][]nuke.Item{}
-	for _, item := range manifest.Items {
+	for _, item := range selected {
 		if _, exists := byCategory[item.Category]; !exists {
 			categoryOrder = append(categoryOrder, item.Category)
 		}
 		byCategory[item.Category] = append(byCategory[item.Category], item)
 	}
 
-	dangerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7B72"))
+	_ = manifest // reserved for future context
 	headerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#E3B341")).Bold(true)
 
-	fmt.Println(dangerStyle.Render("  The following will be permanently deleted:\n"))
+	fmt.Println(lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7B72")).
+		Render("  Selected for deletion:\n"))
 
+	var totalSize int64
 	for _, cat := range categoryOrder {
 		items := byCategory[cat]
 		fmt.Printf("  %s\n", headerStyle.Render(cat))
@@ -152,23 +211,25 @@ func printNukeManifest(manifest *nuke.Manifest) {
 			if item.Path != "" {
 				fmt.Printf("       %s\n", tui.StyleMuted.Render(item.Path))
 			}
+			totalSize += item.SizeBytes
 		}
 		fmt.Println()
 	}
 
-	totalStr := nuke.FormatBytes(manifest.TotalSize)
-	if manifest.TotalSize > 0 {
-		fmt.Printf("  %s\n\n",
-			lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#E3B341")).
-				Render(fmt.Sprintf("Total: %s across %d items", totalStr, len(manifest.Items))),
-		)
+	boldYellow := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#E3B341"))
+	if totalSize > 0 {
+		fmt.Printf("  %s\n\n", boldYellow.Render(
+			fmt.Sprintf("Total: %s across %d item(s)", nuke.FormatBytes(totalSize), len(selected)),
+		))
 	} else {
-		fmt.Printf("  %s\n\n",
-			tui.StyleMuted.Render(fmt.Sprintf("%d items (containers and volumes)", len(manifest.Items))),
-		)
+		fmt.Printf("  %s\n\n", tui.StyleMuted.Render(
+			fmt.Sprintf("%d item(s) (containers and volumes)", len(selected)),
+		))
 	}
+}
 
-	// Explicitly call out what is NOT touched
+// printSafeZone prints the items that are never touched, for developer peace of mind.
+func printSafeZone() {
 	safeStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#3FB950"))
 	fmt.Println(safeStyle.Render("  Safe (never touched):"))
 	for _, safe := range []string{"Source code", ".env files", "devx.yaml", "SSH keys", "~/.devx/snapshots"} {
