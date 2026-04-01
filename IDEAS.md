@@ -217,9 +217,10 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** Implemented `devx config validate`. Reads required keys from `.env.example` or `.env.schema`, fetches actual values from vault sources in `devx.yaml` (1Password, Bitwarden, GCP) or falls back to `.env`, and reports each key as ✓ ok / ✗ missing / ⚠ empty. Exits non-zero on failure so it integrates cleanly into CI. Respects `--json` for AI agents.
 * **Key files:** `cmd/config_validate.go`
 
-### 22. The "Nuke It" Button (Hard Project Reset)
+### 22. The "Nuke It" Button (Hard Project Reset) (DONE)
 * **The Problem:** "Have you tried turning it off and on again?" When local caches become deeply corrupted (node_modules, Go caches, Podman dangling images, corrupted DB volumes), developers waste hours manually deleting directories.
-* **The Solution:** Add `devx nuke`. A powerful, confirmation-guarded command that detects the project ecosystem, aggressively purges language-specific dependency caches, destroys all ephemeral `devx` VM containers and networks associated with the project, and performs a clean `devx init` to guarantee a 100% fresh state in seconds.
+* **The Solution:** Implemented `devx nuke`. Scans the project directory and devx runtime, builds a manifest of everything that would be deleted (grouped by language, with disk sizes), displays it alongside an explicit "Safe (never touched)" list, then uses a Huh confirmation form before performing atomic deletions. Supports `--dry-run`, `-y`, and `--runtime`. Covers Node.js, Go, Python, Rust, Java, and all devx-managed containers/volumes.
+* **Key files:** `cmd/nuke.go`, `internal/nuke/nuke.go`
 
 ### 23. Local Email Catcher & Inspector
 * **The Problem:** Testing transactional emails locally risks accidentally emailing real users or requires developers to sign up for external services like Mailtrap.
