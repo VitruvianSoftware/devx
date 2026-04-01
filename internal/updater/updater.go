@@ -69,6 +69,22 @@ func Check(current string) (*CheckResult, error) {
 	return compare(current, latest, releaseURL), nil
 }
 
+// CheckForUpgrade always fetches the latest release from GitHub, bypassing both
+// the 24h cache and the dev-build guard. Used by 'devx upgrade' so that the
+// command always has fresh data and works during development.
+func CheckForUpgrade(current string) (*CheckResult, error) {
+	latest, releaseURL, err := fetchLatest()
+	if err != nil {
+		return nil, err
+	}
+	_ = writeCache(cacheFile{
+		CheckedAt:  time.Now(),
+		LatestTag:  latest,
+		ReleaseURL: releaseURL,
+	})
+	return compare(current, latest, releaseURL), nil
+}
+
 func compare(current, latest, releaseURL string) *CheckResult {
 	r := &CheckResult{
 		Current:    current,

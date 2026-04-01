@@ -43,7 +43,7 @@ Run 'devx vm init' to set up your environment for the first time.`,
 			if result != nil && result.UpdateAvailable {
 				fmt.Fprintf(os.Stderr, "\n╭─────────────────────────────────────────────────╮\n")
 				fmt.Fprintf(os.Stderr, "│  ✦ devx %s is available (you have %s)  │\n", result.Latest, result.Current)
-				fmt.Fprintf(os.Stderr, "│    %s\n", result.ReleaseURL)
+				fmt.Fprintf(os.Stderr, "│    Run: devx upgrade                            │\n")
 				fmt.Fprintf(os.Stderr, "╰─────────────────────────────────────────────────╯\n")
 			}
 		default:
