@@ -1,0 +1,18 @@
+# devx.yaml — local dev topology for {{.ProjectName}}
+# Run 'devx up' to start databases and expose your service publicly.
+
+name: {{.ProjectName}}
+
+# Uncomment to use your own Cloudflare domain:
+# domain: {{.Domain}}
+
+databases:
+  - engine: postgres
+    port: 5432
+    # 'devx db pull postgres' will stream a pre-anonymised production dump here.
+    # pull:
+    #   command: "gcloud storage cat gs://my-scrubbed-dumps/nightly.sql.gz | gunzip"
+
+tunnels:
+  - name: api
+    port: 8080

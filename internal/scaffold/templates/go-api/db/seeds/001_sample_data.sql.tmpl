@@ -1,0 +1,21 @@
+-- Seeds: 001_sample_data.sql
+-- Project: {{.ProjectName}}
+-- 
+-- Seed your local database with realistic sample data for development.
+-- Run with: psql $DATABASE_URL -f db/seeds/001_sample_data.sql
+--
+-- WHY SEEDS MATTER:
+-- Seeded databases allow you to develop against realistic data shapes that
+-- mirror production behaviour. This catches issues like NULL-handling bugs,
+-- pagination edge-cases, and UI rendering problems that an empty database
+-- would never surface. Always keep seeds up to date with schema changes.
+
+BEGIN;
+
+INSERT INTO items (id, name, description) VALUES
+    (uuid_generate_v4(), 'Sample Item One',   'The first seeded development record'),
+    (uuid_generate_v4(), 'Sample Item Two',   'The second seeded development record'),
+    (uuid_generate_v4(), 'Sample Item Three', 'The third seeded development record')
+ON CONFLICT DO NOTHING;
+
+COMMIT;

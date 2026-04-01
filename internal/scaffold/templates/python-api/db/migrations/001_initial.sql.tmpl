@@ -1,0 +1,13 @@
+-- Migration: 001_initial.sql
+-- {{.ProjectName}} initial schema
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS items (
+    id          SERIAL PRIMARY KEY,
+    name        TEXT NOT NULL,
+    description TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMIT;

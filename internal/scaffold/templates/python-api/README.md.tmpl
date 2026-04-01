@@ -1,0 +1,16 @@
+# {{.ProjectName}}
+
+> {{.Description}}
+
+## Quick Start
+
+```bash
+devx up
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+psql $DATABASE_URL -f db/migrations/001_initial.sql
+psql $DATABASE_URL -f db/seeds/001_sample_data.sql
+uvicorn app.main:app --reload
+```
+
+Docs at `http://localhost:8000/docs`. Generated with `devx scaffold python-api`.
