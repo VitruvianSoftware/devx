@@ -130,9 +130,8 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 	foundIssues := false
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
-			// Exit code 1 = issues found (not a tool crash)
+			// Exit code 1 = issues found (not a tool crash) — not an error condition
 			foundIssues = true
-			err = nil
 		} else {
 			return string(out), false, fmt.Errorf("%s failed: %w\n%s", t.Name, err, string(out))
 		}
