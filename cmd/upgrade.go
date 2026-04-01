@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/VitruvianSoftware/devx/internal/updater"
@@ -40,7 +42,11 @@ func runUpgrade(_ *cobra.Command, _ []string) error {
 	}
 
 	if !result.UpdateAvailable {
-		fmt.Printf("✓ devx %s is already the latest version.\n", version)
+		fmt.Printf("✓ devx %s is already the latest version.", version)
+		if isGoInstallBinary() {
+			fmt.Printf("\n\n  Installed via: go install\n  To upgrade: go install github.com/VitruvianSoftware/devx@latest\n")
+		}
+		fmt.Println()
 		return nil
 	}
 
@@ -78,4 +84,26 @@ func runUpgrade(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+// isGoInstallBinary returns true when devx appears to have been installed via
+// 'go install' by checking if the binary lives inside a known Go bin directory
+// (GOPATH/bin or ~/go/bin).
+func isGoInstallBinary() bool {
+	execPath, err := os.Executable()
+	if err != nil {
+		return false
+	}
+
+	goBin := filepath.Join(runtime.GOROOT(), "..", "..", "bin") // not reliable
+
+	// Prefer GOPATH env var, fall back to ~/go
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		home, _ := os.UserHomeDir()
+		gopath = filepath.Join(home, "go")
+	}
+	goBin = filepath.Join(gopath, "bin")
+
+	return strings.HasPrefix(filepath.Clean(execPath), filepath.Clean(goBin))
 }

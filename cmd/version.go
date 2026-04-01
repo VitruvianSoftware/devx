@@ -4,13 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+	"runtime/debug"
 
 	"github.com/VitruvianSoftware/devx/internal/updater"
 	"github.com/spf13/cobra"
 )
 
-// version is set at build time via ldflags.
+// version is set at build time via ldflags by GoReleaser.
+// For 'go install' builds, we fall back to the Go module build info.
 var version = "dev"
+
+func init() {
+	if version == "dev" {
+		if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+			version = info.Main.Version
+		}
+	}
+}
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
