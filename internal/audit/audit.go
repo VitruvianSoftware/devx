@@ -21,18 +21,21 @@ const (
 
 // Tool represents a single audit tool.
 type Tool struct {
-	Name       string
-	BinaryName string                          // binary to look for in $PATH
-	Image      string                          // fallback container image
-	BuildArgs  func(cwd, format string) []string // args for native execution
-	ContainerArgs func(cwd, format string) []string // args for container execution
+	Name             string
+	BinaryName       string                           // binary to look for in $PATH
+	Image            string                           // fallback container image
+	NetworkIsolated  bool                             // true = run container with --network none
+	BuildArgs        func(cwd, format string) []string // args for native execution
+	ContainerArgs    func(cwd, format string) []string // args for container execution
 }
 
 // Trivy scans for CVEs in OS packages and language dependencies.
+// NetworkIsolated = false: Trivy needs internet access to download/update its CVE database.
 var Trivy = Tool{
-	Name:       "Trivy",
-	BinaryName: "trivy",
-	Image:      "docker.io/aquasec/trivy:latest",
+	Name:            "Trivy",
+	BinaryName:      "trivy",
+	Image:           "ghcr.io/aquasecurity/trivy:latest",
+	NetworkIsolated: false,
 	BuildArgs: func(cwd, format string) []string {
 		args := []string{"fs", "--exit-code", "1", "--no-progress"}
 		if format == "json" {
@@ -57,10 +60,12 @@ var Trivy = Tool{
 }
 
 // Gitleaks scans git history and working tree for leaked secrets.
+// NetworkIsolated = true: Gitleaks needs no network access — pure local filesystem scan.
 var Gitleaks = Tool{
-	Name:       "Gitleaks",
-	BinaryName: "gitleaks",
-	Image:      "docker.io/zricethezav/gitleaks:latest",
+	Name:            "Gitleaks",
+	BinaryName:      "gitleaks",
+	Image:           "docker.io/zricethezav/gitleaks:latest",
+	NetworkIsolated: true,
 	BuildArgs: func(cwd, format string) []string {
 		args := []string{"detect", "--source", cwd, "--no-git", "--exit-code", "1"}
 		if format == "json" {
@@ -123,23 +128,43 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 			return "", false, err
 		}
 
-		// Pull the image silently. We bypass the gcloud Docker credential helper
-		// (which intercepts ALL registries, including public docker.io) by
-		// setting REGISTRY_AUTH_FILE to /dev/null. This tells podman to use
-		// anonymous auth for this pull, which is all we need for public images.
-		// Your existing gcloud credentials are NOT needed for these public images.
+		// Pull the image, bypassing the gcloud Docker credential helper.
+		// gcloud-auth-docker intercepts ALL registries (including public docker.io),
+		// causing auth failures for images that need no credentials at all.
+		// We write a temp file containing valid empty JSON {} and point
+		// REGISTRY_AUTH_FILE at it. Podman parses it as "no credentials configured"
+		// and falls back to anonymous auth — which is exactly what we need.
+		// NOTE: we do NOT set this on `podman run` because by then the image is
+		// already pulled and cached locally; no auth is required.
+		authFile, authErr := os.CreateTemp("", "devx-audit-auth-*.json")
+		if authErr == nil {
+			_, _ = authFile.WriteString("{}")
+			authFile.Close()
+			defer os.Remove(authFile.Name())
+		}
+
 		pullCmd := exec.Command(rt, "pull", "--quiet", t.Image)
-		pullCmd.Env = append(os.Environ(), "REGISTRY_AUTH_FILE=/dev/null")
+		if authErr == nil {
+			pullCmd.Env = append(os.Environ(), "REGISTRY_AUTH_FILE="+authFile.Name())
+		}
 		_ = pullCmd.Run()
 
+		networkArg := "bridge" // default: allow internet (e.g. Trivy DB download)
+		if t.NetworkIsolated {
+			networkArg = "none" // Gitleaks: pure filesystem scan, no network needed
+		}
 		containerArgs := append([]string{
-			"run", "--rm", "--network", "none",
+			"run", "--rm", "--network", networkArg,
 			"-v", cwd + ":/scan:ro",
 		}, t.Image)
 		containerArgs = append(containerArgs, t.ContainerArgs(cwd, format)...)
 		cmd = exec.Command(rt, containerArgs...)
-		// Same bypass for the run command in case the image is not cached yet
-		cmd.Env = append(os.Environ(), "REGISTRY_AUTH_FILE=/dev/null")
+		// Apply the same bypass on run: if the pull failed or was skipped, the
+		// image may still need to be fetched at run time. {} is a valid empty
+		// auth config that tells Podman to use anonymous auth for all registries.
+		if authErr == nil {
+			cmd.Env = append(os.Environ(), "REGISTRY_AUTH_FILE="+authFile.Name())
+		}
 	}
 
 	cmd.Stdin = os.Stdin
