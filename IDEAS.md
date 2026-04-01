@@ -201,9 +201,11 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** Implemented `devx db snapshot create <engine> <name>` and `devx db snapshot restore <engine> <name>`. Uses `podman volume export/import` (tar archives) for instant, zero-SQL snapshots. For Docker, falls back to a lightweight Alpine helper container. Full subcommand tree: `create`, `restore`, `list`, `rm`. Respects `--dry-run`, `-y`, and `--json` flags.
 * **Key files:** `cmd/db_snapshot.go`, `internal/database/snapshot.go`
 
-### 19. Local S3 & Cloud Emulation
-* **The Problem:** Modern apps depend on cloud services (S3 for file uploads, SQS for queues). Testing these locally requires complex LocalStack setups or pointing to shared dev environments that get polluted.
-* **The Solution:** Add `devx cloud spawn s3` (using MinIO) or `devx cloud spawn pubsub` (using Redis/emulator). It instantly spins up a lightweight, pre-configured emulator inside the VM and automatically injects the mocked AWS/GCP endpoint URLs into the `.env` context during `devx shell`.
+### 19. Local GCS & Cloud Emulation (DONE)
+* **The Problem:** Modern apps depend on GCP cloud services (GCS for file uploads, Pub/Sub for queues). Testing these locally requires pointing to real GCP projects or shared dev environments that get polluted.
+* **The Solution:** Implemented `devx cloud spawn gcs|pubsub|firestore`. Runs `fake-gcs-server` (GCS), or the GCP Cloud SDK emulators (Pub/Sub, Firestore) as named containers. Automatically injects the correct SDK env vars (`STORAGE_EMULATOR_HOST`, `PUBSUB_EMULATOR_HOST`, etc.) when using `devx shell`. Full subcommand tree: `spawn`, `list`, `rm`. Respects `--json` and `--dry-run`.
+* **TODO:** AWS S3 emulation via MinIO (`devx cloud spawn s3`) planned for a future release.
+* **Key files:** `cmd/cloud.go`, `cmd/cloud_spawn.go`, `cmd/cloud_list.go`, `cmd/cloud_rm.go`, `internal/cloud/emulator.go`
 
 ### 20. Zero-Config Local HTTPS / TLS Certificates
 * **The Problem:** Dealing with mixed-content unsecure warnings (`http://localhost`) when integrating with APIs (like Stripe webhooks or OAuth flows) that strictly require `https://`. Setting up `mkcert` and passing certificates to containers is tedious friction.

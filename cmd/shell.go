@@ -121,6 +121,16 @@ func runShell(_ *cobra.Command, _ []string) error {
 		}
 	}
 
+	// Auto-inject env vars for any running devx cloud emulators.
+	// This means 'devx shell' just works out of the box if you've run
+	// 'devx cloud spawn gcs' — no manual .env editing required.
+	if cloudEnvs := discoverCloudEmulatorEnvs(runtime); len(cloudEnvs) > 0 {
+		for k, v := range cloudEnvs {
+			args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+		}
+		fmt.Printf("☁️  Injected %d cloud emulator endpoints (STORAGE_EMULATOR_HOST, etc.)\n", len(cloudEnvs))
+	}
+
 	// Note: port forwarding (-p) is intentionally skipped when using host
 	// networking. The host network mode already exposes all container ports
 	// directly, and combining -p with --network host causes warnings or

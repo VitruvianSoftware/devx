@@ -30,6 +30,7 @@ export default defineConfig({
           { text: 'Databases (Ephemeral)', link: '/guide/databases' },
           { text: 'Cloudflare Tunnels', link: '/guide/tunnels' },
           { text: 'Native Apps & Logs', link: '/guide/execution' },
+          { text: 'Cloud Emulators (GCS)', link: '/guide/cloud-emulators' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }
