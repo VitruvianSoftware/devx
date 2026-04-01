@@ -21,6 +21,7 @@ var scaffoldDomain string
 var scaffoldNoGit bool
 var scaffoldModulePath string
 var scaffoldDescription string
+var scaffoldForce bool
 
 var scaffoldCmd = &cobra.Command{
 	Use:   "scaffold [template] [project-name]",
@@ -57,6 +58,7 @@ func init() {
 	scaffoldCmd.Flags().StringVar(&scaffoldModulePath, "module", "", "Go module path (e.g. github.com/acme/go-my-service)")
 	scaffoldCmd.Flags().StringVar(&scaffoldDescription, "desc", "", "One-line project description")
 	scaffoldCmd.Flags().BoolVar(&scaffoldNoGit, "no-git", false, "Skip 'git init' after scaffolding")
+	scaffoldCmd.Flags().BoolVarP(&scaffoldForce, "force", "f", false, "Overwrite existing files (default: skip files that already exist)")
 
 	scaffoldCmd.AddCommand(scaffoldListCmd)
 	rootCmd.AddCommand(scaffoldCmd)
@@ -126,23 +128,8 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		outDir = filepath.Join(".", projectName)
 	}
 
-	// Check if output dir already exists and is non-empty
-	if entries, err := os.ReadDir(outDir); err == nil && len(entries) > 0 {
-		if !NonInteractive {
-			var overwrite bool
-			_ = huh.NewConfirm().
-				Title(fmt.Sprintf("Directory '%s' already exists and is not empty. Continue?", outDir)).
-				Affirmative("Yes, overwrite").
-				Negative("No, cancel").
-				Value(&overwrite).
-				WithTheme(huh.ThemeCatppuccin()).
-				Run()
-			if !overwrite {
-				fmt.Println("Cancelled.")
-				return nil
-			}
-		}
-	}
+	// Remove the directory-level overwrite guard — idempotency is now
+	// handled per-file inside the engine. --force opts into overwriting.
 
 	description := scaffoldDescription
 	if description == "" {
@@ -162,7 +149,8 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("\n🏗️  Scaffolding %s → %s\n\n", tmpl.Name, outDir)
 
-	if err := scaffold.Scaffold(templateID, outDir, vars); err != nil {
+	result, err := scaffold.Scaffold(templateID, outDir, vars, scaffoldForce)
+	if err != nil {
 		return fmt.Errorf("scaffold failed: %w", err)
 	}
 
@@ -173,7 +161,7 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	printScaffoldSuccess(tmpl, projectName, outDir, vars)
+	printScaffoldSuccess(tmpl, projectName, outDir, vars, result)
 
 	// Proactively offer devx doctor — default YES
 	if !NonInteractive {
@@ -255,25 +243,34 @@ func runScaffoldInteractive(templateID, projectName, description, modulePath *st
 	return nil
 }
 
-func printScaffoldSuccess(tmpl scaffold.Template, project, outDir string, vars scaffold.Vars) {
+func printScaffoldSuccess(tmpl scaffold.Template, project, outDir string, vars scaffold.Vars, result scaffold.Result) {
 	if outputJSON {
-		type result struct {
-			Template    string `json:"template"`
-			Project     string `json:"project"`
-			Directory   string `json:"directory"`
-			ModulePath  string `json:"module_path,omitempty"`
+		type jsonResult struct {
+			Template   string   `json:"template"`
+			Project    string   `json:"project"`
+			Directory  string   `json:"directory"`
+			ModulePath string   `json:"module_path,omitempty"`
+			Written    []string `json:"written"`
+			Skipped    []string `json:"skipped"`
 		}
-		b, _ := json.MarshalIndent(result{
+		b, _ := json.MarshalIndent(jsonResult{
 			Template:   tmpl.ID,
 			Project:    project,
 			Directory:  outDir,
 			ModulePath: vars.ModulePath,
+			Written:    result.Written,
+			Skipped:    result.Skipped,
 		}, "", "  ")
 		fmt.Println(string(b))
 		return
 	}
 
-	fmt.Printf("✅ Project '%s' created at %s\n\n", project, outDir)
+	fmt.Printf("✅ Project '%s' scaffolded at %s\n", project, outDir)
+	fmt.Printf("   %d file(s) written", len(result.Written))
+	if len(result.Skipped) > 0 {
+		fmt.Printf(", %d skipped (already exist — use --force to overwrite)", len(result.Skipped))
+	}
+	fmt.Println("\n")
 	fmt.Println("  Next steps:")
 	fmt.Printf("    cd %s\n", outDir)
 	fmt.Println("    devx up                  # Start database + tunnel")

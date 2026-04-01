@@ -99,9 +99,18 @@ func Find(id string) (Template, bool) {
 	return Template{}, false
 }
 
+// Result contains a per-file breakdown of the scaffold operation.
+type Result struct {
+	Written []string // files that were created or updated
+	Skipped []string // files that already existed and were preserved
+}
+
 // Scaffold renders the template with id into targetDir using the provided vars.
 // Files ending in .tmpl are rendered; all other files are copied verbatim.
-func Scaffold(templateID, targetDir string, vars Vars) error {
+// Existing files are skipped unless force is true.
+func Scaffold(templateID, targetDir string, vars Vars, force bool) (Result, error) {
+	var result Result
+
 	// Default year if not set
 	if vars.Year == "" {
 		vars.Year = time.Now().Format("2006")
@@ -114,7 +123,7 @@ func Scaffold(templateID, targetDir string, vars Vars) error {
 
 	root := filepath.Join("templates", templateID)
 
-	return fs.WalkDir(EmbedFS, root, func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(EmbedFS, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -148,6 +157,15 @@ func Scaffold(templateID, targetDir string, vars Vars) error {
 			return fmt.Errorf("mkdir %s: %w", filepath.Dir(outputPath), err)
 		}
 
+		// Skip existing files unless --force was requested.
+		// This makes scaffold idempotent: re-running preserves developer edits.
+		if !force {
+			if _, statErr := os.Stat(outputPath); statErr == nil {
+				result.Skipped = append(result.Skipped, outputPath)
+				return nil
+			}
+		}
+
 		// Read embedded content
 		content, err := EmbedFS.ReadFile(path)
 		if err != nil {
@@ -177,8 +195,10 @@ func Scaffold(templateID, targetDir string, vars Vars) error {
 			}
 		}
 
+		result.Written = append(result.Written, outputPath)
 		return nil
 	})
+	return result, err
 }
 
 // PostScaffold runs git init and language-specific setup in targetDir.
