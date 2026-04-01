@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/VitruvianSoftware/devx/internal/updater"
@@ -95,15 +94,13 @@ func isGoInstallBinary() bool {
 		return false
 	}
 
-	goBin := filepath.Join(runtime.GOROOT(), "..", "..", "bin") // not reliable
-
-	// Prefer GOPATH env var, fall back to ~/go
+	// Prefer GOPATH env var, fall back to the conventional ~/go default
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		home, _ := os.UserHomeDir()
 		gopath = filepath.Join(home, "go")
 	}
-	goBin = filepath.Join(gopath, "bin")
+	goBin := filepath.Join(gopath, "bin")
 
 	return strings.HasPrefix(filepath.Clean(execPath), filepath.Clean(goBin))
 }
