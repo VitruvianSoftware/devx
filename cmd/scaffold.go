@@ -270,7 +270,7 @@ func printScaffoldSuccess(tmpl scaffold.Template, project, outDir string, vars s
 	if len(result.Skipped) > 0 {
 		fmt.Printf(", %d skipped (already exist — use --force to overwrite)", len(result.Skipped))
 	}
-	fmt.Println("\n")
+	fmt.Println()
 	fmt.Println("  Next steps:")
 	fmt.Printf("    cd %s\n", outDir)
 	fmt.Println("    devx up                  # Start database + tunnel")
@@ -313,7 +313,7 @@ func runScaffoldList(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	fmt.Println("\n  Available scaffold templates:\n")
+	fmt.Printf("\n  Available scaffold templates:\n\n")
 	for _, t := range scaffold.Registry {
 		dbTag := ""
 		if t.HasDatabase {
@@ -322,6 +322,6 @@ func runScaffoldList(_ *cobra.Command, _ []string) error {
 		fmt.Printf("  %-12s  %s%s\n", t.ID, t.Description, dbTag)
 	}
 	fmt.Println("\n  Usage: devx scaffold <template> <project-name>")
-	fmt.Println("         devx scaffold --help\n")
+	fmt.Printf("         devx scaffold --help\n\n")
 	return nil
 }
