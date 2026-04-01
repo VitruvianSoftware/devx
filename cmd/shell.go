@@ -131,6 +131,14 @@ func runShell(_ *cobra.Command, _ []string) error {
 		fmt.Printf("☁️  Injected %d cloud emulator endpoints (STORAGE_EMULATOR_HOST, etc.)\n", len(cloudEnvs))
 	}
 
+	// Auto-inject SMTP_HOST / SMTP_PORT / MAIL_CATCHER_URL if MailHog is running.
+	if mailEnvs := discoverMailEnvVars(runtime); len(mailEnvs) > 0 {
+		for k, v := range mailEnvs {
+			args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+		}
+		fmt.Printf("📬 Injected mail catcher endpoints (SMTP_HOST, SMTP_PORT, MAIL_CATCHER_URL)\n")
+	}
+
 	// Note: port forwarding (-p) is intentionally skipped when using host
 	// networking. The host network mode already exposes all container ports
 	// directly, and combining -p with --network host causes warnings or

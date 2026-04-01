@@ -222,9 +222,10 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** Implemented `devx nuke`. Scans the project directory and devx runtime, builds a manifest of everything that would be deleted (grouped by language, with disk sizes), displays it alongside an explicit "Safe (never touched)" list, then uses a Huh confirmation form before performing atomic deletions. Supports `--dry-run`, `-y`, and `--runtime`. Covers Node.js, Go, Python, Rust, Java, and all devx-managed containers/volumes.
 * **Key files:** `cmd/nuke.go`, `internal/nuke/nuke.go`
 
-### 23. Local Email Catcher & Inspector
+### 23. Local Email Catcher & Inspector (DONE)
 * **The Problem:** Testing transactional emails locally risks accidentally emailing real users or requires developers to sign up for external services like Mailtrap.
-* **The Solution:** Add `devx mail spawn`. This spins up an in-memory SMTP server (like MailHog or Inbucket) inside the VM, exposes SMTP port 1025 to the application, and automatically generates a Cloudflare tunnel or local web UI to inspect rendered HTML emails instantly in the browser.
+* **The Solution:** Implemented `devx mail spawn`. Starts MailHog (`docker.io/mailhog/mailhog`) as a named devx-managed container with SMTP on port 1025 and a web UI on port 8025. `devx shell` automatically injects `SMTP_HOST`, `SMTP_PORT`, and `MAIL_CATCHER_URL` into the dev container. Also provides `devx mail list` and `devx mail rm`. MailHog exposes a JSON API at `/api/v2/messages` for automated test assertions.
+* **Key files:** `cmd/mail.go`, `cmd/mail_spawn.go`, `cmd/mail_list.go`, `cmd/mail_rm.go`
 
 ### 24. Outbound Webhook Catcher & Request Bin
 * **The Problem:** We already solved *incoming* webhooks via Cloudflare Tunnels, but when the local app needs to *send* a webhook payload to a 3rd party, inspecting exactly what headers and JSON was sent often requires setting up a remote RequestBin in the browser.
