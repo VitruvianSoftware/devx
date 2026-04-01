@@ -227,9 +227,10 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** Implemented `devx mail spawn`. Starts MailHog (`docker.io/mailhog/mailhog`) as a named devx-managed container with SMTP on port 1025 and a web UI on port 8025. `devx shell` automatically injects `SMTP_HOST`, `SMTP_PORT`, and `MAIL_CATCHER_URL` into the dev container. Also provides `devx mail list` and `devx mail rm`. MailHog exposes a JSON API at `/api/v2/messages` for automated test assertions.
 * **Key files:** `cmd/mail.go`, `cmd/mail_spawn.go`, `cmd/mail_list.go`, `cmd/mail_rm.go`
 
-### 24. Outbound Webhook Catcher & Request Bin
+### 24. Outbound Webhook Catcher & Request Bin (DONE)
 * **The Problem:** We already solved *incoming* webhooks via Cloudflare Tunnels, but when the local app needs to *send* a webhook payload to a 3rd party, inspecting exactly what headers and JSON was sent often requires setting up a remote RequestBin in the browser.
-* **The Solution:** Add `devx webhook catch`. This spawns a local server acting as a dummy endpoint, injects `WEBHOOK_URL=http://...` into the environment, and displays a beautiful terminal UI logging every outgoing HTTP request the application attempts to fire, complete with payload formatting.
+* **The Solution:** Implemented `devx webhook catch`. A native Go HTTP server (no container needed) that accepts every request and displays it in a live Bubble Tea TUI with per-method colour coding (GET/POST/PUT/PATCH/DELETE), timestamp + duration, important signature header extraction (Stripe-Signature, X-Hub-Signature, X-Twilio-Signature, etc.), and pretty-printed syntax-highlighted JSON. Falls back to streaming JSON lines when not in a TTY (CI/jq). `--expose` wraps via Cloudflare tunnel for a public HTTPS URL.
+* **Key files:** `cmd/webhook_catch.go`, `internal/webhook/server.go`, `internal/webhook/tui.go`
 
 ### 25. Secure Production Data Anonymization & Pull
 * **The Problem:** `devx db spawn` offers a blank database, which is useless for fixing a bug that only occurs with specific production data shapes. Dumping production data locally is a massive security/compliance risk.
