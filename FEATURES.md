@@ -245,3 +245,7 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** `devx doctor` sets up the prerequisite tools, but getting a new microservice off the ground (frameworks, Dockerfiles, linting, CI config) requires manually copying from other repos, slowing down new development.
 * **The Solution:** Implemented `devx scaffold <template>`. Using an embedded Template Registry, instantly generates a paved-path repository (e.g. `go-api`, `node-api`, `python-api`) pre-wired with standard CI pipelines, database migrations, dev seed data, and `devx.yaml` configurations. Fully supports interactive TUI forms (`huh`), non-interactive agent execution (`-y`), JSON output (`--json`), and idempotent re-executions.
 * **Key files:** `cmd/scaffold.go`, `internal/scaffold/engine.go`
+
+### 28. Zero-Friction Local AI Bridge (DONE)
+* **The Problem:** Developers building AI applications struggle with the overhead of running models locally inside VMs while retaining GPU acceleration, and they often lose agent identities (`claude`, `opencode`) when entering isolated containers.
+* **The Solution:** Implemented a lightweight AI Bridge that automatically detects host-level inference engines (Ollama, LM Studio) and natively injects `OPENAI_API_BASE` overrides into `devx shell`. Additionally bridges agentic workflow gaps by natively mounting identity/auth tokens, global skill vaults, Docker socket (DooD) sandboxing privileges, and SSH/Git forwarding capabilities seamlessly into the workspace.
