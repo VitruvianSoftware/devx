@@ -51,10 +51,7 @@ var versionCmd = &cobra.Command{
 		if result.UpdateAvailable {
 			fmt.Printf("\n✦ devx %s is available!\n", result.Latest)
 			fmt.Printf("  %s\n\n", result.ReleaseURL)
-			fmt.Printf("  Upgrade:\n")
-			fmt.Printf("    curl -sL https://github.com/VitruvianSoftware/devx/releases/download/%s/devx_%s_%s.tar.gz | tar xz\n",
-				result.Latest, runtime.GOOS, runtime.GOARCH)
-			fmt.Printf("    sudo mv devx /usr/local/bin/\n")
+			fmt.Printf("  Run: devx upgrade\n")
 		} else {
 			fmt.Printf("✓ You are up to date.\n")
 		}
