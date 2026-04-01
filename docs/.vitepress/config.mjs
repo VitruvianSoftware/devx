@@ -32,6 +32,7 @@ export default defineConfig({
           { text: 'Native Apps & Logs', link: '/guide/execution' },
           { text: 'Cloud Emulators (GCS)', link: '/guide/cloud-emulators' },
           { text: 'The Nuke Button', link: '/guide/nuke' },
+          { text: 'Email Catcher', link: '/guide/mail' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }
