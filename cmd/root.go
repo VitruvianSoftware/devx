@@ -7,8 +7,12 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/devx/internal/updater"
 	"github.com/spf13/cobra"
 )
+
+// updateResult receives the background version check result.
+var updateResult = make(chan *updater.CheckResult, 1)
 
 var envFile string
 var outputJSON bool
@@ -28,6 +32,24 @@ Run 'devx vm init' to set up your environment for the first time.`,
 	},
 	SilenceErrors: true, // we handle it in Execute()
 	SilenceUsage:  true, // don't dump help text on errors
+	// After every command, print an update notice if one is available.
+	// Suppressed in --json mode so AI agents don't get noise.
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		if outputJSON {
+			return
+		}
+		select {
+		case result := <-updateResult:
+			if result != nil && result.UpdateAvailable {
+				fmt.Fprintf(os.Stderr, "\n╭─────────────────────────────────────────────────╮\n")
+				fmt.Fprintf(os.Stderr, "│  ✦ devx %s is available (you have %s)  │\n", result.Latest, result.Current)
+				fmt.Fprintf(os.Stderr, "│    %s\n", result.ReleaseURL)
+				fmt.Fprintf(os.Stderr, "╰─────────────────────────────────────────────────╯\n")
+			}
+		default:
+			// Check hasn't finished yet — skip silently
+		}
+	},
 }
 
 func Execute() {
@@ -46,6 +68,14 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(func() {
 		secrets.NonInteractive = NonInteractive
+		// Fire the update check in the background immediately.
+		go func() {
+			result, _ := updater.Check(version)
+			select {
+			case updateResult <- result:
+			default:
+			}
+		}()
 	})
 
 	rootCmd.PersistentFlags().StringVar(&envFile, "env-file", ".env",
