@@ -55,38 +55,69 @@ devx db rm myapp-db --volumes    # Delete everything
 
 ### `devx db pull`
 
-Pull a pre-scrubbed production/staging dataset and stream it directly into your local container:
+Pull a pre-scrubbed production/staging dataset and stream it directly into your local container — no temp files written to disk:
 
 ```bash
 devx db pull postgres
 ```
 
 #### Why it's secure
-Dumping real production databases locally is a massive security risk. Instead of connecting your laptop directly to production or pulling unscrubbed PII, `devx` delegates to a shell command defined in your `devx.yaml`. 
+Dumping real production databases locally is a massive security risk. Instead of connecting your laptop directly to production or pulling raw PII, `devx` delegates to a shell command you define. The responsibility for scrubbing/anonymizing data stays in your cloud, where compliance tooling already lives.
 
-The standard approach is configuring your cloud environment to generate a nightly, anonymized dump (scrubbing emails, passwords, and PII) and storing it in a secure bucket. `devx db pull` simply downloads that safe artifact and pipes it directly into the container's ingestion tool (`psql`, `mysql`, etc.) without writing massive temporary files to your disk.
+`devx db pull` downloads that pre-scrubbed artifact and pipes it directly into the container's ingestion tool — `psql`, `mysql`, `mongorestore`, `redis-cli` — without ever writing a multi-gigabyte SQL file to your SSD.
+
+#### Two import formats
+
+| | **SQL (default)** | **Custom/Binary** |
+|---|---|---|
+| **Format** | Plain SQL text (`pg_dump`, `mysqldump`) | PostgreSQL binary (`pg_dump -Fc`) |
+| **Ingestion tool** | `psql` / `mysql` | `pg_restore` |
+| **Import speed** | Sequential, single-threaded | **Parallel** (uses all CPU cores) |
+| **Best for** | Any engine, databases < 5 GB | Large PostgreSQL databases (5 GB+) |
+| **DB engine** | All engines | PostgreSQL only |
 
 #### Configuration
-
-Add a `pull.command` to your `devx.yaml`:
 
 ```yaml
 databases:
   - engine: postgres
-    port: 5432
     pull:
-      # A shell command that outputs raw SQL to stdout
-      command: "gcloud storage cat gs://acme-scrubbed-dumps/nightly.sql.gz | gunzip"
+      # Mode 1 — plain SQL (default): works for all engines
+      command: "gcloud storage cat gs://acme-dumps/nightly.sql.gz | gunzip"
+
+      # Mode 2 — binary format (postgres only, large databases):
+      # format: custom        # switches to pg_restore instead of psql
+      # jobs: 4               # parallel workers (default: auto = number of CPU cores)
+      # command: "gcloud storage cat gs://acme-dumps/nightly.dump"
 ```
 
 When you run `devx db pull postgres`, `devx` will:
-1. Ensure the `postgres` container is running.
-2. Prompt for confirmation (unless `-y` is passed).
-3. Execute your `command` and pipe it directly into `podman exec -i devx-db-postgres psql -U devx -d devx`.
+1. Verify the `postgres` container is running (error if not).
+2. Show the pull command and format, requiring confirmation (skip with `-y`).
+3. Execute your `command` in a subshell and pipe stdout directly into the container.
+4. For `format: custom`, use `pg_restore -j <jobs>` for parallel import.
 
-::: warning Drop commands
-Ensure your SQL dump includes `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` or `DROP TABLE IF EXISTS` statements. `devx` streams the dump sequentially; it does not automatically drop the database beforehand. This prevents accidental data loss if the pull command fails midway or lacks data.
+#### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `-j, --jobs` | CPU cores | Parallel workers for `format: custom` (overrides `devx.yaml`) |
+| `--runtime` | `podman` | Container runtime |
+
+::: warning SQL mode: drop commands
+Ensure your SQL dump includes `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` or `DROP TABLE IF EXISTS` before each table. `devx` streams the dump sequentially and does not automatically drop the database first.
 :::
+
+::: tip Binary mode: pre-seed your nightly job
+In GCP, create a Cloud Scheduler job that runs nightly:
+```bash
+pg_dump -Fc -h $PROD_HOST -U $PROD_USER mydb | \
+  anonymize-pii | \
+  gcloud storage cp - gs://my-company-scrubbed-dumps/nightly.dump
+```
+Then `devx db pull postgres` downloads and imports it in seconds with full parallelism.
+:::
+
 
 ### `devx db snapshot`
 

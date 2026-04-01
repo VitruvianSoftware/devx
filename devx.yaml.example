@@ -27,11 +27,20 @@ databases:
   # Supported engines: postgres, redis, mysql, mongo
   - engine: postgres
     port: 5432
-    # You can configure a one-click fetch of a staging/scrubbed database
-    # via `devx db pull postgres`. The standard output of this command
-    # is streamed directly into the local container.
+    # Optional: configure 'devx db pull postgres' to fetch a nightly scrubbed dump.
+    # The 'command' must write the dump to stdout.
     pull:
-      command: "gcloud storage cat gs://my-company-scrubbed-dumps/nightly.sql.gz | gunzip"
+      # --- Mode 1: Plain SQL (default, all engines) ---
+      # Best for standard pg_dump, mysqldump and smaller databases (<5GB).
+      # Imported sequentially via psql.
+      # command: "gcloud storage cat gs://my-company-scrubbed-dumps/nightly.sql.gz | gunzip"
+
+      # --- Mode 2: PostgreSQL binary format (postgres only, large databases) ---
+      # pg_dump -Fc produces a compressed binary that pg_restore can parallelise.
+      # Use this when import time matters on large datasets (5GB+).
+      format: custom   # triggers pg_restore instead of psql
+      jobs: 4          # parallel workers (default: number of CPU cores)
+      command: "gcloud storage cat gs://my-company-scrubbed-dumps/nightly.dump"
   - engine: redis
 
 tunnels:

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/huh"
@@ -16,22 +17,37 @@ import (
 )
 
 var dbPullRuntime string
+var dbPullJobs int
 
 var dbPullCmd = &cobra.Command{
 	Use:   "pull <engine>",
 	Short: "Pull scrubbed production data and stream it into the local database",
-	Long: `Executes the pull command defined in your devx.yaml and streams the
-resulting anonymized data dump directly into your local database container.
+	Long: `Executes the pull command configured in devx.yaml and streams the output
+directly into the local database container — no temp files written to disk.
 
-This avoids writing massive raw SQL files to your disk and ensures you
-always test against realistic (but safe) staging/production data shapes.
+Two formats are supported, configured via 'format' in devx.yaml:
 
-Example devx.yaml configuration:
-databases:
-  - engine: postgres
-    port: 5432
-    pull:
-      command: "gcloud storage cat gs://acme-scrubbed-dumps/latest.sql.gz | gunzip"
+  sql (default) — plain SQL text, ingested via psql/mysql/mongorestore.
+    Best for: standard pg_dump, mysqldump, mongodump.
+    Import speed: sequential, single-threaded.
+
+  custom — PostgreSQL binary custom format (pg_dump -Fc).
+    Ingested via pg_restore with parallel -j workers.
+    Best for: large databases (5GB+) where import time matters.
+    Import speed: parallel, uses all CPU cores by default.
+
+Example devx.yaml:
+
+  databases:
+    - engine: postgres
+      pull:
+        # Plain SQL (all engines):
+        command: "gcloud storage cat gs://acme-dumps/latest.sql.gz | gunzip"
+
+        # Or, binary parallel (postgres only):
+        format: custom
+        jobs: 4
+        command: "gcloud storage cat gs://acme-dumps/latest.dump"
 `,
 	Args: cobra.ExactArgs(1),
 	RunE: runDbPull,
@@ -40,7 +56,21 @@ databases:
 func init() {
 	dbPullCmd.Flags().StringVar(&dbPullRuntime, "runtime", "podman",
 		"Container runtime to use (podman, docker)")
+	dbPullCmd.Flags().IntVarP(&dbPullJobs, "jobs", "j", 0,
+		"Parallel import workers for custom format (0 = auto: number of CPUs)")
 	dbCmd.AddCommand(dbPullCmd)
+}
+
+// dbPullYAML mirrors the pull section of devx.yaml databases entries.
+type dbPullYAML struct {
+	Databases []struct {
+		Engine string `yaml:"engine"`
+		Pull   struct {
+			Command string `yaml:"command"`
+			Format  string `yaml:"format"` // "sql" (default) or "custom"
+			Jobs    int    `yaml:"jobs"`   // parallel workers for pg_restore (0 = nCPU)
+		} `yaml:"pull"`
+	} `yaml:"databases"`
 }
 
 func runDbPull(_ *cobra.Command, args []string) error {
@@ -51,7 +81,7 @@ func runDbPull(_ *cobra.Command, args []string) error {
 			engineName, strings.Join(database.SupportedEngines(), ", "))
 	}
 
-	// 1. Read devx.yaml
+	// ── 1. Read devx.yaml ────────────────────────────────────────────────────
 	yamlData, err := os.ReadFile("devx.yaml")
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -60,55 +90,85 @@ func runDbPull(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to read devx.yaml: %w", err)
 	}
 
-	// Parse out just the databases > pull block
-	type dbPullConfig struct {
-		Databases []struct {
-			Engine string `yaml:"engine"`
-			Pull   struct {
-				Command string `yaml:"command"`
-			} `yaml:"pull"`
-		} `yaml:"databases"`
-	}
-
-	var cfg dbPullConfig
+	var cfg dbPullYAML
 	if err := yaml.Unmarshal(yamlData, &cfg); err != nil {
-		return fmt.Errorf("failed to parse databases from devx.yaml: %w", err)
+		return fmt.Errorf("failed to parse devx.yaml: %w", err)
 	}
 
-	// Find the matching engine in the yaml
+	// Find the matching engine block
 	pullCommand := ""
+	pullFormat := "sql"
+	pullJobs := 0
 	for _, db := range cfg.Databases {
 		if strings.ToLower(db.Engine) == engineName {
 			pullCommand = db.Pull.Command
+			if db.Pull.Format != "" {
+				pullFormat = strings.ToLower(db.Pull.Format)
+			}
+			pullJobs = db.Pull.Jobs
 			break
 		}
 	}
 
 	if pullCommand == "" {
-		return fmt.Errorf("no 'pull.command' configured for %q in devx.yaml", engineName)
+		return fmt.Errorf("no 'pull.command' configured for %q in devx.yaml\n\n"+
+			"Add a pull block under your database entry:\n\n"+
+			"  databases:\n    - engine: %s\n      pull:\n        command: \"your-dump-command-here\"",
+			engineName, engineName)
+	}
+
+	// CLI flag overrides yaml for jobs
+	if dbPullJobs > 0 {
+		pullJobs = dbPullJobs
+	}
+	if pullJobs == 0 {
+		pullJobs = runtime.NumCPU()
+	}
+
+	// Validate format
+	if pullFormat != "sql" && pullFormat != "custom" {
+		return fmt.Errorf("unknown format %q — use 'sql' or 'custom'", pullFormat)
+	}
+	if pullFormat == "custom" && engineName != "postgres" {
+		return fmt.Errorf("format 'custom' (pg_restore) is only supported for postgres")
 	}
 
 	containerName := fmt.Sprintf("devx-db-%s", engineName)
 
-	// 2. Ensure container is running
-	checkCmd := exec.Command(dbPullRuntime, "inspect", containerName, "--format", "{{.State.Running}}")
-	if out, err := checkCmd.Output(); err != nil || strings.TrimSpace(string(out)) != "true" {
-		return fmt.Errorf("the local %s database is not running. Start it first with 'devx db spawn %s'", engineName, engineName)
+	// ── 2. Verify container is running ────────────────────────────────────────
+	out, err := exec.Command(dbPullRuntime, "inspect", containerName, "--format", "{{.State.Running}}").Output()
+	if err != nil || strings.TrimSpace(string(out)) != "true" {
+		return fmt.Errorf("the local %s database is not running — start it with 'devx db spawn %s'",
+			engineName, engineName)
 	}
 
 	if DryRun {
-		fmt.Printf("DRY RUN: Would execute `%s` and pipe output into %s\n", pullCommand, containerName)
+		formatDesc := "SQL text mode (psql)"
+		if pullFormat == "custom" {
+			formatDesc = fmt.Sprintf("binary format (pg_restore -j %d)", pullJobs)
+		}
+		fmt.Printf("[dry-run] Would execute: %s\n", pullCommand)
+		fmt.Printf("[dry-run] Ingestion:     %s → %s  [%s]\n", pullCommand, containerName, formatDesc)
 		return nil
 	}
 
-	// 3. Confirm with user
+	// ── 3. Confirm ───────────────────────────────────────────────────────────
 	if !NonInteractive {
+		formatLabel := "SQL text (sequential)"
+		if pullFormat == "custom" {
+			formatLabel = fmt.Sprintf("binary/custom (pg_restore -j %d parallel workers)", pullJobs)
+		}
+
 		var confirmed bool
 		form := huh.NewForm(
 			huh.NewGroup(
 				huh.NewConfirm().
-					Title(fmt.Sprintf("Pull and overwrite %s database?", engineName)).
-					Description(fmt.Sprintf("This will download data via the configured pull command:\n\n%s\n\nEnsure your dump file drops/truncates cleanly to avoid table merging issues.", tui.StyleMuted.Render(pullCommand))).
+					Title(fmt.Sprintf("Pull and restore %s database?", engineName)).
+					Description(fmt.Sprintf(
+						"Pull command:  %s\nFormat:        %s\n\nThis will stream the dump directly into your local container.",
+						tui.StyleMuted.Render(pullCommand),
+						tui.StyleMuted.Render(formatLabel),
+					)).
 					Affirmative("Yes, pull data").
 					Negative("Cancel").
 					Value(&confirmed),
@@ -121,65 +181,89 @@ func runDbPull(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Printf("\n%s Pulling %s data via script...\n", tui.IconRunning, engineName)
+	fmt.Printf("\n%s Pulling %s data", tui.IconRunning, engineName)
+	if pullFormat == "custom" {
+		fmt.Printf(" (binary mode, %d parallel workers)", pullJobs)
+	}
+	fmt.Println("...")
 
-	// 4. Set up the pipeline: script stdout -> container stdin
-	pullProc := exec.Command("sh", "-c", pullCommand)
-	
-	// Determine the ingest command for the container
+	// ── 4. Build the ingestion command ────────────────────────────────────────
 	var ingestArgs []string
-	switch engineName {
-	case "postgres":
-		ingestArgs = []string{"exec", "-i", containerName, "psql", "-U", engine.Env["POSTGRES_USER"], "-d", engine.Env["POSTGRES_DB"]}
-	case "mysql":
-		ingestArgs = []string{"exec", "-i", containerName, "mysql", "-u", engine.Env["MYSQL_USER"], "-p" + engine.Env["MYSQL_ROOT_PASSWORD"], engine.Env["MYSQL_DATABASE"]}
-	case "redis":
+	switch {
+	case engineName == "postgres" && pullFormat == "custom":
+		// Binary custom format: pg_restore with parallel jobs
+		// pg_restore reads the dump as binary from stdin (--format=custom)
+		// It can parallelise reads (-j N) even from a stream since Postgres 14+
+		ingestArgs = []string{
+			"exec", "-i", containerName,
+			"pg_restore",
+			"--no-owner",          // don't try to assign DB ownership
+			"--no-privileges",     // skip GRANT/REVOKE — local dev doesn't need ACLs
+			"-d", engine.Env["POSTGRES_DB"],
+			"-U", engine.Env["POSTGRES_USER"],
+			fmt.Sprintf("-j%d", pullJobs),
+			"-v",
+			"--format=custom",
+			"--single-transaction",
+		}
+	case engineName == "postgres":
+		ingestArgs = []string{"exec", "-i", containerName,
+			"psql", "-U", engine.Env["POSTGRES_USER"], "-d", engine.Env["POSTGRES_DB"]}
+	case engineName == "mysql":
+		ingestArgs = []string{"exec", "-i", containerName,
+			"mysql", "-u", engine.Env["MYSQL_USER"], "-p" + engine.Env["MYSQL_ROOT_PASSWORD"],
+			engine.Env["MYSQL_DATABASE"]}
+	case engineName == "redis":
 		ingestArgs = []string{"exec", "-i", containerName, "redis-cli"}
-	case "mongo":
-		ingestArgs = []string{"exec", "-i", containerName, "mongorestore", "--username", engine.Env["MONGO_INITDB_ROOT_USERNAME"], "--password", engine.Env["MONGO_INITDB_ROOT_PASSWORD"], "--authenticationDatabase", "admin", "--archive"}
+	case engineName == "mongo":
+		ingestArgs = []string{"exec", "-i", containerName,
+			"mongorestore",
+			"--username", engine.Env["MONGO_INITDB_ROOT_USERNAME"],
+			"--password", engine.Env["MONGO_INITDB_ROOT_PASSWORD"],
+			"--authenticationDatabase", "admin",
+			"--archive"}
 	default:
-		return fmt.Errorf("pull ingestion is not supported natively for engine %q", engineName)
+		return fmt.Errorf("pull ingestion not yet supported for engine %q", engineName)
 	}
 
+	// ── 5. Wire the pipeline: pull stdout → container stdin ──────────────────
+	pullProc := exec.Command("sh", "-c", pullCommand)
 	ingestProc := exec.Command(dbPullRuntime, ingestArgs...)
 
-	// Pipe the output
 	pr, pw := io.Pipe()
 	pullProc.Stdout = pw
 	ingestProc.Stdin = pr
-	
-	// Wire errors to user screen so they can debug GCP/AWS auth issues or psql syntax issues
+
+	// Surface both stderr streams so devs can see auth errors / psql notices
 	pullProc.Stderr = os.Stderr
 	ingestProc.Stderr = os.Stderr
 	ingestProc.Stdout = os.Stdout
 
-	fmt.Printf("  %s %s\n", tui.StyleMuted.Render("→"), pullCommand)
-	fmt.Printf("  %s %s %s\n\n", tui.StyleMuted.Render("→"), dbPullRuntime, strings.Join(ingestArgs, " "))
+	fmt.Printf("\n  %s %s\n", tui.StyleMuted.Render("pull →"), pullCommand)
+	fmt.Printf("  %s %s %s\n\n",
+		tui.StyleMuted.Render("ingest →"),
+		dbPullRuntime,
+		strings.Join(ingestArgs, " "),
+	)
 
-	// Start ingestion first
 	if err := ingestProc.Start(); err != nil {
-		return fmt.Errorf("failed to start ingestion process into container: %w", err)
+		return fmt.Errorf("failed to start ingestion process: %w", err)
 	}
-
-	// Start pulling
 	if err := pullProc.Start(); err != nil {
 		return fmt.Errorf("failed to start pull command: %w", err)
 	}
 
-	// Wait for pull to finish and close the pipe
 	pullErr := pullProc.Wait()
 	_ = pw.Close()
-
-	// Wait for import to wrap up
 	ingestErr := ingestProc.Wait()
 
 	if pullErr != nil {
-		return fmt.Errorf("pull script failed: %v", pullErr)
+		return fmt.Errorf("pull command failed: %w", pullErr)
 	}
 	if ingestErr != nil {
-		return fmt.Errorf("data ingestion into container failed: %v", ingestErr)
+		return fmt.Errorf("ingestion into container failed: %w", ingestErr)
 	}
 
-	fmt.Printf("\n%s Database %s successfully restored and imported.\n", tui.IconDone, engineName)
+	fmt.Printf("\n%s %s database successfully restored.\n", tui.IconDone, engineName)
 	return nil
 }
