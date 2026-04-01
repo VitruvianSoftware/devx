@@ -27,6 +27,11 @@ databases:
   # Supported engines: postgres, redis, mysql, mongo
   - engine: postgres
     port: 5432
+    # You can configure a one-click fetch of a staging/scrubbed database
+    # via `devx db pull postgres`. The standard output of this command
+    # is streamed directly into the local container.
+    pull:
+      command: "gcloud storage cat gs://my-company-scrubbed-dumps/nightly.sql.gz | gunzip"
   - engine: redis
 
 tunnels:
