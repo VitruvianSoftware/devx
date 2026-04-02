@@ -264,3 +264,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** Running Cypress or Playwright tests locally destroys the developer's active database state or fights with existing ports, breaking their flow state.
 * **The Solution:** Implemented `devx test ui`. Reads `databases:` from `devx.yaml`, boots completely isolated, ephemeral containers on random free ports with anonymous volumes, injects `DATABASE_URL` / `<ENGINE>_URL` into the test process environment, runs an optional idempotent `setup` (e.g. migrations), executes the test command, then unconditionally tears down all containers and volumes on exit. Supports full YAML configuration (`test.ui.setup`, `test.ui.command`) and CLI flag overrides (`--setup`, `--command`, `--runtime`) per the CLI + YAML parity design principle.
 * **Key files:** `cmd/test.go`, `cmd/test_ui.go`, `internal/testing/ephemeral.go`
+
+### 31. Unified OpenAPI & 3rd-Party Mocking (DONE)
+* **The Problem:** If Stripe, Twilio, or an internal downstream team's API goes down, local development is completely blocked. Developers can't test integration flows without the real API being available.
+* **The Solution:** Implemented `devx mock` — spins up persistent `stoplight/prism` background containers that serve schema-faithful HTTP responses from any remote OpenAPI spec. Supports full lifecycle management: `devx mock up`, `devx mock list`, `devx mock restart`, and `devx mock rm`. Environment variables (`MOCK_<NAME>_URL`) are automatically injectable. Also added `devx db restart` to close the parity gap.
+* **Key files:** `cmd/mock.go`, `cmd/mock_up.go`, `cmd/mock_list.go`, `cmd/mock_restart.go`, `cmd/mock_rm.go`, `cmd/db_restart.go`, `internal/mock/server.go`
