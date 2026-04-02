@@ -161,6 +161,17 @@ flowchart TB
     class App,DB container;
 ```
 
+## Design Principles
+
+- **One CLI, everything** — VM, tunnels, databases, agent skills, and site hosting are all subcommands of `devx`.
+- **Convention over configuration** — Sensible defaults, but everything is overridable.
+- **Transparency & Idempotency** — Destructive operations show an impact summary. Commands are designed to be run repeatedly safely.
+- **AI-native** — Agent skill files and `--json` output make `devx` controllable by AI coding assistants.
+- **CLI + YAML parity** — Every configurable behavior is available both as a CLI flag and as a `devx.yaml` property.
+- **Optimized Inner Loop** — Developer flow state is sacred. Every feature is optimized to radically reduce cycle time.
+- **Client-Side First Architecture** — No bloated centralized SaaS proxy servers required. `devx` runs completely locally.
+- **Absolute Portability** — "It works on my machine" is solved permanently. Because `devx` standardizes a VM locally, execution topology is indistinguishable regardless of your host OS.
+
 ## 📚 Documentation
 
 The full documentation for `devx`, including all CLI commands, advanced networking, and AI Agent workflows, is available at [devx.vitruviansoftware.dev](https://devx.vitruviansoftware.dev).
