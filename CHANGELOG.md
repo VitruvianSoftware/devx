@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0](https://github.com/VitruvianSoftware/devx/compare/v0.22.0...v0.23.0) (2026-04-02)
+
+
+### Features
+
+* **k8s:** implement zero-config devx k8s local clusters via single-binary k3s ([#91](https://github.com/VitruvianSoftware/devx/issues/91)) ([c68fa35](https://github.com/VitruvianSoftware/devx/commit/c68fa353e19322a1debf67ccd9cf5b47791b8ea5))
+* **mock:** implement devx mock for OpenAPI 3rd-party API mocking ([#89](https://github.com/VitruvianSoftware/devx/issues/89)) ([858ce06](https://github.com/VitruvianSoftware/devx/commit/858ce06337da96f7bbb70d3f99354d514f018e7d))
+* **testing:** implement devx test ui for ephemeral browser testing isolation ([#85](https://github.com/VitruvianSoftware/devx/issues/85)) ([0b0a88b](https://github.com/VitruvianSoftware/devx/commit/0b0a88b28e747822d99007372da96a5ca73b7e0c))
+
+
+### Bug Fixes
+
+* **docs:** copy visual proof image to public asset directory to resolve VitePress CI build error ([#86](https://github.com/VitruvianSoftware/devx/issues/86)) ([8bdc59a](https://github.com/VitruvianSoftware/devx/commit/8bdc59a91fe665090884c5f9fa4192406dd99420))
+* **lint:** Ignore error returns in test helpers ([19d4a6f](https://github.com/VitruvianSoftware/devx/commit/19d4a6f7282211ebdd424dd1e16992b8594a0de0))
+* **mock:** handle Sscanf error return to satisfy errcheck linter ([#90](https://github.com/VitruvianSoftware/devx/issues/90)) ([23dcda9](https://github.com/VitruvianSoftware/devx/commit/23dcda9251821636c185295a854053f74a6d2162))
+* **vault:** convert Bitwarden sync to native Go with auto-login and schema provisioning ([#83](https://github.com/VitruvianSoftware/devx/issues/83)) ([27efafe](https://github.com/VitruvianSoftware/devx/commit/27efafef0f6b791229923c418b3551ea4bbf3286))
+
 ## [0.22.0](https://github.com/VitruvianSoftware/devx/compare/v0.21.0...v0.22.0) (2026-04-02)
 
 
