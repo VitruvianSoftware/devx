@@ -95,18 +95,37 @@ Or install them manually:
 
 ## Quick Start
 
+Before running any infrastructure, you should always check your host environment:
 ```bash
-# 0. Check your environment (one-time)
 devx doctor
+```
 
+### Path A: The Golden Path (Starting a Project)
+
+```bash
 # 1. Provision your dev environment
 devx vm init
 
-# 2. Run something and expose it
-devx exec podman run -d -p 8080:80 docker.io/nginx
-# Visit https://your-name.ipv1337.dev — it's live!
+# 2. Generate a pre-wired API (e.g. go-api, node-api)
+devx scaffold go-api
 
-# 3. Expose any local port instantly (like ngrok)
+# 3. Boot required databases and tunnel mappings
+cd new-project
+devx up
+
+# 4. Enter the isolated dev container (with AI and secrets injected!)
+devx shell
+```
+
+### Path B: The 'ngrok' Alternative
+
+If you just want to punch a secure hole through to an app running on your Macbook right now:
+
+```bash
+# 1. Start your local application natively
+npm run dev # (running on localhost:3000)
+
+# 2. Expose it via Cloudflare Tunnels instantly
 devx tunnel expose 3000 --name myapp
 # → https://myapp.your-name.ipv1337.dev
 ```

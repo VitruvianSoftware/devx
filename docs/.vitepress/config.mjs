@@ -21,6 +21,7 @@ export default defineConfig({
         items: [
           { text: 'What is devx?', link: '/guide/introduction' },
           { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'User Journeys', link: '/guide/journeys' },
           { text: 'Environment Doctor', link: '/guide/doctor' },
           { text: 'Architecture', link: '/guide/architecture' }
         ]
