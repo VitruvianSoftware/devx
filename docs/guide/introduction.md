@@ -48,3 +48,6 @@ Behind the scenes, `devx` provisions a **Podman Machine** running Fedora CoreOS,
 - **Idempotency** — Commands are designed to be run repeatedly safely. Existing configurations and files are skipped or patched contextually to preserve developer intent.
 - **AI-native** — Agent skill files and `--json` output make `devx` controllable by AI coding assistants
 - **CLI + YAML parity** — Every configurable behavior is available both as a CLI flag (for one-off use and scripting) and as a `devx.yaml` property (for committed team defaults). Neither mode is a second-class citizen.
+- **Optimized Inner Loop** — Developer flow state is sacred. Every feature, from sub-millisecond Cloudflare ingress to instant ephemeral database testing, is optimized to radically reduce the "code-to-feedback" cycle time.
+- **Client-Side First Architecture** — No bloated centralized SaaS proxy servers or massive Kubernetes cluster controllers required. `devx` runs completely locally, orchestrating standard daemons (Tailscale, Cloudflared, Podman) natively on your host.
+- **Absolute Portability** — "It works on my machine" is solved permanently. Because `devx` standardizes a Fedora CoreOS Podman Machine locally, your testing and execution topology is indistinguishable regardless of your host OS (Mac/Windows/Linux) or processor architecture.
