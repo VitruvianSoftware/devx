@@ -13,6 +13,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/ai"
 	"github.com/VitruvianSoftware/devx/internal/devcontainer"
 	"github.com/VitruvianSoftware/devx/internal/envvault"
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 )
 
 var shellProviderFlag string
@@ -168,6 +169,16 @@ func runShell(_ *cobra.Command, _ []string) error {
 			args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 		}
 		fmt.Printf("📬 Injected mail catcher endpoints (SMTP_HOST, SMTP_PORT, MAIL_CATCHER_URL)\n")
+	}
+
+	// Auto-inject OTEL exporter endpoints if a devx trace backend is running.
+	// This routes any standard OTEL SDK (Go, Node, Python, Java, etc.) to the
+	// local backend without the developer having to touch their .env file.
+	if otelEnvs := telemetry.DiscoverOTEL(runtime); len(otelEnvs) > 0 {
+		for k, v := range otelEnvs {
+			args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+		}
+		fmt.Printf("🔍 Local telemetry detected. Injected OTEL_EXPORTER_OTLP_ENDPOINT → %s\n", otelEnvs["OTEL_EXPORTER_OTLP_ENDPOINT"])
 	}
 
 	// Note: port forwarding (-p) is intentionally skipped when using host
