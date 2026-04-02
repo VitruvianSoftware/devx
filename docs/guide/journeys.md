@@ -65,6 +65,24 @@ Open a new terminal tab and launch the local Bubble Tea inspector. This allows y
 devx tunnel inspect
 ```
 
+### Alternative: The Configuration Approach (`devx.yaml`)
+In keeping with the **CLI + YAML Parity** design principle, you can permanently codify this tunnel in your repository so you (and your teammates) don't have to remember the CLI flags.
+
+Create a `devx.yaml` file:
+```yaml
+tunnels:
+  - name: my-frontend
+    port: 3000
+    # Optional: Basic Auth or GitHub org restrictions
+    # basic_auth: "admin:supersecret"
+```
+
+Then simply run:
+```bash
+devx up
+```
+This automatically boots the tunnel exactly as if you had typed the long-form command!
+
 ---
 
 ## 3. The Backend Maintainer: Troubleshooting Production Data
@@ -77,10 +95,21 @@ Stand up an isolated, persistent instance of the required database engine.
 devx db spawn postgres --name debug-db
 ```
 
+*Note on YAML Parity:* If the database is already defined in your `devx.yaml` under `databases: [ { name: "debug-db", engine: "postgres" } ]`, simply running `devx up` handles this for you!
+
 ### Step 2: Pull Anonymized State
 Instead of copying a raw SQL dump to your hard drive, orchestrate a secure, streaming injection of anonymized production data directly into the newly spawned database.
 ```bash
 devx db pull postgres
+```
+
+This command relies entirely on `devx.yaml` configuration to know *how* to securely fetch data. For example, `devx.yaml` might have:
+```yaml
+databases:
+  - name: debug-db
+    engine: postgres
+    pull:
+      command: "gcloud storage cat gs://my-anonymized-bucket/nightly.sql"
 ```
 
 ### Step 3: Snapshot the Clean State
