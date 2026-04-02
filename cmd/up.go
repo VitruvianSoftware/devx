@@ -136,8 +136,8 @@ var upCmd = &cobra.Command{
 			return fmt.Errorf("CFDomain is not configured. Run `devx init` or `devx config secrets` first")
 		}
 
-		if err := cloudflare.CheckLogin(); err != nil {
-			return fmt.Errorf("cloudflared missing credentials: %w", err)
+		if err := ensureCloudflareLogin(); err != nil {
+			return err
 		}
 
 		// Generate a single tunnel for the whole project topology

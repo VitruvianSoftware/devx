@@ -95,8 +95,8 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, tunnelID s
 		return "", "", "", nil, fmt.Errorf("CFDomain is not configured. Run `devx vm init` or `devx config secrets` first")
 	}
 
-	if err = cloudflare.CheckLogin(); err != nil {
-		return "", "", "", nil, fmt.Errorf("cloudflared missing credentials: %w", err)
+	if err = ensureCloudflareLogin(); err != nil {
+		return "", "", "", nil, err
 	}
 
 	exposeID := inspectName

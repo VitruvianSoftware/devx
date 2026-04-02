@@ -21,8 +21,3 @@ To propose a new feature, copy the template below and add it to the **Proposed I
 
 ## Proposed Ideas
 
-
-
-
-
-

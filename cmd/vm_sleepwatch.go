@@ -3,11 +3,14 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +26,18 @@ var vmDaemonCmd = &cobra.Command{
 			return err
 		}
 
+		devName := os.Getenv("USER")
+		if devName == "" {
+			devName = "developer"
+		}
+		cfg := config.New(devName, "", "", "")
+		if s, err := secrets.Load(envFile); err == nil && s.DevHostname != "" {
+			cfg.DevHostname = s.DevHostname
+		}
+		if cfg.DevHostname == "" {
+			cfg.DevHostname = "devx"
+		}
+
 		fmt.Printf("🐾 devx sleep-watch active. Polling every %d seconds...\n", sleepTimeout)
 
 		idleTicks := 0
@@ -30,7 +45,7 @@ var vmDaemonCmd = &cobra.Command{
 		for {
 			time.Sleep(time.Duration(sleepTimeout) * time.Second)
 
-			if !prov.IsRunning("devx") {
+			if !prov.IsRunning(cfg.DevHostname) {
 				continue // already asleep
 			}
 
@@ -55,7 +70,7 @@ var vmDaemonCmd = &cobra.Command{
 			// If idle for 3 consecutive polls, sleep it!
 			if idleTicks >= 3 {
 				fmt.Println("💤 No active containers inside VM. Triggering deep-sleep...")
-				if err := prov.Sleep("devx"); err == nil {
+				if err := prov.Sleep(cfg.DevHostname); err == nil {
 					fmt.Println("✓ VM is asleep.")
 				}
 				idleTicks = 0

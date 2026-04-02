@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
+	"github.com/charmbracelet/huh"
 	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/spf13/cobra"
 
@@ -70,35 +70,59 @@ func runSpawn(_ *cobra.Command, args []string) error {
 	// Remove any stopped container with the same name
 	_ = exec.Command(runtime, "rm", "-f", containerName).Run()
 
-	fmt.Printf("🚀 Spawning %s on port %d...\n", engine.Name, port)
+	var finalErr error
+	for {
+		fmt.Printf("🚀 Spawning %s on port %d...\n", engine.Name, port)
 
-	// Build run args
-	runArgs := []string{
-		"run", "-d",
-		"--name", containerName,
-		"-p", fmt.Sprintf("%d:%d", port, engine.InternalPort),
-		"-v", fmt.Sprintf("%s:%s", volumeName, engine.VolumePath),
-		"--label", "managed-by=devx",
-		"--label", fmt.Sprintf("devx-engine=%s", engineName),
-		"--restart", "unless-stopped",
-	}
-
-	for k, v := range engine.Env {
-		runArgs = append(runArgs, "-e", fmt.Sprintf("%s=%s", k, v))
-	}
-
-	runArgs = append(runArgs, engine.Image)
-
-	cmd := exec.Command(runtime, runArgs...)
-	var stderrBuf bytes.Buffer
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
-
-	if err := cmd.Run(); err != nil {
-		if strings.Contains(stderrBuf.String(), "address already in use") || strings.Contains(stderrBuf.String(), "port is already allocated") {
-			return devxerr.New(devxerr.CodeHostPortInUse, fmt.Sprintf("Port %d is already in use by another process", port), err)
+		// Build run args
+		runArgs := []string{
+			"run", "-d",
+			"--name", containerName,
+			"-p", fmt.Sprintf("%d:%d", port, engine.InternalPort),
+			"-v", fmt.Sprintf("%s:%s", volumeName, engine.VolumePath),
+			"--label", "managed-by=devx",
+			"--label", fmt.Sprintf("devx-engine=%s", engineName),
+			"--restart", "unless-stopped",
 		}
-		return fmt.Errorf("failed to start %s: %w", engine.Name, err)
+
+		for k, v := range engine.Env {
+			runArgs = append(runArgs, "-e", fmt.Sprintf("%s=%s", k, v))
+		}
+
+		runArgs = append(runArgs, engine.Image)
+
+		cmd := exec.Command(runtime, runArgs...)
+		var stderrBuf bytes.Buffer
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+
+		if err := cmd.Run(); err != nil {
+			if strings.Contains(stderrBuf.String(), "address already in use") || strings.Contains(stderrBuf.String(), "port is already allocated") {
+				_ = exec.Command(runtime, "rm", "-f", containerName).Run()
+
+				var retry bool
+				pErr := huh.NewConfirm().
+					Title(fmt.Sprintf("Port %d is already in use. Try starting on port %d instead?", port, port+1)).
+					Value(&retry).
+					Run()
+
+				if pErr == nil && retry {
+					port++
+					continue
+				}
+				finalErr = devxerr.New(devxerr.CodeHostPortInUse, fmt.Sprintf("Port %d is already in use by another process", port), err)
+				break
+			}
+			finalErr = fmt.Errorf("failed to start %s: %w", engine.Name, err)
+			break
+		}
+		
+		// Success
+		break
+	}
+
+	if finalErr != nil {
+		return finalErr
 	}
 
 	connStr := engine.ConnString(port)
