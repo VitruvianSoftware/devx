@@ -51,8 +51,8 @@ SECRET_API_KEY=supersecret
 
 	// Change working directory to the test dir
 	originalWd, _ := os.Getwd()
-	os.Chdir(testDir)
-	defer os.Chdir(originalWd)
+	_ = os.Chdir(testDir)
+	defer func() { _ = os.Chdir(originalWd) }()
 
 	shellProviderFlag = "podman"
 

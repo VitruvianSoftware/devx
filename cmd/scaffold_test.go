@@ -58,8 +58,8 @@ func TestScaffoldForce(t *testing.T) {
 	}
 
 	// Make sure the force flag is active
-	scaffoldCmd.Flags().Set("force", "true")
-	defer scaffoldCmd.Flags().Set("force", "false") // reset for other tests
+	_ = scaffoldCmd.Flags().Set("force", "true")
+	defer func() { _ = scaffoldCmd.Flags().Set("force", "false") }() // reset for other tests
 
 	NonInteractive = true
 	defer func() { NonInteractive = false }()
