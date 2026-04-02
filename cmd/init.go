@@ -46,6 +46,11 @@ func runInit(cmd *cobra.Command, _ []string) error {
 	}
 	cfg := config.New(devName, s.DevHostname, "", "")
 
+	// ── Ensure Cloudflare Login (to avoid prompting from within TUI) ──────────
+	if err := ensureCloudflareLogin(); err != nil {
+		return err
+	}
+
 	// ── Shared mutable state across step closures ─────────────────────────────
 	state := &setupState{cfg: cfg, token: s.CFTunnelToken}
 
@@ -79,7 +84,7 @@ func runInit(cmd *cobra.Command, _ []string) error {
 			return prereqs.Summary(results), nil
 		},
 		func() (string, error) {
-			return "authenticated", cloudflare.CheckLogin()
+			return "authenticated", nil
 		},
 		func() (string, error) {
 			tunnel, err := cloudflare.EnsureTunnel(cfg.TunnelName)

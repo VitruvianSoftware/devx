@@ -9,7 +9,6 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/authproxy"
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
@@ -47,9 +46,9 @@ var exposeCmd = &cobra.Command{
 			return fmt.Errorf("CFDomain is not configured. Run `devx init` or `devx secrets` first")
 		}
 
-		// Ensure cloudflared is logged in
-		if err := cloudflare.CheckLogin(); err != nil {
-			return devxerr.New(devxerr.CodeNotLoggedIn, "Cloudflare credentials missing. Run 'cloudflared tunnel login'", err)
+		// Ensure cloudflared is logged in (prompts interactively if not)
+		if err := ensureCloudflareLogin(); err != nil {
+			return err
 		}
 
 		// Generate random sub-domain name if one wasn't provided
