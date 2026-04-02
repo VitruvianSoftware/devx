@@ -78,7 +78,7 @@ func Up(runtime, name, specURL string, port int) (*MockServer, error) {
 		"--restart", "unless-stopped",
 		prismImage,
 		"mock",
-		specURL,             // positional document arg must come first
+		specURL, // positional document arg must come first
 		"--host", "0.0.0.0",
 		"--multiprocess", "false", // workaround for Prism isPrimary crash in v4/v5
 	}

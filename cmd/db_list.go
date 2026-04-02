@@ -15,10 +15,10 @@ import (
 var listRuntime string
 
 var dbListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all devx-managed databases",
+	Use:     "list",
+	Short:   "List all devx-managed databases",
 	Aliases: []string{"ls"},
-	RunE:  runDbList,
+	RunE:    runDbList,
 }
 
 func init() {

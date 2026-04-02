@@ -26,7 +26,7 @@ var agentInitCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var selectedAgents []string
 		var selectedSkills []string
-		
+
 		if len(args) > 0 {
 			selectedAgents = args
 			// Non-interactive fallback: assume all available skills if args are passed

@@ -43,7 +43,7 @@ func Install(targetAgent string, skillName string, force bool) error {
 
 	relPath := fmt.Sprintf("%s/%s/SKILL.md", basePath, skillName)
 	templatePath := "templates/" + relPath
-	
+
 	content, err := EmbedFS.ReadFile(templatePath)
 	if err != nil {
 		return fmt.Errorf("reading embedded template %q: %w", templatePath, err)

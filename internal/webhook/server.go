@@ -18,15 +18,15 @@ import (
 
 // Request captures a single inbound request to the catch server.
 type Request struct {
-	Time      time.Time
-	Method    string
-	Path      string
-	UserAgent string
-	Headers   map[string]string
-	Body      string   // raw body
-	BodyJSON  string   // pretty-printed JSON, empty if not JSON
-	Duration  time.Duration
-	StatusCode int     // always 200 — we always accept
+	Time       time.Time
+	Method     string
+	Path       string
+	UserAgent  string
+	Headers    map[string]string
+	Body       string // raw body
+	BodyJSON   string // pretty-printed JSON, empty if not JSON
+	Duration   time.Duration
+	StatusCode int // always 200 — we always accept
 }
 
 // Server is the webhook catch server.

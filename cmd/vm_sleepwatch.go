@@ -24,7 +24,7 @@ var vmDaemonCmd = &cobra.Command{
 		}
 
 		fmt.Printf("🐾 devx sleep-watch active. Polling every %d seconds...\n", sleepTimeout)
-		
+
 		idleTicks := 0
 
 		for {
@@ -38,14 +38,14 @@ var vmDaemonCmd = &cobra.Command{
 			var out bytes.Buffer
 			psCmd := exec.Command("podman", "ps", "-q")
 			psCmd.Stdout = &out
-			
+
 			// If error, maybe podman machine is booting or failing, just skip this tick
 			if err := psCmd.Run(); err != nil {
 				continue
 			}
 
 			running := len(strings.Fields(strings.TrimSpace(out.String())))
-			
+
 			if running > 0 {
 				idleTicks = 0
 			} else {

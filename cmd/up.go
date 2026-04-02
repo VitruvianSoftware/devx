@@ -90,7 +90,7 @@ var upCmd = &cobra.Command{
 		if projectName == "" {
 			projectName = filepath.Base(mustGetwd())
 		}
-		
+
 		if len(cfgYaml.Databases) > 0 {
 			fmt.Printf("🏗️ Bootstrapping Project '%s' Databases...\n", projectName)
 			devxBin, err := os.Executable()
@@ -160,7 +160,7 @@ var upCmd = &cobra.Command{
 			}
 			composedDomainID := fmt.Sprintf("%s-%s", exposeID, projectName)
 			domain := exposure.GenerateDomain(composedDomainID, baseDomain)
-			
+
 			fmt.Printf("🌍 Routing %s to port %d...\n", domain, tConfig.Port)
 			if err := cloudflare.RouteDNS(tunnelName, domain); err != nil {
 				return fmt.Errorf("failed routing DNS for %s: %w", domain, err)
@@ -188,13 +188,13 @@ var upCmd = &cobra.Command{
 				targetPort = fmt.Sprintf("%d", proxyPort)
 				fmt.Printf("  🔒 Proxy Auth active on %s\n", domain)
 			}
-			
+
 			// register to our ingress routing pipeline
 			ingresses = append(ingresses, cloudflare.IngressEntry{
 				Hostname:   domain,
 				TargetPort: targetPort,
 			})
-			
+
 			// persist exposure state
 			_ = exposure.Save(exposure.Entry{
 				TunnelName: tunnelName,
@@ -203,7 +203,7 @@ var upCmd = &cobra.Command{
 				Domain:     domain,
 			})
 		}
-		
+
 		fmt.Printf("\n🎉 All services are now explicitly available worldwide! Press Ctrl+C to stop exposing your environment.\n\n")
 
 		configFile, err := cloudflare.WriteMultiIngressConfig(tunnel.ID, ingresses)
@@ -212,9 +212,9 @@ var upCmd = &cobra.Command{
 		}
 
 		pCmd := exec.Command("cloudflared", "tunnel", "--config", configFile, "run")
-		
+
 		pCmd.Stdout = nil
-		pCmd.Stderr = nil 
+		pCmd.Stderr = nil
 
 		err = pCmd.Run()
 		if err != nil && err.Error() != "signal: interrupt" {

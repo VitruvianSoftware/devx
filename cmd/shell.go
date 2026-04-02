@@ -102,11 +102,11 @@ func runShell(_ *cobra.Command, _ []string) error {
 		}
 		var devxCfg devxConfig
 		_ = yaml.Unmarshal(yamlData, &devxCfg)
-		
+
 		if devxCfg.AI.Bridge != nil && !*devxCfg.AI.Bridge {
 			aiBridgeEnabled = false
 		}
-		
+
 		// "mix and match which ones, multiple, or none which will default back to using plain .env"
 		if len(devxCfg.Env) == 0 {
 			devxCfg.Env = []string{"file://.env"}
@@ -215,8 +215,8 @@ func runShell(_ *cobra.Command, _ []string) error {
 			".config/gemini-cli",
 			".codex",
 			".openai",
-			".agent",      // Global skills vault
-			".gemini",     // Common gemini state / antigravity
+			".agent",  // Global skills vault
+			".gemini", // Common gemini state / antigravity
 		}
 
 		mountedAgents := 0
@@ -235,7 +235,7 @@ func runShell(_ *cobra.Command, _ []string) error {
 	// 4. SSH Agent forwarding (enables agents to authenticate against Git over SSH)
 	if sshAuthSock := os.Getenv("SSH_AUTH_SOCK"); sshAuthSock != "" {
 		if _, statErr := os.Stat(sshAuthSock); statErr == nil {
-			// Mount the socket file identically so it's queryable at the same path 
+			// Mount the socket file identically so it's queryable at the same path
 			// and inject the matching environment variable.
 			args = append(args, "-v", fmt.Sprintf("%s:%s", sshAuthSock, sshAuthSock))
 			args = append(args, "-e", fmt.Sprintf("SSH_AUTH_SOCK=%s", sshAuthSock))

@@ -39,7 +39,7 @@ var runCmd = &cobra.Command{
 		fmt.Printf("Started native process [%s]. Logs routing to devx logs...\n", name)
 
 		command := exec.Command(args[0], args[1:]...)
-		
+
 		// Setup multi-writers to route to both terminal and log file
 		if logFile != nil {
 			command.Stdout = io.MultiWriter(os.Stdout, logFile)

@@ -26,4 +26,3 @@ func runSecrets(_ *cobra.Command, _ []string) error {
 func init() {
 	configCmd.AddCommand(secretsCmd)
 }
-

@@ -49,7 +49,7 @@ var exposuresCmd = &cobra.Command{
 		if !outputJSON {
 			fmt.Println("🌍 Active Cloudflare Exposures:")
 		}
-		
+
 		type tunnelJSON struct {
 			Name      string `json:"name"`
 			URL       string `json:"url"`

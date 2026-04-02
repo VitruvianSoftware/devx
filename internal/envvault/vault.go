@@ -55,7 +55,7 @@ func pullOne(uri string) (map[string]string, error) {
 		path := strings.TrimPrefix(uri, "file://")
 		return godotenv.Read(path)
 	}
-	
+
 	// Default to trying to read it as a local dotenv file if no protocol
 	if !strings.Contains(uri, "://") {
 		return godotenv.Read(uri)
@@ -154,7 +154,7 @@ func push1Password(uri string, content []byte) error {
 
 	ref := strings.TrimPrefix(uri, "1password://")
 	ref = strings.TrimPrefix(ref, "op://")
-	
+
 	parts := strings.Split(ref, "/")
 	if len(parts) < 3 {
 		return fmt.Errorf("invalid 1Password URI for pushing, expected vault/item/field")
@@ -180,14 +180,14 @@ func pushBitwarden(uri string, content []byte) error {
 	// 1. Get current item JSON just to verify existance and get the exact ID
 	getCmd := exec.Command("bw", "get", "item", item)
 	itemRaw, err := getCmd.Output()
-	
+
 	var itemJSON map[string]interface{}
 	isNew := false
-	
+
 	if err != nil {
 		fmt.Printf("Bitwarden item %q not found. Creating it as a new Secure Note...\n", item)
 		isNew = true
-		
+
 		tmplCmd := exec.Command("bw", "get", "template", "item")
 		itemRaw, err = tmplCmd.Output()
 		if err != nil {
@@ -220,7 +220,7 @@ func pushBitwarden(uri string, content []byte) error {
 	if err != nil {
 		return fmt.Errorf("bw encode failed: %w\nOutput: %s", err, string(encodedRaw))
 	}
-	
+
 	if isNew {
 		createCmd := exec.Command("bw", "create", "item")
 		createCmd.Stdin = bytes.NewReader(encodedRaw)
@@ -239,7 +239,7 @@ func pushBitwarden(uri string, content []byte) error {
 	editCmd := exec.Command("bw", "edit", "item", itemID)
 	// bw edit expects the encoded JSON payload on stdin
 	editCmd.Stdin = bytes.NewReader(encodedRaw)
-	
+
 	if editOut, err := editCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("bw edit item failed: %w\nOutput: %s", err, string(editOut))
 	}
@@ -256,7 +256,7 @@ func pushGCP(uri string, content []byte) error {
 
 	cmd := exec.Command("gcloud", "secrets", "versions", "add", secretPath, "--data-file=-", "--project="+getProjectFromPath(secretPath))
 	cmd.Stdin = strings.NewReader(string(content))
-	
+
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("gcloud secrets versions add failed: %w\nOutput: %s", err, string(out))
 	}
@@ -268,40 +268,40 @@ func checkBitwardenUnlocked() error {
 	if _, err := exec.LookPath("bw"); err != nil {
 		return fmt.Errorf("Bitwarden CLI 'bw' not found in PATH")
 	}
-	
+
 	cmd := exec.Command("bw", "status")
 	out, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("bw status failed: %w", err)
 	}
-	
+
 	var status struct {
 		Status string `json:"status"`
 	}
 	if err := json.Unmarshal(out, &status); err != nil {
 		return fmt.Errorf("failed to parse bw status JSON: %w (output: %s)", err, string(out))
 	}
-	
+
 	if status.Status == "locked" {
 		fmt.Println("🔒 Bitwarden vault is locked. Prompting for unlock...")
-		
+
 		var password string
 		err := huh.NewInput().
 			Title("Bitwarden Master Password").
 			EchoMode(huh.EchoModePassword).
 			Value(&password).
 			Run()
-			
+
 		if err != nil {
 			return fmt.Errorf("unlock cancelled")
 		}
-		
+
 		unlockCmd := exec.Command("bw", "unlock", password, "--raw")
 		sessionRaw, unlockErr := unlockCmd.Output()
 		if unlockErr != nil {
 			return fmt.Errorf("failed to unlock Bitwarden. Check your master password")
 		}
-		
+
 		sessionKey := strings.TrimSpace(string(sessionRaw))
 		if sessionKey != "" {
 			if err := os.Setenv("BW_SESSION", sessionKey); err != nil {
@@ -313,7 +313,7 @@ func checkBitwardenUnlocked() error {
 		}
 	} else if status.Status == "unauthenticated" {
 		fmt.Println("🚫 Bitwarden vault is unauthenticated.")
-		
+
 		var loginMethod string
 		err := huh.NewSelect[string]().
 			Title("How would you like to authenticate to Bitwarden?").
@@ -340,16 +340,16 @@ func checkBitwardenUnlocked() error {
 		loginCmd.Stdin = os.Stdin
 		loginCmd.Stdout = os.Stdout
 		loginCmd.Stderr = os.Stderr
-		
+
 		if err := loginCmd.Run(); err != nil {
 			return fmt.Errorf("interactive bw login failed: %w", err)
 		}
-		
+
 		// Recursively self-evaluate since 'bw login' leaves the CLI in a 'locked' state in this shell context
 		return checkBitwardenUnlocked()
 	} else if status.Status != "unlocked" {
 		return fmt.Errorf("Bitwarden vault is %s. Please resolve this state manually.", status.Status)
 	}
-	
+
 	return nil
 }

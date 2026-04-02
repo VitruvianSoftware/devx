@@ -25,9 +25,9 @@ func getAPIToken() (string, error) {
 
 // cfAPIResponse is the standard Cloudflare API v4 response wrapper.
 type cfAPIResponse struct {
-	Success bool              `json:"success"`
-	Errors  []cfAPIError      `json:"errors"`
-	Result  json.RawMessage   `json:"result"`
+	Success bool            `json:"success"`
+	Errors  []cfAPIError    `json:"errors"`
+	Result  json.RawMessage `json:"result"`
 }
 
 type cfAPIError struct {

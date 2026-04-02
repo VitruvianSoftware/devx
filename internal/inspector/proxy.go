@@ -19,9 +19,9 @@ const replayHeader = "X-Devx-Replay"
 
 // Proxy is a reverse proxy that captures HTTP request/response exchanges.
 type Proxy struct {
-	target    *url.URL
-	rp        *httputil.ReverseProxy
-	listener  net.Listener
+	target   *url.URL
+	rp       *httputil.ReverseProxy
+	listener net.Listener
 
 	mu        sync.RWMutex
 	exchanges []*CapturedExchange

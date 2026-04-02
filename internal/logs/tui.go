@@ -132,7 +132,7 @@ func (m Model) renderedLines() string {
 		c := getColor(l.Service)
 		style := lipgloss.NewStyle().Foreground(c).Bold(true)
 		prefix := style.Render(fmt.Sprintf("[%s]", l.Service))
-		
+
 		// Wrap lines nicely or just truncate. For now just standard format.
 		sb.WriteString(fmt.Sprintf("%s %s %s\n", l.Timestamp.Format("15:04:05"), prefix, l.Message))
 	}

@@ -40,7 +40,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	// VM
 	vmStatus := "not created"
 	vmStyle := tui.StyleMuted
-	
+
 	if info, err := vm.Inspect(cfg.DevHostname); err == nil {
 		vmStatus = info.State
 		if vmStatus == "" {
@@ -109,7 +109,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 			Name   string `json:"name"`
 			Domain string `json:"domain"`
 		}
-		
+
 		var ports []exposedPort
 		if tunnels, err := cloudflare.ListExposedTunnels(devName); err == nil {
 			prefix := fmt.Sprintf("devx-expose-%s-", devName)

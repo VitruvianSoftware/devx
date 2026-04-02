@@ -4,14 +4,14 @@ import "fmt"
 
 const (
 	// State/Existence Errors
-	CodeVMDormant     = 15
-	CodeVMNotFound    = 16
+	CodeVMDormant  = 15
+	CodeVMNotFound = 16
 
 	// Execution/Environment Errors
 	CodeHostPortInUse = 22
 
 	// Auth/Authentication Errors
-	CodeNotLoggedIn   = 41
+	CodeNotLoggedIn = 41
 )
 
 // DevxError wraps a standard error with a stable machine-readable exit code.

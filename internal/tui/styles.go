@@ -3,13 +3,13 @@ package tui
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	colorCyan    = lipgloss.Color("#79C0FF")
-	colorGreen   = lipgloss.Color("#3FB950")
-	colorRed     = lipgloss.Color("#FF7B72")
-	colorYellow  = lipgloss.Color("#E3B341")
-	colorMuted   = lipgloss.Color("#8B949E")
-	colorWhite   = lipgloss.Color("#E6EDF3")
-	colorBorder  = lipgloss.Color("#30363D")
+	colorCyan   = lipgloss.Color("#79C0FF")
+	colorGreen  = lipgloss.Color("#3FB950")
+	colorRed    = lipgloss.Color("#FF7B72")
+	colorYellow = lipgloss.Color("#E3B341")
+	colorMuted  = lipgloss.Color("#8B949E")
+	colorWhite  = lipgloss.Color("#E6EDF3")
+	colorBorder = lipgloss.Color("#30363D")
 
 	// Status icons
 	IconPending = lipgloss.NewStyle().Foreground(colorMuted).Render("◌")

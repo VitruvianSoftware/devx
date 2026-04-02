@@ -9,7 +9,7 @@ import (
 
 // InstallPlan describes what will be installed and the commands to run.
 type InstallPlan struct {
-	PackageManager string       `json:"package_manager"`
+	PackageManager string        `json:"package_manager"`
 	Steps          []InstallStep `json:"steps"`
 }
 

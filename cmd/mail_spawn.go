@@ -18,8 +18,8 @@ const (
 )
 
 var mailSpawnSMTPPort int
-var mailSpawnUIPort   int
-var mailSpawnRuntime  string
+var mailSpawnUIPort int
+var mailSpawnRuntime string
 
 var mailSpawnCmd = &cobra.Command{
 	Use:   "spawn",
@@ -71,7 +71,7 @@ func runMailSpawn(_ *cobra.Command, _ []string) error {
 		"run", "-d",
 		"--name", mailContainerName,
 		"-p", fmt.Sprintf("%d:1025", smtpPort), // SMTP
-		"-p", fmt.Sprintf("%d:8025", uiPort),   // HTTP UI
+		"-p", fmt.Sprintf("%d:8025", uiPort), // HTTP UI
 		"--label", "managed-by=devx",
 		"--label", "devx-mail=mailhog",
 		"--restart", "unless-stopped",
@@ -99,10 +99,10 @@ func printMailEnvVars(smtpPort, uiPort int) {
 
 	if outputJSON {
 		type mailJSON struct {
-			SMTPHost       string `json:"smtp_host"`
-			SMTPPort       int    `json:"smtp_port"`
-			UIUrl          string `json:"ui_url"`
-			APIUrl         string `json:"api_url"`
+			SMTPHost string `json:"smtp_host"`
+			SMTPPort int    `json:"smtp_port"`
+			UIUrl    string `json:"ui_url"`
+			APIUrl   string `json:"api_url"`
 		}
 		b, _ := json.MarshalIndent(mailJSON{
 			SMTPHost: "localhost",

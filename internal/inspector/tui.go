@@ -64,10 +64,10 @@ const (
 
 // TUIModel is the Bubble Tea model for the inspector interface.
 type TUIModel struct {
-	exchanges []CapturedExchange
-	cursor    int
-	scroll    int
-	view      viewState
+	exchanges    []CapturedExchange
+	cursor       int
+	scroll       int
+	view         viewState
 	detailScroll int
 
 	width  int

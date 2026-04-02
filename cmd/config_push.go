@@ -42,7 +42,7 @@ or to update remote shared values securely.`,
 		}
 
 		fmt.Printf("Pushing local .env to configured vaults...\n")
-		
+
 		if err := envvault.PushAll(cfg.Env, dotEnvRaw); err != nil {
 			return err
 		}

@@ -119,7 +119,7 @@ func checkWritable(dir string) error {
 
 // downloadBytes fetches a URL and returns the full response body as bytes.
 func downloadBytes(url string) ([]byte, error) {
-	client := &http.Client{} // no timeout — downloads can be slow on poor connections
+	client := &http.Client{}     // no timeout — downloads can be slow on poor connections
 	resp, err := client.Get(url) //nolint:noctx
 	if err != nil {
 		return nil, err

@@ -21,12 +21,12 @@ const (
 
 // Tool represents a single audit tool.
 type Tool struct {
-	Name             string
-	BinaryName       string                           // binary to look for in $PATH
-	Image            string                           // fallback container image
-	NetworkIsolated  bool                             // true = run container with --network none
-	BuildArgs        func(cwd, format string) []string // args for native execution
-	ContainerArgs    func(cwd, format string) []string // args for container execution
+	Name            string
+	BinaryName      string                            // binary to look for in $PATH
+	Image           string                            // fallback container image
+	NetworkIsolated bool                              // true = run container with --network none
+	BuildArgs       func(cwd, format string) []string // args for native execution
+	ContainerArgs   func(cwd, format string) []string // args for container execution
 }
 
 // Trivy scans for CVEs in OS packages and language dependencies.
@@ -199,7 +199,6 @@ func checkContainerRuntime(rt string) error {
 	return fmt.Errorf("container runtime %q is not reachable: %w", rt, err)
 }
 
-
 // InstallPrePushHook writes a git pre-push hook to .git/hooks/pre-push.
 func InstallPrePushHook(cwd string) error {
 	hooksDir := cwd + "/.git/hooks"
@@ -207,7 +206,7 @@ func InstallPrePushHook(cwd string) error {
 		return fmt.Errorf("not a git repository (no .git/hooks directory found)")
 	}
 	hookPath := hooksDir + "/pre-push"
-	
+
 	// Don't overwrite an existing hook without reading it
 	if _, err := os.Stat(hookPath); err == nil {
 		existing, _ := os.ReadFile(hookPath)

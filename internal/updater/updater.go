@@ -21,9 +21,9 @@ const (
 )
 
 type cacheFile struct {
-	CheckedAt   time.Time `json:"checked_at"`
-	LatestTag   string    `json:"latest_tag"`
-	ReleaseURL  string    `json:"release_url"`
+	CheckedAt  time.Time `json:"checked_at"`
+	LatestTag  string    `json:"latest_tag"`
+	ReleaseURL string    `json:"release_url"`
 }
 
 type githubRelease struct {
@@ -33,9 +33,9 @@ type githubRelease struct {
 
 // CheckResult holds the outcome of a version comparison.
 type CheckResult struct {
-	Current    string
-	Latest     string
-	ReleaseURL string
+	Current         string
+	Latest          string
+	ReleaseURL      string
 	UpdateAvailable bool
 }
 

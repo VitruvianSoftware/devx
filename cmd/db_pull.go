@@ -197,8 +197,8 @@ func runDbPull(_ *cobra.Command, args []string) error {
 		ingestArgs = []string{
 			"exec", "-i", containerName,
 			"pg_restore",
-			"--no-owner",          // don't try to assign DB ownership
-			"--no-privileges",     // skip GRANT/REVOKE — local dev doesn't need ACLs
+			"--no-owner",      // don't try to assign DB ownership
+			"--no-privileges", // skip GRANT/REVOKE — local dev doesn't need ACLs
 			"-d", engine.Env["POSTGRES_DB"],
 			"-U", engine.Env["POSTGRES_USER"],
 			fmt.Sprintf("-j%d", pullJobs),

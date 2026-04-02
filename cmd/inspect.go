@@ -132,7 +132,7 @@ func setupTunnel(proxyPort int) (tunnelURL string, tunnelName string, tunnelID s
 		}
 		// Since we defer cleanupTunnel later, we can't cleanly defer cleanupAuth returning it,
 		// but since authproxy will die when the devx CLI dies, it's fine.
-		_ = cleanupAuth 
+		_ = cleanupAuth
 		targetPort = fmt.Sprintf("%d", newPort)
 	}
 

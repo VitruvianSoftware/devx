@@ -23,10 +23,10 @@ and allows advanced interactive filtering/searching across the entire local stac
 			// AI Native non-interactive JSON streaming
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			
+
 			st := logs.NewStreamer()
 			st.Start(ctx)
-			
+
 			for msg := range st.Lines {
 				b, _ := json.Marshal(msg)
 				fmt.Println(string(b))

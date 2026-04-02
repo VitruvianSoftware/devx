@@ -12,13 +12,12 @@ import (
 // requestMsg is sent to the Bubble Tea program when a new request arrives.
 type requestMsg Request
 
-
 // Model is the Bubble Tea model for the webhook catch TUI.
 type Model struct {
-	requests  []Request
-	viewport  viewport.Model
-	width     int
-	height    int
+	requests   []Request
+	viewport   viewport.Model
+	width      int
+	height     int
 	webhookURL string
 	publicURL  string // non-empty if Cloudflare tunnel is active
 	ready      bool
@@ -200,9 +199,9 @@ func (m Model) renderRequest(n int, req Request) string {
 // - string values in green
 // - numbers/booleans/null in yellow
 func highlightJSON(s string) string {
-	colorKey := lipgloss.Color("#79C0FF")   // cyan
-	colorStr := lipgloss.Color("#A5D6FF")   // light blue
-	colorVal := lipgloss.Color("#E3B341")   // yellow
+	colorKey := lipgloss.Color("#79C0FF") // cyan
+	colorStr := lipgloss.Color("#A5D6FF") // light blue
+	colorVal := lipgloss.Color("#E3B341") // yellow
 
 	lines := strings.Split(s, "\n")
 	out := make([]string, 0, len(lines))

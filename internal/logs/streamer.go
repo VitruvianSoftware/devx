@@ -73,7 +73,7 @@ func (s *Streamer) watchContainers(ctx context.Context) {
 
 func (s *Streamer) tailContainer(ctx context.Context, name string) {
 	cmd := exec.CommandContext(ctx, "podman", "logs", "--tail", "50", "-f", name)
-	
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return

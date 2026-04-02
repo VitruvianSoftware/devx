@@ -59,7 +59,7 @@ func Execute() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(dex.ExitCode)
 		}
-		
+
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

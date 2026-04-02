@@ -11,10 +11,10 @@ import (
 
 // Profile maps named network profiles to actual constraints
 type Profile struct {
-	Latency     time.Duration
-	Jitter      time.Duration
-	Bandwidth   int // bytes per second
-	PacketLoss  float64 // probability 0.0 to 1.0
+	Latency    time.Duration
+	Jitter     time.Duration
+	Bandwidth  int     // bytes per second
+	PacketLoss float64 // probability 0.0 to 1.0
 }
 
 var Profiles = map[string]Profile{
@@ -29,10 +29,10 @@ var Profiles = map[string]Profile{
 		Bandwidth: 50 * 1024, // ~400 kbps
 	},
 	"slow": {
-		Latency:   500 * time.Millisecond,
-		Jitter:    200 * time.Millisecond,
-		Bandwidth: 10 * 1024, // ~80 kbps
-		PacketLoss: 0.05, // 5% loss
+		Latency:    500 * time.Millisecond,
+		Jitter:     200 * time.Millisecond,
+		Bandwidth:  10 * 1024, // ~80 kbps
+		PacketLoss: 0.05,      // 5% loss
 	},
 }
 
@@ -131,7 +131,7 @@ func copyThrottled(dst net.Conn, src net.Conn, bytesPerSec int, packetLoss float
 		if nr > 0 {
 			// Simulate packet loss by simply dropping the payload slice and moving on
 			if packetLoss > 0 && rand.Float64() < packetLoss {
-				continue 
+				continue
 			}
 
 			// Slice to current chunk
@@ -152,7 +152,7 @@ func copyThrottled(dst net.Conn, src net.Conn, bytesPerSec int, packetLoss float
 				// Calculate how long this chunk *should* have taken at the target bandwidth
 				expectedDuration := time.Duration(float64(nw)/float64(bytesPerSec)*1000) * time.Millisecond
 				elapsed := time.Since(start)
-				
+
 				if elapsed < expectedDuration {
 					time.Sleep(expectedDuration - elapsed)
 				}

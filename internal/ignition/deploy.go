@@ -50,7 +50,7 @@ func DeployWithSSH(ignPath, machineName string, sshFn SSHFunc) error {
 	if err != nil {
 		return fmt.Errorf("reading ign path %s: %w", ignPath, err)
 	}
-	
+
 	var conf ignConfig
 	if err := json.Unmarshal(data, &conf); err != nil {
 		return fmt.Errorf("unmarshaling ignition json: %w", err)
@@ -82,13 +82,13 @@ func DeployWithSSH(ignPath, machineName string, sshFn SSHFunc) error {
 				content = decoded
 			}
 		}
-		
+
 		script := fmt.Sprintf("sudo tee %s >/dev/null <<'EOF'\n%s\nEOF\nsudo chmod %o %s", f.Path, content, f.Mode, f.Path)
 		if _, err := sshFn(machineName, script); err != nil {
 			return fmt.Errorf("deploying file %s: %w", f.Path, err)
 		}
 	}
-    // Re-evaluate sysctls
+	// Re-evaluate sysctls
 	_, _ = sshFn(machineName, "sudo sysctl --system")
 
 	var enabledUnits []string
@@ -102,11 +102,11 @@ func DeployWithSSH(ignPath, machineName string, sshFn SSHFunc) error {
 			enabledUnits = append(enabledUnits, u.Name)
 		}
 	}
-	
+
 	if _, err := sshFn(machineName, "sudo systemctl daemon-reload"); err != nil {
 		return fmt.Errorf("systemctl daemon-reload: %w", err)
 	}
-	
+
 	for _, u := range enabledUnits {
 		if _, err := sshFn(machineName, "sudo systemctl enable --now "+u); err != nil {
 			return fmt.Errorf("systemctl enable --now %s: %w", u, err)

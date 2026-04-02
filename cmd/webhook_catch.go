@@ -18,8 +18,8 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/webhook"
 )
 
-var webhookPort    int
-var webhookExpose  bool
+var webhookPort int
+var webhookExpose bool
 var webhookRuntime string
 
 var webhookCmd = &cobra.Command{
@@ -255,4 +255,3 @@ func (r *requestEncoder) encode(req webhook.Request) {
 		Duration: fmt.Sprintf("%d", req.Duration.Milliseconds()),
 	})
 }
-

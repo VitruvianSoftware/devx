@@ -13,14 +13,14 @@ import (
 // Config represents the subset of the devcontainer.json spec that
 // devx supports. See https://containers.dev/implementors/json_reference/
 type Config struct {
-	Name              string            `json:"name"`
-	Image             string            `json:"image"`
-	WorkspaceFolder   string            `json:"workspaceFolder"`
-	ContainerEnv      map[string]string `json:"containerEnv"`
-	RemoteUser        string            `json:"remoteUser"`
-	PostCreateCommand interface{}       `json:"postCreateCommand"` // string or []string
-	Mounts            []interface{}     `json:"mounts"`            // string or object
-	ForwardPorts      []int             `json:"forwardPorts"`
+	Name              string                 `json:"name"`
+	Image             string                 `json:"image"`
+	WorkspaceFolder   string                 `json:"workspaceFolder"`
+	ContainerEnv      map[string]string      `json:"containerEnv"`
+	RemoteUser        string                 `json:"remoteUser"`
+	PostCreateCommand interface{}            `json:"postCreateCommand"` // string or []string
+	Mounts            []interface{}          `json:"mounts"`            // string or object
+	ForwardPorts      []int                  `json:"forwardPorts"`
 	Features          map[string]interface{} `json:"features"`
 }
 

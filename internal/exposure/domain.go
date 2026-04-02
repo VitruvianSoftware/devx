@@ -7,8 +7,8 @@ import (
 
 // GenerateDomain constructs a flattened subdomain to prevent SSL wildcard mismatch.
 // Cloudflare Universal SSL certificates automatically cover 1 level of wildcard (*.example.com).
-// If cfDomain is already a subdomain (e.g. james.ipv1337.dev - 3 parts), navigating one level deeper 
-// (eagle.james.ipv1337.dev) causes SSL errors (ERR_SSL_VERSION_OR_CIPHER_MISMATCH) because it requires 
+// If cfDomain is already a subdomain (e.g. james.ipv1337.dev - 3 parts), navigating one level deeper
+// (eagle.james.ipv1337.dev) causes SSL errors (ERR_SSL_VERSION_OR_CIPHER_MISMATCH) because it requires
 // Advanced Certificate Manager coverage (*.*.ipv1337.dev is invalid, you must cover the base specifically).
 // To bypass this, we combine the exposeID and the first subdomain part with a hyphen.
 func GenerateDomain(exposeID, cfDomain string) string {

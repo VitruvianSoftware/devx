@@ -85,12 +85,12 @@ func (e *DomainNotVerifiedError) Error() string {
 
 // PagesStatus holds the current state of GitHub Pages for a repository.
 type PagesStatus struct {
-	CNAME          string `json:"cname"`
-	Status         string `json:"status"`          // "built", "building", etc.
-	HTMLURL        string `json:"html_url"`
-	HTTPSEnforced  bool   `json:"https_enforced"`
-	DomainState    string `json:"protected_domain_state"` // "verified", "unverified", "pending"
-	HTTPSCert      *HTTPSCert `json:"https_certificate"`
+	CNAME         string     `json:"cname"`
+	Status        string     `json:"status"` // "built", "building", etc.
+	HTMLURL       string     `json:"html_url"`
+	HTTPSEnforced bool       `json:"https_enforced"`
+	DomainState   string     `json:"protected_domain_state"` // "verified", "unverified", "pending"
+	HTTPSCert     *HTTPSCert `json:"https_certificate"`
 }
 
 // HTTPSCert holds the SSL certificate details.
