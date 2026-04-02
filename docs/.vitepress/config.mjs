@@ -38,6 +38,7 @@ export default defineConfig({
           { text: 'Webhook Catcher', link: '/guide/webhook' },
           { text: 'Security Auditing', link: '/guide/audit' },
           { text: 'Distributed Tracing', link: '/guide/trace' },
+          { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }
