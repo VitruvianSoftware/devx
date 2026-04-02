@@ -78,7 +78,7 @@ devx test ui --runtime docker --command "npx playwright test"
 
 The test run below demonstrates a full lifecycle: two fresh databases are booted on dynamic ports, the test receives the correct injected `DATABASE_URL`, and both containers are destroyed cleanly on exit — the primary development database remains completely untouched.
 
-![devx test ui — Ephemeral E2E Testing Verification Proof](/Users/james/.gemini/antigravity/brain/ed2bc556-c685-48f3-a96d-f9e02ab64feb/devx_test_ui_proof_1775113649865.png)
+![devx test ui — Ephemeral E2E Testing Verification Proof](/devx_test_ui_proof.png)
 
 ::: tip Pre-processing
 The `setup` step is designed for idempotent migration commands like `npm run prisma db push` or `npm run db:migrate`. These same steps should mirror your deployment pipeline to shift pre-processing validation left and catch issues early.
