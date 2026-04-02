@@ -274,3 +274,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** `devx` excels at standard container execution, but developers shipping to Kubernetes ultimately need to test manifests locally without destroying their macbooks with Minikube or navigating the heavy bootstrapping of the `kind` CLI.
 * **The Solution:** Implemented `devx k8s spawn`. Directly orchestrates the raw `rancher/k3s` container inside Podman/Docker to instantly boot a fully compliant Kubernetes control plane in seconds. Safely extracts the kubeconfig to an isolated scoped file (e.g. `~/.kube/devx-<name>.yaml`) ensuring no corruption to the host's primary configuration. Includes full lifecycle via `devx k8s list` and `devx k8s rm`.
 * **Key files:** `cmd/k8s_spawn.go`, `cmd/k8s_list.go`, `internal/k8s/k3s.go`
+
+### 33. CLI Integration Test Harness (DONE)
+* **The Problem:** The `cmd/` layer — our most user-facing surface — had zero test coverage. Commands like `devx shell`, `devx scaffold`, and `devx cloud spawn` contain complex branching logic (env injection, idempotency guards, mount detection) that was entirely untested, creating a silent regression risk on every PR.
+* **The Solution:** Built a dedicated integration test harness for the `cmd/` package. Uses a fake/mock container runtime backend to allow tests to run without a real Podman VM. Written table-driven test cases covering the most critical code paths: AI bridge injection logic, `.env` override precedence, and `--force` flag behavior on scaffold, whilst ensuring interactive TUI prompts (`huh`) don't hang automated tests.
+* **Key files:** `cmd/shell_test.go`, `cmd/scaffold_test.go`, `internal/testutil/fake_runtime.go`
