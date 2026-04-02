@@ -13,17 +13,27 @@
   <img src=".github/assets/hero.png" alt="devx — Supercharged Local Development" width="600">
 </p>
 
+## Mission Statement
+
+**devx** exists to bring absolute joy back to local development. 
+We relentlessly eliminate the daily friction that pulls developers out of their flow state. From wrestling with inconsistent OS kernels to manually managing `.env` files, mocking webhooks, or resetting scrambled testing databases—we believe your tooling should work natively, instantly, and invisibly so you can just write code.
+
+## Why `devx`? (More than just Compose or Skaffold)
+
+While tools like **Docker Compose** excel at booting containers and **Skaffold** focuses on bridging local code to Kubernetes clusters, `devx` serves as a comprehensive, end-to-end **Local Development Environment Orchestrator**. 
+
+We go far beyond basic container networking by natively integrating the premium capabilities developers usually pay for or duct-tape together into a single, unified CLI:
+
+* 🌐 **Instant Public Ingress:** Stop paying for ngrok. We securely wire your local containers to the internet instantly via Cloudflare Tunnels (`*.ipv1337.dev`), right out of the box.
+* 🔒 **Zero-Trust Corporate Access:** Stop fighting with heavy VPN clients. The `devx` VM natively joins your Tailscale mesh silently, giving your local apps direct access to staging and production databases.
+* 🧪 **Ephemeral E2E Testing:** Unlike Compose which corrupts your local databases during UI tests, `devx test ui` dynamically clones isolated, randomized copies of your database topology to run Cypress/Playwright tests safely.
+* 🔑 **Vault-Native Config Sync:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to automatically inject secrets natively directly into process environments.
+* 🤖 **AI-Native from Day 1:** Fully compliant with AI Agents (Cursor, Claude Code, Gemina) via deterministic `--json` outputs, `--dry-run` safety mechanisms, and native Agent Skill discovery.
+* 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
+
+`devx` provisions a customized **Fedora CoreOS** VM via Podman Machine or Docker and seamlessly drives this entire supercharged ecosystem.
+
 ---
-
-`devx` provisions a customized **Fedora CoreOS** VM via Podman Machine and automatically configures **Cloudflare Tunnels** (instant public HTTPS) and **Tailscale** (zero-trust corporate network access) — all from a single command.
-
-## The Problem
-
-Local development is plagued by recurring friction:
-
-1. **"It works on my machine"** — Inconsistent host OS configs, file watcher limits, kernel parameters
-2. **Accessing internal services** — Developers need corporate APIs/databases without routing everything through a slow VPN
-3. **Webhooks & sharing** — Testing Stripe/GitHub webhooks or sharing a prototype requires sketchy ngrok setups
 
 ## The Solution
 

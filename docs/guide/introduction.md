@@ -1,12 +1,25 @@
 # What is devx?
 
-**devx** is a developer experience CLI that provisions a fully-configured local development environment in a single command. It eliminates the three most common sources of developer friction:
+## Mission Statement
+
+**devx** exists to bring absolute joy back to local development. 
+We relentlessly eliminate the daily friction that pulls developers out of their flow state. From wrestling with inconsistent OS kernels to manually managing `.env` files, mocking webhooks, or resetting scrambled testing databases—we believe your tooling should work natively, instantly, and invisibly so you can just write code.
+
+## Why `devx`? (More than just Compose or Skaffold)
+
+While tools like **Docker Compose** excel at booting containers and **Skaffold** focuses on bridging local workflows to Kubernetes, `devx` serves as a comprehensive, end-to-end **Local Development Environment Orchestrator**. 
+
+We go far beyond basic container networking by natively integrating the premium capabilities developers usually pay for or duct-tape together into a single, unified CLI:
 
 | Problem | devx Solution |
 |---------|---------------|
 | "It works on my machine" | Deterministic Fedora CoreOS VM with pre-tuned kernel parameters |
-| Accessing internal services | Zero-trust Tailscale mesh VPN, built into the VM |
-| Webhooks & sharing | Instant public HTTPS via Cloudflare Tunnels (`*.ipv1337.dev`) |
+| Accessing internal services | Zero-trust Tailscale mesh VPN silently built into the VM |
+| Costly ngrok subscriptions | Instant public HTTPS via Cloudflare Tunnels (`*.ipv1337.dev`) |
+| Broken UI tests corrupting DBs | Isolated, dynamically allocated Ephemeral E2E Browser Testing Databases |
+| Outdated local `.env` files | Native injection of secrets directly from Bitwarden and 1Password |
+| Juggling multiple CLI tools | Integrated Bubble Tea TUIs for log multiplexing and webhook caching |
+
 
 ## How It Works
 
