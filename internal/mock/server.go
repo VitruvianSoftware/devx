@@ -210,7 +210,9 @@ func containerPort(runtime, containerName string) (int, error) {
 		return 0, err
 	}
 	var port int
-	fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &port)
+	if _, err := fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &port); err != nil {
+		return 0, err
+	}
 	return port, nil
 }
 
