@@ -40,6 +40,7 @@ export default defineConfig({
           { text: 'Distributed Tracing', link: '/guide/trace' },
           { text: 'Ephemeral E2E Testing', link: '/guide/testing' },
           { text: 'API Mocking', link: '/guide/mocking' },
+          { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
           { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]

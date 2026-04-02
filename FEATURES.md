@@ -269,3 +269,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** If Stripe, Twilio, or an internal downstream team's API goes down, local development is completely blocked. Developers can't test integration flows without the real API being available.
 * **The Solution:** Implemented `devx mock` — spins up persistent `stoplight/prism` background containers that serve schema-faithful HTTP responses from any remote OpenAPI spec. Supports full lifecycle management: `devx mock up`, `devx mock list`, `devx mock restart`, and `devx mock rm`. Environment variables (`MOCK_<NAME>_URL`) are automatically injectable. Also added `devx db restart` to close the parity gap.
 * **Key files:** `cmd/mock.go`, `cmd/mock_up.go`, `cmd/mock_list.go`, `cmd/mock_restart.go`, `cmd/mock_rm.go`, `cmd/db_restart.go`, `internal/mock/server.go`
+
+### 32. Zero-Config Local Kubernetes (Kind / k3s) (DONE)
+* **The Problem:** `devx` excels at standard container execution, but developers shipping to Kubernetes ultimately need to test manifests locally without destroying their macbooks with Minikube or navigating the heavy bootstrapping of the `kind` CLI.
+* **The Solution:** Implemented `devx k8s spawn`. Directly orchestrates the raw `rancher/k3s` container inside Podman/Docker to instantly boot a fully compliant Kubernetes control plane in seconds. Safely extracts the kubeconfig to an isolated scoped file (e.g. `~/.kube/devx-<name>.yaml`) ensuring no corruption to the host's primary configuration. Includes full lifecycle via `devx k8s list` and `devx k8s rm`.
+* **Key files:** `cmd/k8s_spawn.go`, `cmd/k8s_list.go`, `internal/k8s/k3s.go`
