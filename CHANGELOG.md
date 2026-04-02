@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0](https://github.com/VitruvianSoftware/devx/compare/v0.21.0...v0.22.0) (2026-04-02)
+
+
+### Features
+
+* **agent:** multi-skill orchestrator + shift-left observability docs ([903f54e](https://github.com/VitruvianSoftware/devx/commit/903f54e89373f8d4ca050d313392cafed853d71b))
+* **trace:** shift-left distributed observability via devx trace ([#81](https://github.com/VitruvianSoftware/devx/issues/81)) ([fcad429](https://github.com/VitruvianSoftware/devx/commit/fcad42955f4555239868d8884b6c0d8eb0640abc))
+
 ## [0.21.0](https://github.com/VitruvianSoftware/devx/compare/v0.20.1...v0.21.0) (2026-04-01)
 
 
