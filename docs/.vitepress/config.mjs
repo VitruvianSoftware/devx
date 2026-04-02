@@ -37,6 +37,7 @@ export default defineConfig({
           { text: 'Email Catcher', link: '/guide/mail' },
           { text: 'Webhook Catcher', link: '/guide/webhook' },
           { text: 'Security Auditing', link: '/guide/audit' },
+          { text: 'Distributed Tracing', link: '/guide/trace' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }

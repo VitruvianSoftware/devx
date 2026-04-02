@@ -25,18 +25,29 @@ var agentInitCmd = &cobra.Command{
 	Long:  `Automatically configures standard AI agent constraints (.cursorrules, CLAUDE.md, etc) so agents understand devx conventions like --json and --dry-run.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var selectedAgents []string
+		var selectedSkills []string
 		
 		if len(args) > 0 {
 			selectedAgents = args
+			// Non-interactive fallback: assume all available skills if args are passed
+			for _, skill := range agent.AvailableSkills {
+				selectedSkills = append(selectedSkills, skill.ID)
+			}
 		} else if NonInteractive {
 			// In non-interactive mode without args, do nothing
 			return nil
 		} else {
+			var skillOptions []huh.Option[string]
+			for _, skill := range agent.AvailableSkills {
+				label := fmt.Sprintf("%s — %s", skill.Name, skill.Description)
+				skillOptions = append(skillOptions, huh.NewOption(label, skill.ID).Selected(true))
+			}
+
 			form := huh.NewForm(
 				huh.NewGroup(
 					huh.NewMultiSelect[string]().
 						Title("Which AI Agent(s) do you use?").
-						Description("We will initialize the correct devx configuration files for them.").
+						Description("We will initialize the correct directory structures for them.").
 						Options(
 							huh.NewOption("Antigravity/Gemini (Standard Agent Skills)", "antigravity").Selected(true),
 							huh.NewOption("Cursor IDE", "cursor"),
@@ -44,6 +55,13 @@ var agentInitCmd = &cobra.Command{
 							huh.NewOption("GitHub Copilot Chat", "copilot"),
 						).
 						Value(&selectedAgents),
+				),
+				huh.NewGroup(
+					huh.NewMultiSelect[string]().
+						Title("Which skills should we inject?").
+						Description("Select standard operating procedures to enforce for this repo.").
+						Options(skillOptions...).
+						Value(&selectedSkills),
 				),
 			).WithTheme(huh.ThemeCatppuccin())
 
@@ -53,15 +71,17 @@ var agentInitCmd = &cobra.Command{
 			}
 		}
 
-		if len(selectedAgents) == 0 {
-			fmt.Println("No agents selected. Doing nothing.")
+		if len(selectedAgents) == 0 || len(selectedSkills) == 0 {
+			fmt.Println("No agents or skills selected. Doing nothing.")
 			return nil
 		}
 
 		fmt.Println("📦 Installing devx configurations...")
 		for _, a := range selectedAgents {
-			if err := agent.Install(a, agentForceUpdate); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to install %s config: %v\n", a, err)
+			for _, s := range selectedSkills {
+				if err := agent.Install(a, s, agentForceUpdate); err != nil {
+					fmt.Fprintf(os.Stderr, "failed to install %s/%s config: %v\n", a, s, err)
+				}
 			}
 		}
 

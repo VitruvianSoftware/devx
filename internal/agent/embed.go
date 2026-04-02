@@ -10,23 +10,43 @@ import (
 //go:embed all:templates
 var EmbedFS embed.FS
 
-var ManifestPaths = map[string]string{
-	"cursor":      ".cursor/skills/devx/SKILL.md",
-	"claude":      ".claude/skills/devx/SKILL.md",
-	"copilot":     ".github/skills/devx/SKILL.md",
-	"antigravity": ".agent/skills/devx/SKILL.md", // Standard format based on UI
+var AgentBasePaths = map[string]string{
+	"cursor":      ".cursor/skills",
+	"claude":      ".claude/skills",
+	"copilot":     ".github/skills",
+	"antigravity": ".agent/skills",
+}
+
+var AvailableSkills = []struct {
+	ID          string
+	Name        string
+	Description string
+}{
+	{
+		ID:          "devx",
+		Name:        "Devx CLI Orchestrator Rules",
+		Description: "Mandates --json, --dry-run, and handles prediction of devx exit codes.",
+	},
+	{
+		ID:          "platform-engineer",
+		Name:        "Platform Engineering SOP (Mandatory Docs)",
+		Description: "Enforces strict documentation-first behavior and image embedding requirements for AI agents.",
+	},
 }
 
 // Install copies the correct template string to the local working directory.
-func Install(targetAgent string, force bool) error {
-	relPath, ok := ManifestPaths[targetAgent]
+func Install(targetAgent string, skillName string, force bool) error {
+	basePath, ok := AgentBasePaths[targetAgent]
 	if !ok {
 		return fmt.Errorf("unsupported agent: %s", targetAgent)
 	}
 
-	content, err := EmbedFS.ReadFile("templates/" + relPath)
+	relPath := fmt.Sprintf("%s/%s/SKILL.md", basePath, skillName)
+	templatePath := "templates/" + relPath
+	
+	content, err := EmbedFS.ReadFile(templatePath)
 	if err != nil {
-		return fmt.Errorf("reading embedded template %q: %w", relPath, err)
+		return fmt.Errorf("reading embedded template %q: %w", templatePath, err)
 	}
 
 	// Make sure the target directory exists (for things like .github/ or .agent/)
@@ -48,6 +68,6 @@ func Install(targetAgent string, force bool) error {
 		return fmt.Errorf("writing %q: %w", relPath, err)
 	}
 
-	fmt.Printf("✓ Installed %s AI Agent config: %s\n", targetAgent, relPath)
+	fmt.Printf("✓ Installed %s AI Agent skill: %s\n", targetAgent, relPath)
 	return nil
 }

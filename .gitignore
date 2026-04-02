@@ -3,7 +3,7 @@
 .env.keys
 
 # Go build output
-devx
+/devx
 dist/
 
 # Go tooling

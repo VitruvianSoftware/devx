@@ -25,11 +25,6 @@ To propose a new feature, copy the template below and add it to the **Proposed I
 
 
 
-### 29. Shift-Left Distributed Observability
-* **The Problem:** When running 5 microservices locally via `devx.yaml`, figuring out *where* a request failed requires tailing 5 sets of logs. Full distributed tracing is currently reserved for cloud/production because setting up an OTLP collector + Jaeger locally is too tedious.
-* **The Solution:** Implement `devx trace` or `devx observe`. Instantly spins up a lightweight OpenTelemetry Collector and Grafana Alloy/Jaeger stack. Auto-injects `OTEL_EXPORTER_OTLP_ENDPOINT` into all managed containers. Provides a beautiful terminal dashboard or local web UI links to visualize spans.
-* **Key files:** `cmd/trace.go`, `internal/telemetry/otel.go`
-
 ### 30. Ephemeral E2E Browser Testing Environments
 * **The Problem:** Writing and running Cypress or Playwright tests locally destroys the developer's local database state or fights with active ports, breaking their flow state.
 * **The Solution:** Implement `devx test ui`. Boots an entirely cloned, perfectly clean topology (app + fresh cloned DB) in isolation, runs headless browser integration tests against it, then immediately tears it down. 

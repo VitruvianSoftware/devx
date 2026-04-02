@@ -249,3 +249,13 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 ### 28. Zero-Friction Local AI Bridge (DONE)
 * **The Problem:** Developers building AI applications struggle with the overhead of running models locally inside VMs while retaining GPU acceleration, and they often lose agent identities (`claude`, `opencode`) when entering isolated containers.
 * **The Solution:** Implemented a lightweight AI Bridge that automatically detects host-level inference engines (Ollama, LM Studio) and natively injects `OPENAI_API_BASE` overrides into `devx shell`. Additionally bridges agentic workflow gaps by natively mounting identity/auth tokens, global skill vaults, Docker socket (DooD) sandboxing privileges, and SSH/Git forwarding capabilities seamlessly into the workspace.
+
+### 29. Shift-Left Distributed Observability (DONE)
+* **The Problem:** When running 5 microservices locally via `devx.yaml`, figuring out *where* a request failed requires tailing 5 sets of logs. Full distributed tracing is currently reserved for cloud/production because setting up an OTLP collector + Jaeger locally is too tedious.
+* **The Solution:** Implemented `devx trace spawn [engine]`. Instantly spins up a lightweight OpenTelemetry backend (`jaeger` or `grafana` LGTM stack) locally. Auto-injects `OTEL_EXPORTER_OTLP_ENDPOINT` directly into all running `devx shell` and managed containers. Provides developers with immediate visual access to their local distributed traces.
+* **Key files:** `cmd/trace.go`, `internal/telemetry/otel.go`, `cmd/shell.go`
+* **Verification Proof:**
+  * Jaeger Stack:
+    ![Jaeger trace search — 1 Trace found](/Users/james/.gemini/antigravity/brain/ed2bc556-c685-48f3-a96d-f9e02ab64feb/jaeger_search_results_1775089747605.png)
+  * Grafana LGTM Stack:
+    ![Grafana Tempo Detail — duration 5.02s](/Users/james/.gemini/antigravity/brain/ed2bc556-c685-48f3-a96d-f9e02ab64feb/grafana_tempo_trace_details_1775093238026.png)
