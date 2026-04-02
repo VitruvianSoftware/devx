@@ -27,10 +27,7 @@ To propose a new feature, copy the template below and add it to the **Proposed I
 
 
 
-### 31. Unified OpenAPI & 3rd-Party Mocking
-* **The Problem:** If Stripe, Twilio, or an internal downstream team's API goes down, local development is completely blocked.
-* **The Solution:** Implement `devx mock`. Parses an `openapi.yaml` spec and spins up a local mock server (like Prism or WireMock) under a `*.devx.local` domain, instantly providing fake generated response schemas so developers can keep coding offline.
-* **Key files:** `cmd/mock.go`, `internal/mock/prism.go`
+
 
 ### 32. Zero-Config Local Kubernetes (Kind / k3s)
 * **The Problem:** `devx` excels at standard container/VM execution, but developers shipping to Kubernetes ultimately need to test manifests, Helm charts, and operators locally without destroying their macbooks with Minikube.

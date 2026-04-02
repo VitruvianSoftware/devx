@@ -38,12 +38,22 @@ type DevxConfigTestUI struct {
 	Command string `yaml:"command"` // The actual test command to execute
 }
 
+// DevxConfigMock defines a remote OpenAPI-backed mock server entry.
+// TODO(future): support local file specs by detecting if URL is a file:// or relative path,
+// then volume-mounting it into the Prism container.
+type DevxConfigMock struct {
+	Name string `yaml:"name"` // Friendly name (becomes env var MOCK_<NAME>_URL)
+	URL  string `yaml:"url"`  // Remote OpenAPI spec URL (must be http:// or https://)
+	Port int    `yaml:"port"` // Host port (0 = auto-assign a free port)
+}
+
 type DevxConfig struct {
 	Name      string               `yaml:"name"`      // Project name
 	Domain    string               `yaml:"domain"`    // Custom domain (BYOD)
 	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`   // List of ports to expose
 	Databases []DevxConfigDatabase `yaml:"databases"` // List of databases to provision
 	Test      DevxConfigTest       `yaml:"test"`      // Test configuration
+	Mocks     []DevxConfigMock     `yaml:"mocks"`     // List of OpenAPI mock servers to provision
 }
 
 var upDomain string
