@@ -2,6 +2,9 @@
 .env
 .env.keys
 
+# Our local config
+devx.yaml
+
 # Go build output
 /devx
 dist/

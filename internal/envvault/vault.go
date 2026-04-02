@@ -1,11 +1,14 @@
 package envvault
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/joho/godotenv"
 )
 
@@ -100,8 +103,8 @@ func pull1Password(uri string) (map[string]string, error) {
 }
 
 func pullBitwarden(uri string) (map[string]string, error) {
-	if _, err := exec.LookPath("bw"); err != nil {
-		return nil, fmt.Errorf("Bitwarden CLI 'bw' not found in PATH. Make sure you are logged in and session is unlocked.")
+	if err := checkBitwardenUnlocked(); err != nil {
+		return nil, err
 	}
 
 	item := strings.TrimPrefix(uri, "bitwarden://")
@@ -167,41 +170,78 @@ func push1Password(uri string, content []byte) error {
 }
 
 func pushBitwarden(uri string, content []byte) error {
-	if _, err := exec.LookPath("bw"); err != nil {
-		return fmt.Errorf("Bitwarden CLI 'bw' not found in PATH")
+	if err := checkBitwardenUnlocked(); err != nil {
+		return err
 	}
 
 	item := strings.TrimPrefix(uri, "bitwarden://")
 	item = strings.TrimPrefix(item, "bw://")
 
-	// 1. Get current item JSON just to verify existance
+	// 1. Get current item JSON just to verify existance and get the exact ID
 	getCmd := exec.Command("bw", "get", "item", item)
-	_, err := getCmd.Output()
+	itemRaw, err := getCmd.Output()
+	
+	var itemJSON map[string]interface{}
+	isNew := false
+	
 	if err != nil {
-		// If it doesn't exist, we'd ideally create it. For now fail.
-		return fmt.Errorf("bw get item failed: %w\n(Note: Bitwarden item must already exist to push to it)", err)
+		fmt.Printf("Bitwarden item %q not found. Creating it as a new Secure Note...\n", item)
+		isNew = true
+		
+		tmplCmd := exec.Command("bw", "get", "template", "item")
+		itemRaw, err = tmplCmd.Output()
+		if err != nil {
+			return fmt.Errorf("failed to fetch Bitwarden item template: %w", err)
+		}
 	}
 
-	// 2. We don't even need to heavily parse it, we can just replace .notes securely using jq?
-	// But it's safer to avoid jq dependency. We can do string search/replace or basic JSON unmarshal.
-	// Actually, doing this natively in Go is very robust
-	
-	// Poor man's JSON edit to preserve exact structure without full unmarshal complexity for generic types:
-	// But Bitwarden requires base64 encoding (bw encode).
-	// Let's use an inline python/ruby or just simple map unmarshalling.
-	// We'll rely on executing a shell command that sets the notes field and pipes to bw encode -> edit.
-	// "jq '.notes = $val'" is easiest, but requires jq. We'll use a small python script.
-	pythonScript := fmt.Sprintf(`
-import json, sys
-data = json.load(sys.stdin)
-data["notes"] = %q
-print(json.dumps(data))
-`, string(content))
+	// 2. Unmarshal into generic map, edit notes natively handling quotes, marshal back
+	if err := json.Unmarshal(itemRaw, &itemJSON); err != nil {
+		return fmt.Errorf("failed to unmarshal bw item JSON: %w (output: %q)", err, string(itemRaw))
+	}
 
-	editFlow := fmt.Sprintf("bw get item %q | python3 -c '%s' | bw encode | bw edit item %q", item, pythonScript, item)
-	flowCmd := exec.Command("sh", "-c", editFlow)
-	if flowOut, flowErr := flowCmd.CombinedOutput(); flowErr != nil {
-		return fmt.Errorf("bw edit pipeline failed: %w\nOutput: %s", flowErr, string(flowOut))
+	if isNew {
+		itemJSON["type"] = 2 // Secure Note
+		itemJSON["name"] = item
+		itemJSON["secureNote"] = map[string]interface{}{"type": 0}
+
+	}
+	itemJSON["notes"] = string(content)
+
+	editedRaw, err := json.Marshal(itemJSON)
+	if err != nil {
+		return fmt.Errorf("failed to marshal edited bw item JSON: %w", err)
+	}
+
+	// 3. Encode via bw encode
+	encodeCmd := exec.Command("bw", "encode")
+	encodeCmd.Stdin = bytes.NewReader(editedRaw)
+	encodedRaw, err := encodeCmd.Output()
+	if err != nil {
+		return fmt.Errorf("bw encode failed: %w\nOutput: %s", err, string(encodedRaw))
+	}
+	
+	if isNew {
+		createCmd := exec.Command("bw", "create", "item")
+		createCmd.Stdin = bytes.NewReader(encodedRaw)
+		if createOut, err := createCmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("bw create item failed: %w\nOutput: %s", err, string(createOut))
+		}
+		return nil
+	}
+
+	// 4. Push edit via bw edit item using the exact ID rather than name
+	itemID := item
+	if idVal, ok := itemJSON["id"].(string); ok && idVal != "" {
+		itemID = idVal
+	}
+
+	editCmd := exec.Command("bw", "edit", "item", itemID)
+	// bw edit expects the encoded JSON payload on stdin
+	editCmd.Stdin = bytes.NewReader(encodedRaw)
+	
+	if editOut, err := editCmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("bw edit item failed: %w\nOutput: %s", err, string(editOut))
 	}
 
 	return nil
@@ -221,5 +261,95 @@ func pushGCP(uri string, content []byte) error {
 		return fmt.Errorf("gcloud secrets versions add failed: %w\nOutput: %s", err, string(out))
 	}
 
+	return nil
+}
+
+func checkBitwardenUnlocked() error {
+	if _, err := exec.LookPath("bw"); err != nil {
+		return fmt.Errorf("Bitwarden CLI 'bw' not found in PATH")
+	}
+	
+	cmd := exec.Command("bw", "status")
+	out, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("bw status failed: %w", err)
+	}
+	
+	var status struct {
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(out, &status); err != nil {
+		return fmt.Errorf("failed to parse bw status JSON: %w (output: %s)", err, string(out))
+	}
+	
+	if status.Status == "locked" {
+		fmt.Println("🔒 Bitwarden vault is locked. Prompting for unlock...")
+		
+		var password string
+		err := huh.NewInput().
+			Title("Bitwarden Master Password").
+			EchoMode(huh.EchoModePassword).
+			Value(&password).
+			Run()
+			
+		if err != nil {
+			return fmt.Errorf("unlock cancelled")
+		}
+		
+		unlockCmd := exec.Command("bw", "unlock", password, "--raw")
+		sessionRaw, unlockErr := unlockCmd.Output()
+		if unlockErr != nil {
+			return fmt.Errorf("failed to unlock Bitwarden. Check your master password")
+		}
+		
+		sessionKey := strings.TrimSpace(string(sessionRaw))
+		if sessionKey != "" {
+			if err := os.Setenv("BW_SESSION", sessionKey); err != nil {
+				return fmt.Errorf("failed to inject BW_SESSION into environment: %w", err)
+			}
+			fmt.Println("🔓 Vault unlocked! Continuing operations...")
+		} else {
+			return fmt.Errorf("bw unlock returned an empty session key")
+		}
+	} else if status.Status == "unauthenticated" {
+		fmt.Println("🚫 Bitwarden vault is unauthenticated.")
+		
+		var loginMethod string
+		err := huh.NewSelect[string]().
+			Title("How would you like to authenticate to Bitwarden?").
+			Options(
+				huh.NewOption("Interactive (Email, Password, 2FA)", "interactive"),
+				huh.NewOption("API Key (Client ID & Secret)", "apikey"),
+				huh.NewOption("SSO (Single Sign-On)", "sso"),
+			).
+			Value(&loginMethod).
+			Run()
+
+		if err != nil {
+			return fmt.Errorf("login cancelled")
+		}
+
+		args := []string{"login"}
+		if loginMethod == "apikey" {
+			args = append(args, "--apikey")
+		} else if loginMethod == "sso" {
+			args = append(args, "--sso")
+		}
+
+		loginCmd := exec.Command("bw", args...)
+		loginCmd.Stdin = os.Stdin
+		loginCmd.Stdout = os.Stdout
+		loginCmd.Stderr = os.Stderr
+		
+		if err := loginCmd.Run(); err != nil {
+			return fmt.Errorf("interactive bw login failed: %w", err)
+		}
+		
+		// Recursively self-evaluate since 'bw login' leaves the CLI in a 'locked' state in this shell context
+		return checkBitwardenUnlocked()
+	} else if status.Status != "unlocked" {
+		return fmt.Errorf("Bitwarden vault is %s. Please resolve this state manually.", status.Status)
+	}
+	
 	return nil
 }
