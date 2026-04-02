@@ -34,3 +34,4 @@ Behind the scenes, `devx` provisions a **Podman Machine** running Fedora CoreOS,
 - **Transparency** — Destructive operations show an impact summary and require confirmation
 - **Idempotency** — Commands are designed to be run repeatedly safely. Existing configurations and files are skipped or patched contextually to preserve developer intent.
 - **AI-native** — Agent skill files and `--json` output make `devx` controllable by AI coding assistants
+- **CLI + YAML parity** — Every configurable behavior is available both as a CLI flag (for one-off use and scripting) and as a `devx.yaml` property (for committed team defaults). Neither mode is a second-class citizen.

@@ -25,10 +25,7 @@ To propose a new feature, copy the template below and add it to the **Proposed I
 
 
 
-### 30. Ephemeral E2E Browser Testing Environments
-* **The Problem:** Writing and running Cypress or Playwright tests locally destroys the developer's local database state or fights with active ports, breaking their flow state.
-* **The Solution:** Implement `devx test ui`. Boots an entirely cloned, perfectly clean topology (app + fresh cloned DB) in isolation, runs headless browser integration tests against it, then immediately tears it down. 
-* **Key files:** `cmd/test_ui.go`, `internal/testing/ephemeral.go`
+
 
 ### 31. Unified OpenAPI & 3rd-Party Mocking
 * **The Problem:** If Stripe, Twilio, or an internal downstream team's API goes down, local development is completely blocked.

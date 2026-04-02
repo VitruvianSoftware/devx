@@ -259,3 +259,8 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
     ![Jaeger trace search — 1 Trace found](/Users/james/.gemini/antigravity/brain/ed2bc556-c685-48f3-a96d-f9e02ab64feb/jaeger_search_results_1775089747605.png)
   * Grafana LGTM Stack:
     ![Grafana Tempo Detail — duration 5.02s](/Users/james/.gemini/antigravity/brain/ed2bc556-c685-48f3-a96d-f9e02ab64feb/grafana_tempo_trace_details_1775093238026.png)
+
+### 30. Ephemeral E2E Browser Testing Environments (DONE)
+* **The Problem:** Running Cypress or Playwright tests locally destroys the developer's active database state or fights with existing ports, breaking their flow state.
+* **The Solution:** Implemented `devx test ui`. Reads `databases:` from `devx.yaml`, boots completely isolated, ephemeral containers on random free ports with anonymous volumes, injects `DATABASE_URL` / `<ENGINE>_URL` into the test process environment, runs an optional idempotent `setup` (e.g. migrations), executes the test command, then unconditionally tears down all containers and volumes on exit. Supports full YAML configuration (`test.ui.setup`, `test.ui.command`) and CLI flag overrides (`--setup`, `--command`, `--runtime`) per the CLI + YAML parity design principle.
+* **Key files:** `cmd/test.go`, `cmd/test_ui.go`, `internal/testing/ephemeral.go`

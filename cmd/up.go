@@ -29,11 +29,21 @@ type DevxConfigDatabase struct {
 	Port   int    `yaml:"port"`
 }
 
+type DevxConfigTest struct {
+	UI DevxConfigTestUI `yaml:"ui"`
+}
+
+type DevxConfigTestUI struct {
+	Setup   string `yaml:"setup"`   // Pre-processing steps (e.g., migrations) to run before tests
+	Command string `yaml:"command"` // The actual test command to execute
+}
+
 type DevxConfig struct {
-	Name      string               `yaml:"name"`      // Project name 
+	Name      string               `yaml:"name"`      // Project name
 	Domain    string               `yaml:"domain"`    // Custom domain (BYOD)
 	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`   // List of ports to expose
 	Databases []DevxConfigDatabase `yaml:"databases"` // List of databases to provision
+	Test      DevxConfigTest       `yaml:"test"`      // Test configuration
 }
 
 var upDomain string
