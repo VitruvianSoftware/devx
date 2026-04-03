@@ -44,6 +44,7 @@ export default defineConfig({
           { text: 'API Mocking', link: '/guide/mocking' },
           { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
           { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
+          { text: 'Local CI Emulation', link: '/guide/ci' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }
