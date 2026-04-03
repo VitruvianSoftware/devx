@@ -7,9 +7,9 @@ import (
 func TestTopologicalSort_Linear(t *testing.T) {
 	dag := NewDAG()
 
-	dag.AddNode(&Node{Name: "postgres", Type: NodeDatabase})
-	dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"postgres"}})
-	dag.AddNode(&Node{Name: "web", Type: NodeService, DependsOn: []string{"api"}})
+	_ = dag.AddNode(&Node{Name: "postgres", Type: NodeDatabase})
+	_ = dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"postgres"}})
+	_ = dag.AddNode(&Node{Name: "web", Type: NodeService, DependsOn: []string{"api"}})
 
 	tiers, err := dag.TopologicalSort()
 	if err != nil {
@@ -34,9 +34,9 @@ func TestTopologicalSort_Linear(t *testing.T) {
 func TestTopologicalSort_Parallel(t *testing.T) {
 	dag := NewDAG()
 
-	dag.AddNode(&Node{Name: "postgres", Type: NodeDatabase})
-	dag.AddNode(&Node{Name: "redis", Type: NodeDatabase})
-	dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"postgres", "redis"}})
+	_ = dag.AddNode(&Node{Name: "postgres", Type: NodeDatabase})
+	_ = dag.AddNode(&Node{Name: "redis", Type: NodeDatabase})
+	_ = dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"postgres", "redis"}})
 
 	tiers, err := dag.TopologicalSort()
 	if err != nil {
@@ -56,8 +56,8 @@ func TestTopologicalSort_Parallel(t *testing.T) {
 func TestTopologicalSort_CycleDetection(t *testing.T) {
 	dag := NewDAG()
 
-	dag.AddNode(&Node{Name: "a", Type: NodeService, DependsOn: []string{"b"}})
-	dag.AddNode(&Node{Name: "b", Type: NodeService, DependsOn: []string{"a"}})
+	_ = dag.AddNode(&Node{Name: "a", Type: NodeService, DependsOn: []string{"b"}})
+	_ = dag.AddNode(&Node{Name: "b", Type: NodeService, DependsOn: []string{"a"}})
 
 	_, err := dag.TopologicalSort()
 	if err == nil {
@@ -72,7 +72,7 @@ func TestTopologicalSort_CycleDetection(t *testing.T) {
 func TestValidate_MissingDependency(t *testing.T) {
 	dag := NewDAG()
 
-	dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"nonexistent"}})
+	_ = dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"nonexistent"}})
 
 	err := dag.Validate()
 	if err == nil {
@@ -87,9 +87,9 @@ func TestValidate_MissingDependency(t *testing.T) {
 func TestTopologicalSort_NoDependencies(t *testing.T) {
 	dag := NewDAG()
 
-	dag.AddNode(&Node{Name: "a", Type: NodeService})
-	dag.AddNode(&Node{Name: "b", Type: NodeService})
-	dag.AddNode(&Node{Name: "c", Type: NodeService})
+	_ = dag.AddNode(&Node{Name: "a", Type: NodeService})
+	_ = dag.AddNode(&Node{Name: "b", Type: NodeService})
+	_ = dag.AddNode(&Node{Name: "c", Type: NodeService})
 
 	tiers, err := dag.TopologicalSort()
 	if err != nil {
@@ -109,10 +109,10 @@ func TestTopologicalSort_DiamondDependency(t *testing.T) {
 	dag := NewDAG()
 
 	// Diamond: db -> api, db -> worker, api+worker -> gateway
-	dag.AddNode(&Node{Name: "db", Type: NodeDatabase})
-	dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"db"}})
-	dag.AddNode(&Node{Name: "worker", Type: NodeService, DependsOn: []string{"db"}})
-	dag.AddNode(&Node{Name: "gateway", Type: NodeService, DependsOn: []string{"api", "worker"}})
+	_ = dag.AddNode(&Node{Name: "db", Type: NodeDatabase})
+	_ = dag.AddNode(&Node{Name: "api", Type: NodeService, DependsOn: []string{"db"}})
+	_ = dag.AddNode(&Node{Name: "worker", Type: NodeService, DependsOn: []string{"db"}})
+	_ = dag.AddNode(&Node{Name: "gateway", Type: NodeService, DependsOn: []string{"api", "worker"}})
 
 	tiers, err := dag.TopologicalSort()
 	if err != nil {
