@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0](https://github.com/VitruvianSoftware/devx/compare/v0.25.0...v0.26.0) (2026-04-03)
+
+
+### Features
+
+* Devx State Command Hierarchy (Idea 41 & 47) ([da85676](https://github.com/VitruvianSoftware/devx/commit/da85676eb182c2ab202f2ea87f16861c6d07dc7e))
+* implement devx agent ship — deterministic agentic pipeline guardrail (Idea 40) ([#105](https://github.com/VitruvianSoftware/devx/issues/105)) ([f9251ba](https://github.com/VitruvianSoftware/devx/commit/f9251badb8b6aae4261c182d5992f888cff82e52))
+
+
+### Bug Fixes
+
+* apply strict documentation checks to embed template ([#100](https://github.com/VitruvianSoftware/devx/issues/100)) ([3afe719](https://github.com/VitruvianSoftware/devx/commit/3afe719a9db593427dc468fad48eda68cc43b50e))
+* downgrade go.mod to 1.24.0 to resolve golangci-lint CI failure ([#104](https://github.com/VitruvianSoftware/devx/issues/104)) ([b54bd26](https://github.com/VitruvianSoftware/devx/commit/b54bd26887e1eeac0ec9edf627c771b925f05689))
+* resolve 3 bugs and 4 design issues in devx state implementation ([5fda58e](https://github.com/VitruvianSoftware/devx/commit/5fda58e7ed9f2142753e281c9ae55b3937ecfa0f))
+
 ## [0.25.0](https://github.com/VitruvianSoftware/devx/compare/v0.24.0...v0.25.0) (2026-04-03)
 
 
