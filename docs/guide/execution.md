@@ -34,6 +34,14 @@ When started, it automatically discovers:
 
 It combines their standard output into a beautifully color-coded **Bubble Tea Terminal UI**, prefixing each line dynamically so you can visually trace a single user request as it hits the Cloudflare Tunnel, routes to your native Node.js process on Mac, and queries the containerized Postgres database—all in one window.
 
+### Native Secrets Redaction (DLP)
+
+Screensharing logs during pair programming or recording demos historically risks leaking production API keys injected from your `.env` or remote Vault sources.
+
+Because `devx` natively coordinates Secret Vault injection to components, it has unique global awareness of the exact values of all secrets injected into your workspace. The `devx logs` stream actively runs every stdout/stderr line through an exact-match substitution engine **before** it hits your Bubble Tea TUI viewport or JSON output. 
+
+Any string matching a known loaded secret (greater than 5 characters to avoid false-positive corruption) is automatically scrubbed entirely and visually replaced with a `[REDACTED]` token.
+
 ### AI Agent Support
 
 Because beautifully rendered Terminal UI components (ANSI characters, colors, and interactive viewports) break the context windows of AI Agents interacting with the CLI, `devx logs` implements a strict fallback mode via the global `--json` flag.

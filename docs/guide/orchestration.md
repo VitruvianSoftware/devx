@@ -70,6 +70,56 @@ $ devx up
 
 ---
 
+## Visual Architecture Map (`devx map`)
+
+For onboarding engineers, reading a 300-line `devx.yaml` file to understand the system topology is daunting. `devx` provides a command to visualize the orchestration DAG immediately:
+
+```bash
+devx map
+```
+
+This parses the internal routing, container bounds, network ports, and `devx.yaml` dependencies to instantly output a [Mermaid.js](https://mermaid.js.org/) flowchart diagram. You can pipe this into an output file for architecture documentation:
+
+```bash
+devx map --output topology.md
+```
+
+---
+
+## Environment Profiles (`--profile`)
+
+Skaffold and Docker Compose natively understand that a local workflow isn't a monolith. A frontend developer might not need a local Kafka queue, while a backend developer might not need the local React build.
+
+`devx` introduces **Environment Profiles** directly into `devx.yaml`. Profiles allow developers to apply additive or merging configuration overlays to the base setup with a simple flag:
+
+```bash
+devx up --profile backend-only
+```
+
+In `devx.yaml`, define conditional blocks:
+
+```yaml
+profiles:
+  backend-only:
+    services:
+      - name: api
+        env:
+          LOG_LEVEL: trace
+      - name: kafka-consumer
+        runtime: host
+        command: ["go", "run", "./cmd/consumer"]
+        depends_on:
+          - name: postgres
+            condition: service_healthy
+```
+
+**Override Semantics:**
+- **Matching names**: fields are merged (the profile wins over the base config).
+- **New entries**: appended contextually (adding a new service to the execution DAG).
+- **Omitted fields**: inherited from the base `devx.yaml`.
+
+---
+
 ## Automatic Port Conflict Resolution
 
 Nothing breaks developer flow state worse than `EADDRINUSE`. 
