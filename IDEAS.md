@@ -24,13 +24,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 ## 🟡 P2 — Build Later (Good Ideas, Need Refinement)
 
-### 41. Shareable Diagnostic Dumps (DONE)
-* **Priority:** 🟢 DONE
-* **Effort:** Low
-* **Impact:** Medium — the snapshot part is easy, but the "upload to where?" question is unsolved. Uploading to Gists adds auth friction; hosting a pastebin adds ops burden. Ship a `devx state dump` first that outputs a structured JSON/markdown report to stdout. Let sharing be a V2 concern.
-* **The Problem:** "It doesn't work on my machine despite the devx environment, please help." Getting context on another developer's broken state requires clunky screen shares.
-* **The Solution:** Add `devx state dump`. This command securely snapshots the running topology, failing container logs, and redacted `devx.yaml` state into a structured diagnostic report. A future V2 can add upload to GitHub Gist or internal pastebin.
-* **Key files:** `cmd/state_dump.go`
 
 ### 42. Local CI Pipeline Emulation
 * **Priority:** 🟡 P2
@@ -73,12 +66,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 * **The Problem:** Complex bugs sometimes only happen with real staging integration data. Running all 50 microservices locally is impossible, but testing a local fix against the remote cluster is tedious.
 * **The Solution:** Similar to Telepresence, `devx bridge` securely intercepts traffic from a specific microservice in a remote K8s staging environment and tunnels it perfectly down into the developer's local `devx` container to allow real-time cross-boundary testing.
 
-### 47. Time-Travel Debugging (Full State Checkpoints) (DONE)
-* **Priority:** 🟢 DONE
-* **Effort:** High
-* **Impact:** Marginal over existing `db snapshot` — CRIU is powerful but notoriously finicky (fails on containers with open network sockets, GPU state, or certain kernel features). Podman's checkpoint support is labeled experimental on macOS. The already-shipped `db snapshot` covers 80% of the use case. Consider marketing `db snapshot` more aggressively instead.
-* **The Problem:** You are writing an integration test and the database gets mutated in an erroneous or complex way, forcing you to completely seed the DB again to reproduce the bug.
-* **The Solution:** Expanding on `db snapshot`, `devx state checkpoint` snapshots the entire topology's RAM, volumes, and running processes using Podman checkpoints (CRIU), letting a user seamlessly "rewind" all containers back exactly 5 minutes prior to the failure.
 
 ### 48. Seed Data Runner
 * **Priority:** 🟡 P3

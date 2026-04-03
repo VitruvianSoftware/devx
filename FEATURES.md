@@ -335,3 +335,12 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **Impact:** High (onboarding) — `devx map` parsing `devx.yaml` and emitting a Mermaid diagram is ~200 lines of Go. But the impact on onboarding is outsized — a new engineer clones a repo, runs `devx map`, and instantly *sees* how 8 services connect. This is a demo-day feature. It sells the tool.
 * **The Problem:** For onboarding engineers, looking at a 300-line `devx.yaml` is overwhelming and the logical flow of which app talks to what database is lost.
 * **The Solution:** Implement `devx map`. It parses the internal routing, volumes, and `devx.yaml` dependencies to instantly spit out an interactive SVG or Mermaid.js graph to `<project_root>/devx-map.html`, giving visual tangibility to the stack.
+
+### 40. Deterministic Agentic Pipeline Guardrail (`devx agent ship`) (DONE)
+* **The Problem:** AI agents pushing code often trigger bad workflows (bypassing pre-commit hooks, failing go vet, ignoring linting, creating malformed PRs). They lack an atomic, reliable guardrail.
+* **The Solution:** Implemented `devx agent ship`. Provides a deterministic wrapper around the CI/CD "ship it" pipeline. Runs `go fmt`, `go test`, pushes to the current branch, and triggers `gh pr create`. AI agents can run this non-interactively (`-y`) to confidently push finished code knowing the system will hard block on regressions before a PR is opened.
+
+### 41 & 47. Diagnostic Context & Time-Travel Debugging (`devx state`) (DONE)
+* **The Problem:** "It doesn't work on my machine... please help." Context gathering involves massive copy-pasting of raw logs, usually leaking `.env` secrets. Meanwhile, integration test flows often corrupt local databases, requiring slow "seed from scratch" workflows.
+* **The Solution:** Introduced the `devx state` command hierarchy. `devx state dump` instantly creates a comprehensive markdown/JSON diagnostic report including system health, Tailscale status, container topologies, strictly redacted config maps, and context-aware crash tails of failing containers. `devx state checkpoint` and `devx state restore` leverages Podman's native CRIU integration to take full-memory, volume, and socket snapshots of running topologies, enabling instantaneous "rewind" to exact state points without re-running data ingestion pipelines.
+
