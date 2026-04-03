@@ -67,6 +67,15 @@ type DevxConfigHealthcheck struct {
 	Retries  int    `yaml:"retries"`  // Number of consecutive successes required
 }
 
+// DevxConfigSync defines a host→container file sync mapping powered by Mutagen.
+// This bypasses slow VirtioFS volume mounts for instant hot-reload.
+type DevxConfigSync struct {
+	Container string   `yaml:"container"` // Target container name (e.g., "my-api")
+	Src       string   `yaml:"src"`       // Host source path (relative to devx.yaml)
+	Dest      string   `yaml:"dest"`      // Container destination path
+	Ignore    []string `yaml:"ignore"`    // Additional ignore patterns (on top of defaults)
+}
+
 // DevxConfigService defines a developer application in devx.yaml.
 type DevxConfigService struct {
 	Name        string                `yaml:"name"`
@@ -75,7 +84,8 @@ type DevxConfigService struct {
 	DependsOn   []DevxConfigDependsOn `yaml:"depends_on"` // services/databases that must be healthy first
 	Healthcheck DevxConfigHealthcheck `yaml:"healthcheck"`
 	Port        int                   `yaml:"port"`
-	Env         map[string]string     `yaml:"env"` // extra env vars
+	Env         map[string]string     `yaml:"env"`              // extra env vars
+	Sync        []DevxConfigSync      `yaml:"sync,omitempty"`   // file sync mappings into containers
 }
 
 // DevxConfigProfile defines a named overlay that merges additively onto the base config.
@@ -368,6 +378,18 @@ var upCmd = &cobra.Command{
 				return fmt.Errorf("service orchestration failed: %w", dagErr)
 			}
 			fmt.Printf("\n✅ All services are running and healthy.\n")
+
+			// Idea 43: Hint about file syncing when sync blocks are present
+			hasSyncBlocks := false
+			for _, svc := range cfgYaml.Services {
+				if len(svc.Sync) > 0 {
+					hasSyncBlocks = true
+					break
+				}
+			}
+			if hasSyncBlocks {
+				fmt.Println("💡 Tip: Run 'devx sync up' to enable zero-rebuild hot reloading for container services.")
+			}
 		}
 
 		if len(cfgYaml.Tunnels) > 0 {

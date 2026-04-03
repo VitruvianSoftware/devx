@@ -39,6 +39,9 @@ func Collect(projectDir, runtime string) (*Manifest, error) {
 	// 2. devx-managed containers and volumes
 	m.collectDevxContainers(runtime)
 
+	// 3. Mutagen sync sessions (Idea 43)
+	m.collectMutagenSessions()
+
 	return m, nil
 }
 
@@ -178,6 +181,32 @@ func (m *Manifest) collectDevxContainers(runtime string) {
 	}
 }
 
+// collectMutagenSessions discovers active devx-managed Mutagen sync sessions.
+func (m *Manifest) collectMutagenSessions() {
+	if _, err := exec.LookPath("mutagen"); err != nil {
+		return // mutagen not installed — nothing to collect
+	}
+
+	out, err := exec.Command("mutagen", "sync", "list", "--label-selector", "managed-by=devx").CombinedOutput()
+	if err != nil {
+		return // no sessions or mutagen error
+	}
+
+	// Parse session names from output
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "Name: ") {
+			name := strings.TrimPrefix(line, "Name: ")
+			m.Items = append(m.Items, Item{
+				Category:    "sync",
+				Label:       name,
+				SizeDisplay: "mutagen session",
+				Kind:        "sync",
+			})
+		}
+	}
+}
+
 // Execute performs the actual deletion of all items in the manifest.
 // Each deletion is reported via the progress callback.
 func (m *Manifest) Execute(progress func(item Item, err error)) {
@@ -191,6 +220,8 @@ func (m *Manifest) Execute(progress func(item Item, err error)) {
 			err = exec.Command(m.Runtime, "rm", "-f", item.Label).Run()
 		case "volume":
 			err = exec.Command(m.Runtime, "volume", "rm", "-f", item.Label).Run()
+		case "sync":
+			err = exec.Command("mutagen", "sync", "terminate", item.Label).Run()
 		}
 		progress(item, err)
 	}

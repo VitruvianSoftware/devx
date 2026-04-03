@@ -250,11 +250,6 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** Developers building AI applications struggle with the overhead of running models locally inside VMs while retaining GPU acceleration, and they often lose agent identities (`claude`, `opencode`) when entering isolated containers.
 * **The Solution:** Implemented a lightweight AI Bridge that automatically detects host-level inference engines (Ollama, LM Studio) and natively injects `OPENAI_API_BASE` overrides into `devx shell`. Additionally bridges agentic workflow gaps by natively mounting identity/auth tokens, global skill vaults, Docker socket (DooD) sandboxing privileges, and SSH/Git forwarding capabilities seamlessly into the workspace.
 
-### 48. Seed Data Runner (DONE)
-* **The Problem:** Many projects rely on massive `.sql` files or custom seed scripts (e.g., Node.js Prisma seeders, Django fixtures) that require developers to manually locate connection strings, host ports, and environment fragments.
-* **The Solution:** Implemented `devx db seed <engine>`. Dynamically parses `devx.yaml`, reads the active database connection details via `podman inspect`, injects both standard URIs (`DATABASE_URL`) and legacy fragments, and executes your seed scripts locally to automate population. Supports `--dry-run`, `-y`, and `--json`.
-* **Key files:** `cmd/db_seed.go`
-
 ### 29. Shift-Left Distributed Observability (DONE)
 * **The Problem:** When running 5 microservices locally via `devx.yaml`, figuring out *where* a request failed requires tailing 5 sets of logs. Full distributed tracing is currently reserved for cloud/production because setting up an OTLP collector + Jaeger locally is too tedious.
 * **The Solution:** Implemented `devx trace spawn [engine]`. Instantly spins up a lightweight OpenTelemetry backend (`jaeger` or `grafana` LGTM stack) locally. Auto-injects `OTEL_EXPORTER_OTLP_ENDPOINT` directly into all running `devx shell` and managed containers. Provides developers with immediate visual access to their local distributed traces.
@@ -287,26 +282,19 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 
 ---
 
-## 🟢 P0 — Build Now (Critical Foundation)
-
-> **Recommended Sprint:** Ship 34 + 35 + 36 together. This trio transforms `devx.yaml` multi-service orchestration from "fragile demo" to "production-grade local platform."
-
 ### 34. Intelligent Service Dependency Graphs (DONE)
-* **Priority:** 🟢 P0
 * **Effort:** Medium
 * **Impact:** Critical — table-stakes for any serious orchestration tool. Without it, multi-service `devx.yaml` topologies are fundamentally fragile. Every developer who has ever run `docker compose up` and watched 3 services crash because Postgres wasn't ready knows this pain. Undermines the credibility of `devx cloud spawn` and `devx db spawn` when used together.
 * **The Problem:** When running multiple services via `devx.yaml`, services often crash on startup with "Connection Refused" because their underlying dependent services (like databases or other APIs) haven't fully initialized.
 * **The Solution:** Introduce `depends_on` functionality with robust `healthcheck` gating directly inside `devx.yaml` (inspired by Compose). `devx` orchestrates the boot order, pausing the start of a frontend app until the backend API confirms readiness, eliminating crash loops.
 
 ### 35. Context-Aware "Log-Tailing" on Crash (DONE)
-* **Priority:** 🟢 P0
 * **Effort:** Trivial
 * **Impact:** High — a 50-line feature that saves thousands of hours collectively. When a container dies during startup, dumping the last N lines inline is the obvious thing to do, and no orchestration tool does it well. Tiny effort, huge developer trust signal.
 * **The Problem:** When a complex startup sequence fails, the developer only gets a generic exit code and then has to manually execute `devx logs` and scroll to find the failure, breaking context.
 * **The Solution:** When `devx up` detects a container exiting prematurely, it automatically intercepts and prints the last 50 lines of the specific crashing container's logs with error highlighting directly in the terminal to immediately context-switch the developer into debugging.
 
 ### 36. Automatic Port Conflict Resolution (Port Shifting) (DONE)
-* **Priority:** 🟢 P0
 * **Effort:** Low
 * **Impact:** High — polish that separates a tool from a product. Because `devx` already owns the entire routing chain (Cloudflare tunnel → env injection → container), it can transparently shift ports without the developer noticing. Most tools can't do this because they don't control the full stack. `devx` can. It's a genuine architectural advantage.
 * **The Problem:** If a developer spins up two apps or forgets they have a ghost Node process running on port 8080, `devx` currently throws an `EADDRINUSE` failure, stopping their workflow until they hunt down and kill the process.
@@ -315,19 +303,13 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 
 ---
 
-## 🟢 P1 — Build Next (High-Value Polish)
-
-> **Recommended Sprint:** Ship 37 + 38 + 39 together as the "polish pass" after P0 lands.
-
 ### 37. Environment Overlays & Profiles (DONE)
-* **Priority:** 🟢 P1
 * **Effort:** Low-Medium
 * **Impact:** High — essential for teams larger than 1. The moment two developers need different local topologies (frontend dev doesn't need Kafka, backend dev doesn't need the React app), you need profiles. Without them, `devx.yaml` becomes a monolith that everyone forks locally and never commits back. Skaffold nailed this; `devx` can do it better with first-class `--profile` support.
 * **The Problem:** Switching between a lightweight local stack and a full integration stack involves manually commenting/uncommenting sections of `devx.yaml`, which risks polluting commits.
 * **The Solution:** Add Skaffold-style `--profile` flagging. `devx.yaml` can define specific blocks (e.g., `profiles: staging`) that conditionally override the base configuration, allowing developers to swap entire environments instantly.
 
 ### 38. Native Secrets Redaction in Logs (DONE)
-* **Priority:** 🟢 P1
 * **Effort:** Low-Medium
 * **Impact:** High (security) — a sleeper hit. The moment someone screenshares a `devx logs` session on Zoom and leaks a production API key, you'll wish you'd built this. The architectural advantage is that `devx` already knows every secret value from vault integration. Most log redaction tools guess patterns; `devx` can do exact-match replacement. That's rare and powerful.
 * **The Problem:** As `devx` natively integrates Vault secrets into the environment, developers risk accidentally screensharing or screenshotting `devx logs` or `webhook catch` TUIs that output real API keys in plaintext.
@@ -335,7 +317,6 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **Key files:** `internal/logs/redactor.go`, `internal/webhook/tui.go`
 
 ### 39. Visual Architecture Map Generator (DONE)
-* **Priority:** 🟢 P1
 * **Effort:** Low
 * **Impact:** High (onboarding) — `devx map` parsing `devx.yaml` and emitting a Mermaid diagram is ~200 lines of Go. But the impact on onboarding is outsized — a new engineer clones a repo, runs `devx map`, and instantly *sees* how 8 services connect. This is a demo-day feature. It sells the tool.
 * **The Problem:** For onboarding engineers, looking at a 300-line `devx.yaml` is overwhelming and the logical flow of which app talks to what database is lost.
@@ -353,3 +334,13 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** The "fix ci... fix ci again..." commit loop. Developers push 10 times to debug GitHub Actions because tools like `act` are clunky and lack environment parity.
 * **The Solution:** Implemented `devx ci run`. Natively parses `.github/workflows/*.yml`, resolves `strategy.matrix` into parallel jobs, respects `needs:` job DAGs via Kahn's algorithm, and executes `run:` shell blocks inside isolated Podman containers. Intentionally skips `uses:` composite actions (with a visible warning) to trade completeness for reliability. Supports `--dry-run` for execution plan previews, `--json` for AI agent consumption, and `--job` for targeted debugging. Uses Docker Compose-style prefixed line streaming for parallel output.
 * **Key files:** `cmd/ci.go`, `cmd/ci_run.go`, `internal/ci/parser.go`, `internal/ci/executor.go`, `internal/ci/template.go`, `internal/ci/writer.go`
+
+### 48. Seed Data Runner (DONE)
+* **The Problem:** Many projects rely on massive `.sql` files or custom seed scripts (e.g., Node.js Prisma seeders, Django fixtures) that require developers to manually locate connection strings, host ports, and environment fragments.
+* **The Solution:** Implemented `devx db seed <engine>`. Dynamically parses `devx.yaml`, reads the active database connection details via `podman inspect`, injects both standard URIs (`DATABASE_URL`) and legacy fragments, and executes your seed scripts locally to automate population. Supports `--dry-run`, `-y`, and `--json`.
+* **Key files:** `cmd/db_seed.go`
+
+### 43. Smart File Syncing — Zero-Rebuild Hot Reloading (DONE)
+* **The Problem:** Hot reloading using OS-level volume mounts on macOS (VirtioFS) is catastrophically slow for file trees with thousands of entries (e.g., `node_modules`). Rebuilding full container images to inject code changes disrupts developer flow state entirely.
+* **The Solution:** Implemented `devx sync up`. Wraps [Mutagen](https://mutagen.io/) as a first-class sync engine behind the `devx sync` subcommand. Sync sessions create high-performance, bidirectional file sync between host directories and running containers, propagating changes in milliseconds. Automatically excludes `.git`, `node_modules`, and other heavy directories by default. Supports Podman via transparent `DOCKER_HOST` injection. Fully integrated with `devx doctor` (optional tool check), `devx nuke` (session cleanup), and all global flags (`--dry-run`, `--json`, `-y`).
+* **Key files:** `cmd/sync.go`, `cmd/sync_up.go`, `cmd/sync_list.go`, `cmd/sync_rm.go`, `internal/sync/daemon.go`

@@ -113,6 +113,22 @@ services:
       http: "http://localhost:3000"
       timeout: "60s"
 
+  # Container-runtime service with smart file syncing (Idea 43).
+  # Instead of slow VirtioFS volume mounts, 'devx sync up' creates a
+  # high-performance Mutagen session that propagates file changes in milliseconds.
+  - name: sidecar
+    runtime: container
+    command: ["docker", "run", "--name", "devx-sidecar", "-p", "9090:9090", "myorg/sidecar:dev"]
+    port: 9090
+    depends_on:
+      - name: api
+        condition: service_healthy
+    sync:
+      - container: devx-sidecar
+        src: ./sidecar/src
+        dest: /app/src
+        ignore: ["*.test.ts", "coverage/"]
+
 # --- Idea 37: Environment Profiles ---
 # Profiles apply additive/merge overlays on top of the base config above.
 # Uses Docker Compose override semantics:

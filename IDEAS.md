@@ -22,19 +22,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 ---
 
-## 🟡 P2 — Build Later (Good Ideas, Need Refinement)
-
-
-### 43. Smart File Syncing (Zero-Rebuild Hot Reloading)
-* **Priority:** 🟡 P2
-* **Effort:** Very High
-* **Impact:** High — the pain is real (VirtioFS on macOS is genuinely slow with large trees), but building a custom file-sync daemon that reliably handles rename cascades, symlinks, `.gitignore` rules, and permission mapping across host→VM→container is a *massive* engineering effort. Evaluate embedding Mutagen as a dependency before writing from scratch. File sync bugs are silent data corruptors — ship it buggy and you destroy developer trust.
-* **The Problem:** Hot reloading using OS-level volume mounts on macOS (via VirtioFS or similar) is catastrophically slow for thousands of files (e.g., `node_modules`), while rebuilding full container images disrupts developer flow state.
-* **The Solution:** Implement an intelligent, lightweight sync daemon inspired by Skaffold. When a developer saves a file, `devx` natively injects the diff directly into the running Podman container, bypassing the kernel mount entirely for instant hot-reload. Consider wrapping Mutagen as the sync engine to avoid reimplementing edge cases.
-* **Key files:** `cmd/sync.go`, `internal/sync/daemon.go`
-
----
-
 ## 🟡 P3 — Backlog (Conditional / Needs Prerequisites)
 
 ### 44. Unified Multirepo Orchestration

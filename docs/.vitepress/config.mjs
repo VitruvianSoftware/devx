@@ -45,6 +45,7 @@ export default defineConfig({
           { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
           { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
           { text: 'Local CI Emulation', link: '/guide/ci' },
+          { text: 'Smart File Syncing', link: '/guide/sync' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }

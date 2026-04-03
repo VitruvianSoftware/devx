@@ -258,6 +258,11 @@ func computeFeatureReadiness(r doctor.Report) []featureReadiness {
 			ready:   tools["gh"],
 			missing: missingList(tools, "gh"),
 		},
+		{
+			command: "devx sync up",
+			ready:   tools["mutagen"],
+			missing: missingList(tools, "mutagen"),
+		},
 	}
 }
 
