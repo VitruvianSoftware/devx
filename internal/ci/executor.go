@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/devcontainer"
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
 )
 
 // RunResult holds the outcome of a single job execution.
@@ -186,7 +187,18 @@ func executeJob(cfg ExecuteConfig, ej ExpandedJob, image string, outputMu *sync.
 	writer := NewPrefixedWriter(displayName, os.Stdout, outputMu)
 
 	cmd := exec.Command(cfg.Runtime, createArgs...)
-	if out, err := cmd.CombinedOutput(); err != nil {
+	out, err := cmd.CombinedOutput()
+	
+	// If Google Cloud docker credential helper fails, intercept and trigger interactive recovery
+	if err != nil && !cfg.JSONOutput {
+		if devxerr.RecoverGcloudAuth(string(out)) {
+			// User successfully re-authenticated, retry once
+			cmd = exec.Command(cfg.Runtime, createArgs...)
+			out, err = cmd.CombinedOutput()
+		}
+	}
+
+	if err != nil {
 		result.Status = "failed"
 		result.Steps = append(result.Steps, StepResult{
 			Name:   "container-create",
