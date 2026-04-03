@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0](https://github.com/VitruvianSoftware/devx/compare/v0.27.3...v0.28.0) (2026-04-03)
+
+
+### Features
+
+* **cli:** add db seed data runner for automated local data injection ([39c1f5f](https://github.com/VitruvianSoftware/devx/commit/39c1f5fe00b07cc23ed057b22bfabeff60921e6f))
+* smart file syncing via mutagen (Idea 43) ([#116](https://github.com/VitruvianSoftware/devx/issues/116)) ([bca5279](https://github.com/VitruvianSoftware/devx/commit/bca5279091e3162d5fa1ae72d263bdc250683ebd))
+
 ## [0.27.3](https://github.com/VitruvianSoftware/devx/compare/v0.27.2...v0.27.3) (2026-04-03)
 
 
