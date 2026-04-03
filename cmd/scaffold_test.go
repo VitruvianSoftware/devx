@@ -51,7 +51,7 @@ func TestScaffoldForce(t *testing.T) {
 
 	destDir := t.TempDir()
 	targetPath := filepath.Join(destDir, "my-app")
-	
+
 	// Create the directory so that "--force" is required to bypass the idempotency guard
 	if err := os.MkdirAll(targetPath, 0755); err != nil {
 		t.Fatal(err)

@@ -41,6 +41,11 @@ databases:
       format: custom   # triggers pg_restore instead of psql
       jobs: 4          # parallel workers (default: number of CPU cores)
       command: "gcloud storage cat gs://my-company-scrubbed-dumps/nightly.dump"
+    # Optional: configure 'devx db seed postgres' to inject dummy test data.
+    # The 'command' executes on your host machine with connection variables injected.
+    seed:
+      # Note: Ensure packages (python, npm) exist on your host or use a container command
+      command: "npm run db:seed"
   - engine: redis
 
 tunnels:

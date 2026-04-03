@@ -15,12 +15,12 @@ import (
 )
 
 var (
-	shipCommitMsg    string
-	shipBaseBranch   string
-	shipCITimeout    time.Duration
+	shipCommitMsg     string
+	shipBaseBranch    string
+	shipCITimeout     time.Duration
 	shipSkipPreflight bool
-	shipInstallHook  bool
-	shipVerbose      bool
+	shipInstallHook   bool
+	shipVerbose       bool
 )
 
 var agentShipCmd = &cobra.Command{
@@ -59,10 +59,10 @@ Machine-readable output:
 // ── Styles ──────────────────────────────────────────────────────────────────
 
 var (
-	shipStylePhase   = lipgloss.NewStyle().Foreground(lipgloss.Color("#79C0FF")).Bold(true)
-	shipStylePass    = lipgloss.NewStyle().Foreground(lipgloss.Color("#3FB950")).Bold(true)
-	shipStyleFail    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7B72")).Bold(true)
-	shipStyleMuted   = lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E"))
+	shipStylePhase    = lipgloss.NewStyle().Foreground(lipgloss.Color("#79C0FF")).Bold(true)
+	shipStylePass     = lipgloss.NewStyle().Foreground(lipgloss.Color("#3FB950")).Bold(true)
+	shipStyleFail     = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7B72")).Bold(true)
+	shipStyleMuted    = lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E"))
 	shipStyleBlocking = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3B341")).Bold(true)
 )
 

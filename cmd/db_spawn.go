@@ -3,13 +3,13 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/charmbracelet/huh"
+	"github.com/spf13/cobra"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
-	"github.com/charmbracelet/huh"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
-	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/database"
 )
@@ -116,7 +116,7 @@ func runSpawn(_ *cobra.Command, args []string) error {
 			finalErr = fmt.Errorf("failed to start %s: %w", engine.Name, err)
 			break
 		}
-		
+
 		// Success
 		break
 	}

@@ -118,6 +118,42 @@ pg_dump -Fc -h $PROD_HOST -U $PROD_USER mydb | \
 Then `devx db pull postgres` downloads and imports it in seconds with full parallelism.
 :::
 
+### `devx db seed`
+
+While `db pull` is meant for restoring massive dumps, `devx db seed` is designed to run your application's natural seeding scripts (e.g., Prisma, Go loops, Django fixtures) directly against the local containerized database.
+
+The tedious part of local seeding has always been figuring out which port the container mapped to, piecing together the connection string, and passing the correct arguments to your script. `devx db seed` automates this entirely.
+
+#### Configuration
+
+In your `devx.yaml`:
+
+```yaml
+databases:
+  - engine: postgres
+    seed:
+      # Any command that populates your database. This command executes 
+      # locally on your host environment, NOT inside the container.
+      command: "npm run db:seed"
+```
+
+#### Injected Variables
+
+When you run `devx db seed postgres`, `devx` will inspect the running `devx-db-postgres` container, resolve its correct host port, and inject a pristine set of environment variables before executing your script.
+
+You'll get a fully formatted `DATABASE_URL` for modern ORMs, plus all standard fragments for legacy connectivity:
+
+| Variable | Example Value | Description |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://devx:devx@localhost:5432/devx` | Primary connection URI |
+| `DATABASE_HOST` | `localhost` | Container mapped address |
+| `DATABASE_PORT` | `5432` | The actual host-mapped port  |
+| `POSTGRES_USER` | `devx` | Derived from `database.Engine.Env` |
+| `POSTGRES_PASSWORD` | `devx` | Derived from `database.Engine.Env` |
+| `POSTGRES_DB` | `devx` | Derived from `database.Engine.Env` |
+
+If your script pulls fixtures from Google Cloud Storage and encounters an expired token, the `devx` CLI will instantly pause execution, spawn `huh.Confirm` to trigger `gcloud auth login`, and automatically retry your seed command.
+
 
 ### `devx db snapshot`
 

@@ -70,7 +70,7 @@ type DevxConfigHealthcheck struct {
 // DevxConfigService defines a developer application in devx.yaml.
 type DevxConfigService struct {
 	Name        string                `yaml:"name"`
-	Runtime     string                `yaml:"runtime"`   // "host" (default), "container", "kubernetes", "cloud"
+	Runtime     string                `yaml:"runtime"`    // "host" (default), "container", "kubernetes", "cloud"
 	Command     []string              `yaml:"command"`    // e.g. ["npm", "run", "dev"]
 	DependsOn   []DevxConfigDependsOn `yaml:"depends_on"` // services/databases that must be healthy first
 	Healthcheck DevxConfigHealthcheck `yaml:"healthcheck"`
@@ -89,14 +89,14 @@ type DevxConfigProfile struct {
 }
 
 type DevxConfig struct {
-	Name      string                        `yaml:"name"`      // Project name
-	Domain    string                        `yaml:"domain"`    // Custom domain (BYOD)
-	Tunnels   []DevxConfigTunnel            `yaml:"tunnels"`   // List of ports to expose
-	Databases []DevxConfigDatabase          `yaml:"databases"` // List of databases to provision
-	Services  []DevxConfigService           `yaml:"services"`  // List of applications to orchestrate
-	Test      DevxConfigTest                `yaml:"test"`      // Test configuration
-	Mocks     []DevxConfigMock              `yaml:"mocks"`     // List of OpenAPI mock servers to provision
-	Profiles  map[string]DevxConfigProfile  `yaml:"profiles"`  // Named environment overlays
+	Name      string                       `yaml:"name"`      // Project name
+	Domain    string                       `yaml:"domain"`    // Custom domain (BYOD)
+	Tunnels   []DevxConfigTunnel           `yaml:"tunnels"`   // List of ports to expose
+	Databases []DevxConfigDatabase         `yaml:"databases"` // List of databases to provision
+	Services  []DevxConfigService          `yaml:"services"`  // List of applications to orchestrate
+	Test      DevxConfigTest               `yaml:"test"`      // Test configuration
+	Mocks     []DevxConfigMock             `yaml:"mocks"`     // List of OpenAPI mock servers to provision
+	Profiles  map[string]DevxConfigProfile `yaml:"profiles"`  // Named environment overlays
 }
 
 var upDomain string

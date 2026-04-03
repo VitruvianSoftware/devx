@@ -250,6 +250,11 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** Developers building AI applications struggle with the overhead of running models locally inside VMs while retaining GPU acceleration, and they often lose agent identities (`claude`, `opencode`) when entering isolated containers.
 * **The Solution:** Implemented a lightweight AI Bridge that automatically detects host-level inference engines (Ollama, LM Studio) and natively injects `OPENAI_API_BASE` overrides into `devx shell`. Additionally bridges agentic workflow gaps by natively mounting identity/auth tokens, global skill vaults, Docker socket (DooD) sandboxing privileges, and SSH/Git forwarding capabilities seamlessly into the workspace.
 
+### 48. Seed Data Runner (DONE)
+* **The Problem:** Many projects rely on massive `.sql` files or custom seed scripts (e.g., Node.js Prisma seeders, Django fixtures) that require developers to manually locate connection strings, host ports, and environment fragments.
+* **The Solution:** Implemented `devx db seed <engine>`. Dynamically parses `devx.yaml`, reads the active database connection details via `podman inspect`, injects both standard URIs (`DATABASE_URL`) and legacy fragments, and executes your seed scripts locally to automate population. Supports `--dry-run`, `-y`, and `--json`.
+* **Key files:** `cmd/db_seed.go`
+
 ### 29. Shift-Left Distributed Observability (DONE)
 * **The Problem:** When running 5 microservices locally via `devx.yaml`, figuring out *where* a request failed requires tailing 5 sets of logs. Full distributed tracing is currently reserved for cloud/production because setting up an OTLP collector + Jaeger locally is too tedious.
 * **The Solution:** Implemented `devx trace spawn [engine]`. Instantly spins up a lightweight OpenTelemetry backend (`jaeger` or `grafana` LGTM stack) locally. Auto-injects `OTEL_EXPORTER_OTLP_ENDPOINT` directly into all running `devx shell` and managed containers. Provides developers with immediate visual access to their local distributed traces.

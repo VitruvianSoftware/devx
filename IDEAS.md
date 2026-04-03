@@ -60,12 +60,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 * **The Solution:** Similar to Telepresence, `devx bridge` securely intercepts traffic from a specific microservice in a remote K8s staging environment and tunnels it perfectly down into the developer's local `devx` container to allow real-time cross-boundary testing.
 
 
-### 48. Seed Data Runner
-* **Priority:** 🟡 P3
-* **Effort:** Low (reframed)
-* **Impact:** Medium — schema-aware auto-generation *sounds* magical but breaks on custom ENUMs, cross-table business logic constraints, geographic/temporal data, and FK cycles. Reframed as a *runner* for user-provided seed scripts rather than an auto-generator. `devx db seed` executes a user-defined seed command against a running database, handling connection wiring automatically.
-* **The Problem:** Maintaining massive `.sql` seed data files is annoying. Often local environments suffer from lack of realistic, high-volume test data.
-* **The Solution:** `devx db seed` runs a user-defined seed command (configured in `devx.yaml`) against the local database. `devx` handles the connection wiring, container exec, and ensures the database is healthy before running. A future V2 could layer on schema-aware generation for simple cases.
 
 ---
 
