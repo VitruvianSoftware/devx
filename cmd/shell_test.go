@@ -39,12 +39,11 @@ SECRET_API_KEY=supersecret
 		t.Fatalf("failed to write .env: %v", err)
 	}
 
-	// 3. Mock Ollama running locally by opening port 11434
+	// 3. Mock Ollama running locally by opening port 11434 (ignore failure if already running)
 	l, err := net.Listen("tcp", "127.0.0.1:11434")
-	if err != nil {
-		t.Fatalf("failed to mock ollama port: %v", err)
+	if err == nil {
+		defer l.Close()
 	}
-	defer l.Close()
 
 	// Give the listener a tiny bit of time to bind
 	time.Sleep(10 * time.Millisecond)

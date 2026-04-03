@@ -21,7 +21,7 @@ var hookPrePushCmd = &cobra.Command{
 	RunE: func(_ *cobra.Command, _ []string) error {
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "╭──────────────────────────────────────────────────────────────────╮")
-		fmt.Fprintln(os.Stderr, "│  ✋ Direct 'git push' is blocked by devx.                       │")
+		fmt.Fprintln(os.Stderr, "│  ✋ Direct 'git push' is blocked by devx.                        │")
 		fmt.Fprintln(os.Stderr, "│                                                                  │")
 		fmt.Fprintln(os.Stderr, "│  AI Agents MUST use:   devx agent ship -m \"commit message\"       │")
 		fmt.Fprintln(os.Stderr, "│  Humans can bypass:    git push --no-verify                      │")

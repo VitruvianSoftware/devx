@@ -23,7 +23,8 @@ export default defineConfig({
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'User Journeys', link: '/guide/journeys' },
           { text: 'Environment Doctor', link: '/guide/doctor' },
-          { text: 'Architecture', link: '/guide/architecture' }
+          { text: 'Architecture', link: '/guide/architecture' },
+          { text: 'Diagnostics & State', link: '/guide/state' }
         ]
       },
       {
