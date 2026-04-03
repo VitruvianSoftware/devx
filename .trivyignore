@@ -1,0 +1,7 @@
+# golang.org/x/crypto/ssh CVEs — devx does NOT import or use the ssh subpackage.
+# These are transitive indirect dependencies from the Go module graph.
+# Safe to suppress until the upstream dependency chain updates.
+CVE-2025-47914
+CVE-2025-58181
+CVE-2024-45337
+CVE-2025-22869

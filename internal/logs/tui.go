@@ -60,6 +60,22 @@ func InitialModel() Model {
 	}
 }
 
+// InitialModelWithRedactor creates the TUI model with secret redaction enabled.
+// All log lines will be scrubbed for known secret values before display.
+func InitialModelWithRedactor(r *SecretRedactor) Model {
+	ctx, cancel := context.WithCancel(context.Background())
+	st := NewStreamer()
+	st.Redactor = r
+	st.Start(ctx)
+
+	return Model{
+		streamer: st,
+		ctx:      ctx,
+		cancel:   cancel,
+		lines:    make([]LogLine, 0, 1000),
+	}
+}
+
 type lineMsg LogLine
 
 func waitForLine(sub chan LogLine) tea.Cmd {

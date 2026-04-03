@@ -78,17 +78,29 @@ type DevxConfigService struct {
 	Env         map[string]string     `yaml:"env"` // extra env vars
 }
 
+// DevxConfigProfile defines a named overlay that merges additively onto the base config.
+// Follows Docker Compose override semantics: matching names merge fields (profile wins),
+// new entries are appended.
+type DevxConfigProfile struct {
+	Databases []DevxConfigDatabase `yaml:"databases"`
+	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`
+	Services  []DevxConfigService  `yaml:"services"`
+	Mocks     []DevxConfigMock     `yaml:"mocks"`
+}
+
 type DevxConfig struct {
-	Name      string               `yaml:"name"`      // Project name
-	Domain    string               `yaml:"domain"`    // Custom domain (BYOD)
-	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`   // List of ports to expose
-	Databases []DevxConfigDatabase `yaml:"databases"` // List of databases to provision
-	Services  []DevxConfigService  `yaml:"services"`  // List of applications to orchestrate
-	Test      DevxConfigTest       `yaml:"test"`      // Test configuration
-	Mocks     []DevxConfigMock     `yaml:"mocks"`     // List of OpenAPI mock servers to provision
+	Name      string                        `yaml:"name"`      // Project name
+	Domain    string                        `yaml:"domain"`    // Custom domain (BYOD)
+	Tunnels   []DevxConfigTunnel            `yaml:"tunnels"`   // List of ports to expose
+	Databases []DevxConfigDatabase          `yaml:"databases"` // List of databases to provision
+	Services  []DevxConfigService           `yaml:"services"`  // List of applications to orchestrate
+	Test      DevxConfigTest                `yaml:"test"`      // Test configuration
+	Mocks     []DevxConfigMock              `yaml:"mocks"`     // List of OpenAPI mock servers to provision
+	Profiles  map[string]DevxConfigProfile  `yaml:"profiles"`  // Named environment overlays
 }
 
 var upDomain string
+var upProfile string
 
 var upCmd = &cobra.Command{
 	Use:   "up",
@@ -112,6 +124,23 @@ var upCmd = &cobra.Command{
 		var cfgYaml DevxConfig
 		if err = yaml.Unmarshal(b, &cfgYaml); err != nil {
 			return fmt.Errorf("failed parsing YAML file block: %w", err)
+		}
+
+		// --- Idea 37: Apply profile overlay (additive/merge, Docker Compose style) ---
+		if upProfile != "" {
+			profile, ok := cfgYaml.Profiles[upProfile]
+			if !ok {
+				var available []string
+				for k := range cfgYaml.Profiles {
+					available = append(available, k)
+				}
+				if len(available) == 0 {
+					return fmt.Errorf("profile %q not found — no profiles defined in devx.yaml", upProfile)
+				}
+				return fmt.Errorf("profile %q not found — available profiles: %v", upProfile, available)
+			}
+			mergeProfile(&cfgYaml, profile)
+			fmt.Printf("📦 Applied profile: %s\n", upProfile)
 		}
 
 		if len(cfgYaml.Tunnels) == 0 && len(cfgYaml.Databases) == 0 && len(cfgYaml.Services) == 0 {
@@ -384,8 +413,111 @@ func mustGetwd() string {
 	return d
 }
 
+// mergeProfile applies an additive overlay onto the base config.
+// For databases, tunnels, services, and mocks: entries with matching names/engines
+// have their fields merged (profile wins). New entries are appended.
+func mergeProfile(cfg *DevxConfig, profile DevxConfigProfile) {
+	// Merge databases by engine
+	for _, pdb := range profile.Databases {
+		found := false
+		for i, bdb := range cfg.Databases {
+			if bdb.Engine == pdb.Engine {
+				if pdb.Port != 0 {
+					cfg.Databases[i].Port = pdb.Port
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Databases = append(cfg.Databases, pdb)
+		}
+	}
+
+	// Merge tunnels by name
+	for _, pt := range profile.Tunnels {
+		found := false
+		for i, bt := range cfg.Tunnels {
+			if bt.Name == pt.Name {
+				if pt.Port != 0 {
+					cfg.Tunnels[i].Port = pt.Port
+				}
+				if pt.BasicAuth != "" {
+					cfg.Tunnels[i].BasicAuth = pt.BasicAuth
+				}
+				if pt.Throttle != "" {
+					cfg.Tunnels[i].Throttle = pt.Throttle
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Tunnels = append(cfg.Tunnels, pt)
+		}
+	}
+
+	// Merge services by name
+	for _, ps := range profile.Services {
+		found := false
+		for i, bs := range cfg.Services {
+			if bs.Name == ps.Name {
+				if ps.Runtime != "" {
+					cfg.Services[i].Runtime = ps.Runtime
+				}
+				if len(ps.Command) > 0 {
+					cfg.Services[i].Command = ps.Command
+				}
+				if ps.Port != 0 {
+					cfg.Services[i].Port = ps.Port
+				}
+				if len(ps.DependsOn) > 0 {
+					cfg.Services[i].DependsOn = ps.DependsOn
+				}
+				if ps.Healthcheck.HTTP != "" || ps.Healthcheck.TCP != "" {
+					cfg.Services[i].Healthcheck = ps.Healthcheck
+				}
+				if len(ps.Env) > 0 {
+					if cfg.Services[i].Env == nil {
+						cfg.Services[i].Env = make(map[string]string)
+					}
+					for k, v := range ps.Env {
+						cfg.Services[i].Env[k] = v
+					}
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Services = append(cfg.Services, ps)
+		}
+	}
+
+	// Merge mocks by name
+	for _, pm := range profile.Mocks {
+		found := false
+		for i, bm := range cfg.Mocks {
+			if bm.Name == pm.Name {
+				if pm.URL != "" {
+					cfg.Mocks[i].URL = pm.URL
+				}
+				if pm.Port != 0 {
+					cfg.Mocks[i].Port = pm.Port
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Mocks = append(cfg.Mocks, pm)
+		}
+	}
+}
+
 func init() {
 	upCmd.Flags().StringVar(&upDomain, "domain", "", "Custom Cloudflare domain (BYOD) to override setting in devx.yaml")
+	upCmd.Flags().StringVar(&upProfile, "profile", "", "Apply a named profile overlay from devx.yaml (additive merge, Docker Compose style)")
 	tunnelCmd.AddCommand(upCmd)
 	rootCmd.AddCommand(upCmd) // Aliased at the root level as a top-level command
 }

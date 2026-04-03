@@ -43,6 +43,11 @@ var Trivy = Tool{
 		} else {
 			args = append(args, "--format", "table")
 		}
+		// Respect .trivyignore if present
+		ignorePath := cwd + "/.trivyignore"
+		if _, err := os.Stat(ignorePath); err == nil {
+			args = append(args, "--ignorefile", ignorePath)
+		}
 		args = append(args, cwd)
 		return args
 	},
@@ -53,6 +58,11 @@ var Trivy = Tool{
 			args = append(args, "--format", "json")
 		} else {
 			args = append(args, "--format", "table")
+		}
+		// Respect .trivyignore mounted inside the container at /scan/.trivyignore
+		ignorePath := cwd + "/.trivyignore"
+		if _, err := os.Stat(ignorePath); err == nil {
+			args = append(args, "--ignorefile", "/scan/.trivyignore")
 		}
 		args = append(args, "/scan")
 		return args
