@@ -214,9 +214,7 @@ func ExpandMatrix(jobKey string, job *Job) []ExpandedJob {
 	combos = applyExcludes(combos, job.Strategy.Matrix.Exclude)
 
 	// Apply include rules (additive — each include becomes an extra combo)
-	for _, inc := range job.Strategy.Matrix.Include {
-		combos = append(combos, inc)
-	}
+	combos = append(combos, job.Strategy.Matrix.Include...)
 
 	var expanded []ExpandedJob
 	for _, combo := range combos {
