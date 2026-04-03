@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0](https://github.com/VitruvianSoftware/devx/compare/v0.24.0...v0.25.0) (2026-04-03)
+
+
+### Features
+
+* implement DAG-based service orchestration (Ideas 34/35/36) ([#94](https://github.com/VitruvianSoftware/devx/issues/94)) ([e86d663](https://github.com/VitruvianSoftware/devx/commit/e86d663e486dddf3f011f582097e1a211832439a))
+* P1 Polish Pass — Environment Profiles, Secrets Redaction, Visual Map (Ideas 37/38/39) ([#97](https://github.com/VitruvianSoftware/devx/issues/97)) ([4722b7f](https://github.com/VitruvianSoftware/devx/commit/4722b7fd567fd8ee936cb81c148db152f5f259c7))
+
+
+### Bug Fixes
+
+* handle errcheck lint failures in DAG test ([#96](https://github.com/VitruvianSoftware/devx/issues/96)) ([5f82d00](https://github.com/VitruvianSoftware/devx/commit/5f82d00956397c546ed15b7118d49929605277a4))
+
 ## [0.24.0](https://github.com/VitruvianSoftware/devx/compare/v0.23.0...v0.24.0) (2026-04-02)
 
 
