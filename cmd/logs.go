@@ -19,12 +19,16 @@ var logsCmd = &cobra.Command{
 Multiplexes their stdout/stderr into a single unified stream, color-codes them by service name, 
 and allows advanced interactive filtering/searching across the entire local stack.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Idea 38: Initialize secret redactor from current environment
+		redactor := logs.NewSecretRedactor()
+
 		if outputJSON {
 			// AI Native non-interactive JSON streaming
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			st := logs.NewStreamer()
+			st.Redactor = redactor
 			st.Start(ctx)
 
 			for msg := range st.Lines {
@@ -34,7 +38,7 @@ and allows advanced interactive filtering/searching across the entire local stac
 			return
 		}
 
-		p := tea.NewProgram(logs.InitialModel(), tea.WithAltScreen(), tea.WithMouseCellMotion())
+		p := tea.NewProgram(logs.InitialModelWithRedactor(redactor), tea.WithAltScreen(), tea.WithMouseCellMotion())
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("Error running log multiplexer: %v\n", err)
 			os.Exit(1)

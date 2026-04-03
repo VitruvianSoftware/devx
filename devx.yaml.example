@@ -107,3 +107,42 @@ services:
     healthcheck:
       http: "http://localhost:3000"
       timeout: "60s"
+
+# --- Idea 37: Environment Profiles ---
+# Profiles apply additive/merge overlays on top of the base config above.
+# Uses Docker Compose override semantics:
+#   - Matching names: profile fields win (merge)
+#   - New entries: appended to list (additive)
+#   - Unmentioned base entries: preserved as-is
+#
+# Usage:
+#   devx up --profile backend-only
+#   devx up --profile staging
+profiles:
+  # For backend developers who don't need the React frontend
+  backend-only:
+    services:
+      # Override: change API log level to trace for deeper debugging
+      - name: api
+        env:
+          LOG_LEVEL: trace
+      # Add: a Kafka consumer that only backend devs care about
+      - name: kafka-consumer
+        runtime: host
+        command: ["go", "run", "./cmd/consumer"]
+        depends_on:
+          - name: postgres
+            condition: service_healthy
+
+  # Full integration stack against staging images
+  staging:
+    services:
+      - name: api
+        runtime: container
+        command: ["docker", "run", "-p", "8080:8080", "gcr.io/my-org/api:staging"]
+        env:
+          ENVIRONMENT: staging
+    databases:
+      - engine: postgres
+        port: 5433  # Different port to avoid conflicts with local dev DB
+

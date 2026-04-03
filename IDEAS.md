@@ -22,34 +22,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 ---
 
-## 🟢 P0 — Build Now (Critical Foundation)
-
-> **Recommended Sprint:** Ship 34 + 35 + 36 together. This trio transforms `devx.yaml` multi-service orchestration from "fragile demo" to "production-grade local platform."
-
-### 34. Intelligent Service Dependency Graphs
-* **Priority:** 🟢 P0
-* **Effort:** Medium
-* **Impact:** Critical — table-stakes for any serious orchestration tool. Without it, multi-service `devx.yaml` topologies are fundamentally fragile. Every developer who has ever run `docker compose up` and watched 3 services crash because Postgres wasn't ready knows this pain. Undermines the credibility of `devx cloud spawn` and `devx db spawn` when used together.
-* **The Problem:** When running multiple services via `devx.yaml`, services often crash on startup with "Connection Refused" because their underlying dependent services (like databases or other APIs) haven't fully initialized.
-* **The Solution:** Introduce `depends_on` functionality with robust `healthcheck` gating directly inside `devx.yaml` (inspired by Compose). `devx` orchestrates the boot order, pausing the start of a frontend app until the backend API confirms readiness, eliminating crash loops.
-
-### 35. Context-Aware "Log-Tailing" on Crash
-* **Priority:** 🟢 P0
-* **Effort:** Trivial
-* **Impact:** High — a 50-line feature that saves thousands of hours collectively. When a container dies during startup, dumping the last N lines inline is the obvious thing to do, and no orchestration tool does it well. Tiny effort, huge developer trust signal.
-* **The Problem:** When a complex startup sequence fails, the developer only gets a generic exit code and then has to manually execute `devx logs` and scroll to find the failure, breaking context.
-* **The Solution:** When `devx up` detects a container exiting prematurely, it automatically intercepts and prints the last 50 lines of the specific crashing container's logs with error highlighting directly in the terminal to immediately context-switch the developer into debugging.
-
-### 36. Automatic Port Conflict Resolution (Port Shifting)
-* **Priority:** 🟢 P0
-* **Effort:** Low
-* **Impact:** High — polish that separates a tool from a product. Because `devx` already owns the entire routing chain (Cloudflare tunnel → env injection → container), it can transparently shift ports without the developer noticing. Most tools can't do this because they don't control the full stack. `devx` can. It's a genuine architectural advantage.
-* **The Problem:** If a developer spins up two apps or forgets they have a ghost Node process running on port 8080, `devx` currently throws an `EADDRINUSE` failure, stopping their workflow until they hunt down and kill the process.
-* **The Solution:** Auto-detect port collisions and dynamically shift to an available port (e.g., `8081`). Because `devx` controls the entire tunnel routing and environment variable injection, the ingress and local `.env` variables mapped into the app update seamlessly, acting completely transparent to the user.
-* **Key files:** `internal/network/ports.go`
-
----
-
 ## 🟢 P1 — Build Next (High-Value Polish)
 
 > **Recommended Sprint:** Ship 37 + 38 + 39 together as the "polish pass" after P0 lands.

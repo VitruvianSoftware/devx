@@ -21,6 +21,7 @@ type LogLine struct {
 type Streamer struct {
 	Lines    chan LogLine
 	Errors   chan error
+	Redactor *SecretRedactor
 	services map[string]context.CancelFunc
 	mu       sync.Mutex
 }
@@ -90,14 +91,22 @@ func (s *Streamer) tailContainer(ctx context.Context, name string) {
 	go func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: scanner.Text(), Type: "container"}
+			msg := scanner.Text()
+			if s.Redactor != nil {
+				msg = s.Redactor.Redact(msg)
+			}
+			s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: msg, Type: "container"}
 		}
 	}()
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: scanner.Text(), Type: "container"}
+			msg := scanner.Text()
+			if s.Redactor != nil {
+				msg = s.Redactor.Redact(msg)
+			}
+			s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: msg, Type: "container"}
 		}
 	}()
 
@@ -157,7 +166,11 @@ func (s *Streamer) tailFile(ctx context.Context, name, path string) {
 
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
-		s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: scanner.Text(), Type: "host"}
+		msg := scanner.Text()
+		if s.Redactor != nil {
+			msg = s.Redactor.Redact(msg)
+		}
+		s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: msg, Type: "host"}
 	}
 
 	s.mu.Lock()

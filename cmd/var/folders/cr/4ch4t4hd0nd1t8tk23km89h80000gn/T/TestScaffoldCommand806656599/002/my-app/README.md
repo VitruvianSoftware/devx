@@ -1,0 +1,102 @@
+# /var/folders/cr/4ch4t4hd0nd1t8tk23km89h80000gn/T/TestScaffoldCommand806656599/002/my-app
+
+> A Go REST API project
+
+**Author:** james · **Year:** 2026
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+Run [`devx doctor`](https://devx.ipv1337.dev/guide/doctor) to verify your environment:
+
+```bash
+devx doctor
+```
+
+### 1. Start local infrastructure
+
+```bash
+devx up
+```
+
+This provisions a local PostgreSQL instance and an HTTPS tunnel for your API.
+
+### 2. Configure your environment
+
+```bash
+cp .env.example .env
+# Edit .env and set DATABASE_URL (shown by `devx up`)
+```
+
+### 3. Run database migrations
+
+```bash
+psql $DATABASE_URL -f db/migrations/001_initial.sql
+```
+
+### 4. Seed development data
+
+Seeded databases let you catch real-world edge cases during development —
+NULL handling, pagination, and rendering bugs that an empty database hides.
+
+```bash
+psql $DATABASE_URL -f db/seeds/001_sample_data.sql
+```
+
+### 5. Start the server
+
+```bash
+go run . serve
+```
+
+Your API is live at `http://localhost:8080`.
+
+Check the health endpoint:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
+---
+
+## Project Structure
+
+```
+/var/folders/cr/4ch4t4hd0nd1t8tk23km89h80000gn/T/TestScaffoldCommand806656599/002/my-app/
+├── cmd/              # CLI commands (Cobra)
+├── internal/
+│   ├── server/       # HTTP router (Chi) and handlers
+│   └── database/     # Database connection pool (pgx)
+├── db/
+│   ├── migrations/   # SQL schema migrations (run in order)
+│   └── seeds/        # Development seed data
+├── devx.yaml         # devx topology (databases + tunnels)
+├── Dockerfile        # Multi-stage production image
+└── .github/
+    └── workflows/
+        └── ci.yml    # GitHub Actions CI pipeline
+```
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/healthz` | Health check (DB ping included) |
+
+> Add your own routes in `internal/server/server.go`.
+
+## Authoring New Templates
+
+This project was generated with `devx scaffold go-api`.  
+Templates use Go [`text/template`](https://pkg.go.dev/text/template) syntax.
+
+To list available templates:
+
+```bash
+devx scaffold list
+```
+
+See the [devx scaffold documentation](https://devx.ipv1337.dev/guide/scaffold) for full details.
