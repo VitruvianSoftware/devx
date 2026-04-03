@@ -1,16 +1,23 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/authproxy"
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
+	"github.com/VitruvianSoftware/devx/internal/logs"
+	"github.com/VitruvianSoftware/devx/internal/network"
+	"github.com/VitruvianSoftware/devx/internal/orchestrator"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
 	"github.com/spf13/cobra"
@@ -39,12 +46,36 @@ type DevxConfigTestUI struct {
 }
 
 // DevxConfigMock defines a remote OpenAPI-backed mock server entry.
-// TODO(future): support local file specs by detecting if URL is a file:// or relative path,
-// then volume-mounting it into the Prism container.
 type DevxConfigMock struct {
 	Name string `yaml:"name"` // Friendly name (becomes env var MOCK_<NAME>_URL)
 	URL  string `yaml:"url"`  // Remote OpenAPI spec URL (must be http:// or https://)
 	Port int    `yaml:"port"` // Host port (0 = auto-assign a free port)
+}
+
+// DevxConfigDependsOn references a service/database dependency with a gating condition.
+type DevxConfigDependsOn struct {
+	Name      string `yaml:"name"`
+	Condition string `yaml:"condition"` // "service_healthy" or "service_started"
+}
+
+// DevxConfigHealthcheck defines how to verify a service is ready.
+type DevxConfigHealthcheck struct {
+	HTTP     string `yaml:"http"`     // HTTP endpoint to poll (e.g., "http://localhost:8080/health")
+	TCP      string `yaml:"tcp"`      // TCP address to probe (e.g., "localhost:5432")
+	Interval string `yaml:"interval"` // Duration string (e.g., "1s", "500ms")
+	Timeout  string `yaml:"timeout"`  // Duration string (e.g., "30s")
+	Retries  int    `yaml:"retries"`  // Number of consecutive successes required
+}
+
+// DevxConfigService defines a developer application in devx.yaml.
+type DevxConfigService struct {
+	Name        string                `yaml:"name"`
+	Runtime     string                `yaml:"runtime"`   // "host" (default), "container", "kubernetes", "cloud"
+	Command     []string              `yaml:"command"`    // e.g. ["npm", "run", "dev"]
+	DependsOn   []DevxConfigDependsOn `yaml:"depends_on"` // services/databases that must be healthy first
+	Healthcheck DevxConfigHealthcheck `yaml:"healthcheck"`
+	Port        int                   `yaml:"port"`
+	Env         map[string]string     `yaml:"env"` // extra env vars
 }
 
 type DevxConfig struct {
@@ -52,6 +83,7 @@ type DevxConfig struct {
 	Domain    string               `yaml:"domain"`    // Custom domain (BYOD)
 	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`   // List of ports to expose
 	Databases []DevxConfigDatabase `yaml:"databases"` // List of databases to provision
+	Services  []DevxConfigService  `yaml:"services"`  // List of applications to orchestrate
 	Test      DevxConfigTest       `yaml:"test"`      // Test configuration
 	Mocks     []DevxConfigMock     `yaml:"mocks"`     // List of OpenAPI mock servers to provision
 }
@@ -82,8 +114,8 @@ var upCmd = &cobra.Command{
 			return fmt.Errorf("failed parsing YAML file block: %w", err)
 		}
 
-		if len(cfgYaml.Tunnels) == 0 && len(cfgYaml.Databases) == 0 {
-			return fmt.Errorf("devx.yaml has no 'tunnels' or 'databases' defined")
+		if len(cfgYaml.Tunnels) == 0 && len(cfgYaml.Databases) == 0 && len(cfgYaml.Services) == 0 {
+			return fmt.Errorf("devx.yaml has no 'tunnels', 'databases', or 'services' defined")
 		}
 
 		projectName := cfgYaml.Name
@@ -101,20 +133,34 @@ var upCmd = &cobra.Command{
 				if db.Engine == "" {
 					continue
 				}
+
+				// Idea 36: Auto-resolve port conflicts before spawning
+				dbPort := db.Port
+				if dbPort > 0 {
+					actual, shifted, warning := network.ResolvePort(dbPort)
+					if shifted {
+						fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
+					}
+					dbPort = actual
+				}
+
 				args := []string{"db", "spawn", db.Engine}
-				if db.Port > 0 {
-					args = append(args, "--port", fmt.Sprintf("%d", db.Port))
+				if dbPort > 0 {
+					args = append(args, "--port", fmt.Sprintf("%d", dbPort))
 				}
 				cmd := exec.Command(devxBin, args...)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
+					// Idea 35: Tail crash logs inline on failure
+					containerName := fmt.Sprintf("devx-db-%s", db.Engine)
+					logs.TailContainerCrashLogs("podman", containerName, 50)
 					return fmt.Errorf("failed provisioning %s: %w", db.Engine, err)
 				}
 			}
 		}
 
-		if len(cfgYaml.Tunnels) == 0 {
+		if len(cfgYaml.Tunnels) == 0 && len(cfgYaml.Services) == 0 {
 			fmt.Printf("\n🎉 Project '%s' databases are up!\n\n", projectName)
 			return nil
 		}
@@ -161,12 +207,20 @@ var upCmd = &cobra.Command{
 			composedDomainID := fmt.Sprintf("%s-%s", exposeID, projectName)
 			domain := exposure.GenerateDomain(composedDomainID, baseDomain)
 
-			fmt.Printf("🌍 Routing %s to port %d...\n", domain, tConfig.Port)
+			// Idea 36: Auto-resolve port conflicts for tunnels
+			resolvedPort := tConfig.Port
+			actual, shifted, warning := network.ResolvePort(resolvedPort)
+			if shifted {
+				fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
+				resolvedPort = actual
+			}
+
+			fmt.Printf("🌍 Routing %s to port %d...\n", domain, resolvedPort)
 			if err := cloudflare.RouteDNS(tunnelName, domain); err != nil {
 				return fmt.Errorf("failed routing DNS for %s: %w", domain, err)
 			}
 
-			targetPort := fmt.Sprintf("%d", tConfig.Port)
+			targetPort := fmt.Sprintf("%d", resolvedPort)
 
 			if tConfig.Throttle != "" {
 				proxyPort, cleanupTraffic, err := trafficproxy.Start(targetPort, tConfig.Throttle)
@@ -183,7 +237,6 @@ var upCmd = &cobra.Command{
 				if err != nil {
 					return fmt.Errorf("failed starting auth proxy for %s: %w", domain, err)
 				}
-				// we technically leak these cleanups when this function defers out unless we catch it
 				defer cleanupAuth()
 				targetPort = fmt.Sprintf("%d", proxyPort)
 				fmt.Printf("  🔒 Proxy Auth active on %s\n", domain)
@@ -204,21 +257,119 @@ var upCmd = &cobra.Command{
 			})
 		}
 
-		fmt.Printf("\n🎉 All services are now explicitly available worldwide! Press Ctrl+C to stop exposing your environment.\n\n")
+		// --- Idea 34: Service Orchestration via DAG ---
+		var dagCleanup func()
+		if len(cfgYaml.Services) > 0 {
+			dag := orchestrator.NewDAG()
 
-		configFile, err := cloudflare.WriteMultiIngressConfig(tunnel.ID, ingresses)
-		if err != nil {
-			return fmt.Errorf("failed to create ingress config payload: %w", err)
+			// Register database nodes (already started above, but needed for dependency resolution)
+			for _, db := range cfgYaml.Databases {
+				if db.Engine == "" {
+					continue
+				}
+				hc := orchestrator.HealthcheckConfig{
+					TCP:     fmt.Sprintf("localhost:%d", db.Port),
+					Timeout: 15 * time.Second,
+				}
+				_ = dag.AddNode(&orchestrator.Node{
+					Name:        db.Engine,
+					Type:        orchestrator.NodeDatabase,
+					Healthcheck: hc,
+					Port:        db.Port,
+				})
+			}
+
+			// Register service nodes
+			for _, svc := range cfgYaml.Services {
+				var deps []string
+				for _, d := range svc.DependsOn {
+					deps = append(deps, d.Name)
+				}
+
+				rt := orchestrator.RuntimeHost
+				switch svc.Runtime {
+				case "container":
+					rt = orchestrator.RuntimeContainer
+				case "kubernetes":
+					rt = orchestrator.RuntimeKubernetes
+				case "cloud":
+					rt = orchestrator.RuntimeCloud
+				}
+
+				hc := orchestrator.HealthcheckConfig{}
+				if svc.Healthcheck.HTTP != "" {
+					hc.HTTP = svc.Healthcheck.HTTP
+				}
+				if svc.Healthcheck.TCP != "" {
+					hc.TCP = svc.Healthcheck.TCP
+				}
+				if svc.Healthcheck.Interval != "" {
+					hc.Interval, _ = time.ParseDuration(svc.Healthcheck.Interval)
+				}
+				if svc.Healthcheck.Timeout != "" {
+					hc.Timeout, _ = time.ParseDuration(svc.Healthcheck.Timeout)
+				}
+				hc.Retries = svc.Healthcheck.Retries
+
+				_ = dag.AddNode(&orchestrator.Node{
+					Name:        svc.Name,
+					Type:        orchestrator.NodeService,
+					DependsOn:   deps,
+					Healthcheck: hc,
+					Port:        svc.Port,
+					Runtime:     rt,
+					Command:     svc.Command,
+					Env:         svc.Env,
+				})
+			}
+
+			if err := dag.Validate(); err != nil {
+				return fmt.Errorf("service dependency error: %w", err)
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			var dagErr error
+			dagCleanup, dagErr = dag.Execute(ctx)
+			if dagErr != nil {
+				if dagCleanup != nil {
+					dagCleanup()
+				}
+				return fmt.Errorf("service orchestration failed: %w", dagErr)
+			}
+			fmt.Printf("\n✅ All services are running and healthy.\n")
 		}
 
-		pCmd := exec.Command("cloudflared", "tunnel", "--config", configFile, "run")
+		if len(cfgYaml.Tunnels) > 0 {
+			fmt.Printf("\n🎉 All services are now explicitly available worldwide! Press Ctrl+C to stop exposing your environment.\n\n")
 
-		pCmd.Stdout = nil
-		pCmd.Stderr = nil
+			configFile, err := cloudflare.WriteMultiIngressConfig(tunnel.ID, ingresses)
+			if err != nil {
+				return fmt.Errorf("failed to create ingress config payload: %w", err)
+			}
 
-		err = pCmd.Run()
-		if err != nil && err.Error() != "signal: interrupt" {
-			return fmt.Errorf("cloudflared crashed: %w", err)
+			pCmd := exec.Command("cloudflared", "tunnel", "--config", configFile, "run")
+			pCmd.Stdout = nil
+			pCmd.Stderr = nil
+
+			err = pCmd.Run()
+			if err != nil && err.Error() != "signal: interrupt" {
+				if dagCleanup != nil {
+					dagCleanup()
+				}
+				return fmt.Errorf("cloudflared crashed: %w", err)
+			}
+		} else if len(cfgYaml.Services) > 0 {
+			// No tunnels, but services are running — block until Ctrl+C
+			fmt.Printf("\n🎉 Project '%s' is running! Press Ctrl+C to stop.\n\n", projectName)
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+			<-sigCh
+		}
+
+		if dagCleanup != nil {
+			dagCleanup()
 		}
 
 		return nil

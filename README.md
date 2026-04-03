@@ -29,6 +29,8 @@ We go far beyond basic container networking by natively integrating the premium 
 * 🧪 **Ephemeral E2E Testing:** Unlike Compose which corrupts your local databases during UI tests, `devx test ui` dynamically clones isolated, randomized copies of your database topology to run Cypress/Playwright tests safely.
 * 🔑 **Vault-Native Config Sync:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to automatically inject secrets natively directly into process environments.
 * 🤖 **AI-Native from Day 1:** Fully compliant with AI Agents (Cursor, Claude Code, Gemina) via deterministic `--json` outputs, `--dry-run` safety mechanisms, and native Agent Skill discovery.
+* 🚦 **Intelligent Service Orchestration:** Seamless DAG-based `depends_on` startup sequences rivaling Docker Compose and Skaffold, completely eliminating local "Connection Refused" loops.
+* 🛠️ **Frictionless Resilience:** Built-in automatic Port-Shifting transparently overrides `EADDRINUSE` conflicts, and native `devx` crash-tailing instantly pinpoints startup failures precisely inline.
 * 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
 
 `devx` provisions a customized **Fedora CoreOS** VM via Podman Machine or Docker and seamlessly drives this entire supercharged ecosystem.

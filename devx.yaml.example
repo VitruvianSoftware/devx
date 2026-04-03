@@ -64,3 +64,46 @@ tunnels:
   # Example output: https://webhooks-demo-app-james.ipv1337.dev
   - name: webhooks
     port: 8000
+
+# Define local developer applications to orchestrate.
+# Services are started in dependency order via a DAG (Directed Acyclic Graph).
+# This eliminates "Connection Refused" errors by gating startup behind health checks.
+#
+# Supported runtimes: host (default), container, kubernetes, cloud
+services:
+  - name: api
+    runtime: host
+    command: ["go", "run", "./cmd/api"]
+    port: 8080
+    depends_on:
+      - name: postgres
+        condition: service_healthy
+      - name: redis
+        condition: service_healthy
+    healthcheck:
+      http: "http://localhost:8080/health"
+      interval: "2s"
+      timeout: "30s"
+      retries: 3
+    env:
+      LOG_LEVEL: debug
+
+  - name: worker
+    runtime: host
+    command: ["go", "run", "./cmd/worker"]
+    depends_on:
+      - name: postgres
+        condition: service_healthy
+      - name: api
+        condition: service_healthy
+
+  - name: web
+    runtime: host
+    command: ["npm", "run", "dev"]
+    port: 3000
+    depends_on:
+      - name: api
+        condition: service_healthy
+    healthcheck:
+      http: "http://localhost:3000"
+      timeout: "60s"
