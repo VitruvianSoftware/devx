@@ -30,7 +30,7 @@ devx ci run ci.yml --json
 3. **Expands** `strategy.matrix` into concrete jobs (e.g., a 2×2 matrix produces 4 parallel containers).
 4. **Creates** an isolated container per job, bind-mounting your project at `/workspace`.
 5. **Executes** each `run:` block sequentially inside that container via `podman exec`.
-6. **Substitutes** `${{ env.VAR }}`, `${{ secrets.VAR }}`, and `${{ matrix.VAR }}` expressions.
+6. **Substitutes** <code v-pre>${{ env.VAR }}</code>, <code v-pre>${{ secrets.VAR }}</code>, and <code v-pre>${{ matrix.VAR }}</code> expressions.
 
 ## What `devx ci run` Does NOT Do
 
@@ -51,17 +51,17 @@ This is a deliberate design decision. Emulating `uses:` faithfully is why `nekto
 | `needs:` job dependencies (DAG) | ✅ Parallel tiers |
 | `env:` at workflow/job/step | ✅ Full merge chain |
 | `if:` conditionals | ✅ Simple equality/inequality; complex expressions fail-open |
-| `${{ secrets.X }}` | ✅ Injected from devx Vault providers |
-| `${{ matrix.X }}` | ✅ From expanded matrix |
-| `${{ env.X }}` | ✅ From merged environment |
-| `${{ github.* }}` | ⚠️ Stubbed (e.g., `event_name` → `"push"`) |
-| `${{ runner.* }}` | ⚠️ Stubbed (e.g., `os` → `"Linux"`) |
+| <code v-pre>${{ secrets.X }}</code> | ✅ Injected from devx Vault providers |
+| <code v-pre>${{ matrix.X }}</code> | ✅ From expanded matrix |
+| <code v-pre>${{ env.X }}</code> | ✅ From merged environment |
+| <code v-pre>${{ github.* }}</code> | ⚠️ Stubbed (e.g., `event_name` → `"push"`) |
+| <code v-pre>${{ runner.* }}</code> | ⚠️ Stubbed (e.g., `os` → `"Linux"`) |
 | `working-directory:` | ✅ Per-step |
 | `shell:` | ✅ bash/sh |
 | `continue-on-error:` | ✅ Step-level |
 | `timeout-minutes:` | ✅ Step-level |
 | `uses:` actions | ❌ Skipped with warning |
-| `${{ steps.id.outputs.X }}` | ❌ Not supported |
+| <code v-pre>${{ steps.id.outputs.X }}</code> | ❌ Not supported |
 | `services:` containers | 🔜 Planned |
 
 ## Flags
