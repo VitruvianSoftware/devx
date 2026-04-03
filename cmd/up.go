@@ -21,93 +21,8 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
-type DevxConfigTunnel struct {
-	Name      string `yaml:"name"`       // Subdomain explicitly requested
-	Port      int    `yaml:"port"`       // Local port to forward traffic towards
-	BasicAuth string `yaml:"basic_auth"` // basic auth literal value 'user:pass'
-	Throttle  string `yaml:"throttle"`   // traffic shaping profile e.g. '3g'
-}
-
-type DevxConfigDatabase struct {
-	Engine string `yaml:"engine"`
-	Port   int    `yaml:"port"`
-}
-
-type DevxConfigTest struct {
-	UI DevxConfigTestUI `yaml:"ui"`
-}
-
-type DevxConfigTestUI struct {
-	Setup   string `yaml:"setup"`   // Pre-processing steps (e.g., migrations) to run before tests
-	Command string `yaml:"command"` // The actual test command to execute
-}
-
-// DevxConfigMock defines a remote OpenAPI-backed mock server entry.
-type DevxConfigMock struct {
-	Name string `yaml:"name"` // Friendly name (becomes env var MOCK_<NAME>_URL)
-	URL  string `yaml:"url"`  // Remote OpenAPI spec URL (must be http:// or https://)
-	Port int    `yaml:"port"` // Host port (0 = auto-assign a free port)
-}
-
-// DevxConfigDependsOn references a service/database dependency with a gating condition.
-type DevxConfigDependsOn struct {
-	Name      string `yaml:"name"`
-	Condition string `yaml:"condition"` // "service_healthy" or "service_started"
-}
-
-// DevxConfigHealthcheck defines how to verify a service is ready.
-type DevxConfigHealthcheck struct {
-	HTTP     string `yaml:"http"`     // HTTP endpoint to poll (e.g., "http://localhost:8080/health")
-	TCP      string `yaml:"tcp"`      // TCP address to probe (e.g., "localhost:5432")
-	Interval string `yaml:"interval"` // Duration string (e.g., "1s", "500ms")
-	Timeout  string `yaml:"timeout"`  // Duration string (e.g., "30s")
-	Retries  int    `yaml:"retries"`  // Number of consecutive successes required
-}
-
-// DevxConfigSync defines a host→container file sync mapping powered by Mutagen.
-// This bypasses slow VirtioFS volume mounts for instant hot-reload.
-type DevxConfigSync struct {
-	Container string   `yaml:"container"` // Target container name (e.g., "my-api")
-	Src       string   `yaml:"src"`       // Host source path (relative to devx.yaml)
-	Dest      string   `yaml:"dest"`      // Container destination path
-	Ignore    []string `yaml:"ignore"`    // Additional ignore patterns (on top of defaults)
-}
-
-// DevxConfigService defines a developer application in devx.yaml.
-type DevxConfigService struct {
-	Name        string                `yaml:"name"`
-	Runtime     string                `yaml:"runtime"`    // "host" (default), "container", "kubernetes", "cloud"
-	Command     []string              `yaml:"command"`    // e.g. ["npm", "run", "dev"]
-	DependsOn   []DevxConfigDependsOn `yaml:"depends_on"` // services/databases that must be healthy first
-	Healthcheck DevxConfigHealthcheck `yaml:"healthcheck"`
-	Port        int                   `yaml:"port"`
-	Env         map[string]string     `yaml:"env"`              // extra env vars
-	Sync        []DevxConfigSync      `yaml:"sync,omitempty"`   // file sync mappings into containers
-}
-
-// DevxConfigProfile defines a named overlay that merges additively onto the base config.
-// Follows Docker Compose override semantics: matching names merge fields (profile wins),
-// new entries are appended.
-type DevxConfigProfile struct {
-	Databases []DevxConfigDatabase `yaml:"databases"`
-	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`
-	Services  []DevxConfigService  `yaml:"services"`
-	Mocks     []DevxConfigMock     `yaml:"mocks"`
-}
-
-type DevxConfig struct {
-	Name      string                       `yaml:"name"`      // Project name
-	Domain    string                       `yaml:"domain"`    // Custom domain (BYOD)
-	Tunnels   []DevxConfigTunnel           `yaml:"tunnels"`   // List of ports to expose
-	Databases []DevxConfigDatabase         `yaml:"databases"` // List of databases to provision
-	Services  []DevxConfigService          `yaml:"services"`  // List of applications to orchestrate
-	Test      DevxConfigTest               `yaml:"test"`      // Test configuration
-	Mocks     []DevxConfigMock             `yaml:"mocks"`     // List of OpenAPI mock servers to provision
-	Profiles  map[string]DevxConfigProfile `yaml:"profiles"`  // Named environment overlays
-}
 
 var upDomain string
 var upProfile string
@@ -126,31 +41,10 @@ var upCmd = &cobra.Command{
 			return fmt.Errorf("could not find devx.yaml in the current directory. Please create one to use 'devx tunnel up'")
 		}
 
-		b, err := os.ReadFile(yamlPath)
+		// Idea 44: resolveConfig handles include blocks and profile merging in one pass
+		cfgYaml, err := resolveConfig(yamlPath, upProfile)
 		if err != nil {
-			return fmt.Errorf("failed creating reading devx.yaml: %w", err)
-		}
-
-		var cfgYaml DevxConfig
-		if err = yaml.Unmarshal(b, &cfgYaml); err != nil {
-			return fmt.Errorf("failed parsing YAML file block: %w", err)
-		}
-
-		// --- Idea 37: Apply profile overlay (additive/merge, Docker Compose style) ---
-		if upProfile != "" {
-			profile, ok := cfgYaml.Profiles[upProfile]
-			if !ok {
-				var available []string
-				for k := range cfgYaml.Profiles {
-					available = append(available, k)
-				}
-				if len(available) == 0 {
-					return fmt.Errorf("profile %q not found — no profiles defined in devx.yaml", upProfile)
-				}
-				return fmt.Errorf("profile %q not found — available profiles: %v", upProfile, available)
-			}
-			mergeProfile(&cfgYaml, profile)
-			fmt.Printf("📦 Applied profile: %s\n", upProfile)
+			return fmt.Errorf("configuration error: %w", err)
 		}
 
 		if len(cfgYaml.Tunnels) == 0 && len(cfgYaml.Databases) == 0 && len(cfgYaml.Services) == 0 {
@@ -359,6 +253,7 @@ var upCmd = &cobra.Command{
 					Runtime:     rt,
 					Command:     svc.Command,
 					Env:         svc.Env,
+					Dir:         svc.Dir, // Idea 44: working directory for included projects
 				})
 			}
 

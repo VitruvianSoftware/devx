@@ -46,6 +46,7 @@ export default defineConfig({
           { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
           { text: 'Local CI Emulation', link: '/guide/ci' },
           { text: 'Smart File Syncing', link: '/guide/sync' },
+          { text: 'Multirepo Orchestration', link: '/guide/multirepo' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }

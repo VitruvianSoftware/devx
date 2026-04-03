@@ -12,7 +12,6 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/VitruvianSoftware/devx/internal/database"
 	"github.com/VitruvianSoftware/devx/internal/devxerr"
@@ -41,15 +40,6 @@ func init() {
 	dbCmd.AddCommand(dbSeedCmd)
 }
 
-type dbSeedYAML struct {
-	Databases []struct {
-		Engine string `yaml:"engine"`
-		Seed   struct {
-			Command string `yaml:"command"`
-		} `yaml:"seed"`
-	} `yaml:"databases"`
-}
-
 func runDbSeed(_ *cobra.Command, args []string) error {
 	engineName := strings.ToLower(args[0])
 	engine, ok := database.Registry[engineName]
@@ -59,7 +49,9 @@ func runDbSeed(_ *cobra.Command, args []string) error {
 	}
 
 	// ── 1. Read devx.yaml ────────────────────────────────────────────────────
-	yamlData, err := os.ReadFile("devx.yaml")
+	// Idea 44: resolveConfig processes include blocks so databases from neighbouring
+	// repos are visible and their Dir (working directory) is correctly set.
+	cfg, err := resolveConfig("devx.yaml", "")
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("could not find devx.yaml in the current directory")
@@ -67,15 +59,12 @@ func runDbSeed(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to read devx.yaml: %w", err)
 	}
 
-	var cfg dbSeedYAML
-	if err := yaml.Unmarshal(yamlData, &cfg); err != nil {
-		return fmt.Errorf("failed to parse devx.yaml: %w", err)
-	}
-
 	seedCommand := ""
+	var seedDir string // working directory for this seed (set if from an included project)
 	for _, db := range cfg.Databases {
 		if strings.ToLower(db.Engine) == engineName {
 			seedCommand = db.Seed.Command
+			seedDir = db.Dir
 			break
 		}
 	}
@@ -194,6 +183,11 @@ func runDbSeed(_ *cobra.Command, args []string) error {
 
 	// ── 5. Setup execution ───────────────────────────────────────────────
 	seedExec := exec.Command("sh", "-c", seedCommand)
+
+	// Idea 44: run from the included project's directory if set
+	if seedDir != "" {
+		seedExec.Dir = seedDir
+	}
 
 	// Inherit host environment, but append ours
 	hostEnv := os.Environ()

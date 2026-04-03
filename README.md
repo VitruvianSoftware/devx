@@ -35,6 +35,7 @@ We go far beyond basic container networking by natively integrating the premium 
 * 🛠️ **Frictionless Resilience:** Built-in automatic Port-Shifting transparently overrides `EADDRINUSE` conflicts, and native `devx` crash-tailing instantly pinpoints startup failures precisely inline.
 * 🌱 **Automated Database Seeding:** Dynamically injects connection strings & legacy fragments (`devx db seed`) from running containers directly into your native Node.js/Go seed scripts.
 * ⚡ **Zero-Rebuild Hot Reloading:** Bypass slow VirtioFS volume mounts with intelligent Mutagen-powered file syncing (`devx sync up`) that propagates changes in milliseconds.
+* 🌐 **Multirepo Orchestration:** Compose multiple sibling `devx.yaml` files from neighbouring repositories via `include:` directives into a single unified local cluster — with fail-fast conflict detection and automatic working-directory injection per project.
 * 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
 
 `devx` provisions a customized **Fedora CoreOS** VM via Podman Machine or Docker and seamlessly drives this entire supercharged ecosystem.
