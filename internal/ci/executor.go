@@ -58,9 +58,7 @@ func Execute(cfg ExecuteConfig) ([]RunResult, error) {
 	}
 
 	// Expand all jobs with their matrix
-	type tierEntry struct {
-		expanded []ExpandedJob
-	}
+
 	var executionPlan [][]ExpandedJob
 
 	for _, tier := range tiers {
