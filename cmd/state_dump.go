@@ -6,6 +6,7 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/state"
+	"github.com/VitruvianSoftware/devx/internal/tailscale"
 	"github.com/spf13/cobra"
 )
 
@@ -37,9 +38,12 @@ func runStateDump(_ *cobra.Command, _ []string) error {
 		vmState = info.State
 	}
 
-	tsStatus := "down"
+	tsStatus := "vm not running"
 	if vm.IsRunning(cfg.DevHostname) {
-		tsStatus = "ok" // generic simplification for the overall state dump
+		sshFn := func(machine, command string) (string, error) {
+			return vm.SSH(machine, command)
+		}
+		tsStatus = tailscale.StatusWithSSH(cfg.DevHostname, sshFn)
 	}
 
 	report, err := state.GenerateDump(cfg, vm.Name(), vmState, tsStatus)

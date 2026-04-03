@@ -85,7 +85,7 @@ func GenerateDump(cfg *config.Config, vmProviderName string, vmState string, tsS
 		runtime = "docker"
 	}
 
-	out, err := exec.Command(runtime, "ps", "-a", "--format", "{{.Names}}|{{.Image}}|{{.State}}").CombinedOutput()
+	out, err := exec.Command(runtime, "ps", "-a", "--filter", "name=devx-", "--format", "{{.Names}}|{{.Image}}|{{.State}}").CombinedOutput()
 	if err == nil {
 		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 		for _, line := range lines {
@@ -205,7 +205,10 @@ func redactYamlEnv(content string) string {
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		
+		if trimmed == "" {
+			continue
+		}
+
 		// Determine current indentation
 		indent := len(line) - len(strings.TrimLeft(line, " "))
 

@@ -37,13 +37,23 @@ func CreateCheckpoint(providerName, name string) error {
 		return fmt.Errorf("failed to create checkpoint directory: %w", err)
 	}
 
+	// Clean up partial checkpoint directory on any failure
+	var checkpointErr error
+	defer func() {
+		if checkpointErr != nil {
+			_ = os.RemoveAll(targetDir)
+		}
+	}()
+
 	// 1. Discover all devx-managed containers that are running
 	containers, err := getRunningDevxContainers()
 	if err != nil {
+		checkpointErr = err
 		return err
 	}
 	if len(containers) == 0 {
-		return fmt.Errorf("no running devx-managed containers found to checkpoint")
+		checkpointErr = fmt.Errorf("no running devx-managed containers found to checkpoint")
+		return checkpointErr
 	}
 
 	fmt.Printf("📸 Checkpointing %d containers into %q...\n", len(containers), targetDir)
@@ -75,13 +85,16 @@ func CreateCheckpoint(providerName, name string) error {
 	}
 
 	if len(combinedErrs) > 0 {
-		return fmt.Errorf("checkpoint failed with errors:\n%s", strings.Join(combinedErrs, "\n"))
+		checkpointErr = fmt.Errorf("checkpoint failed with errors:\n%s", strings.Join(combinedErrs, "\n"))
+		return checkpointErr
 	}
 
 	return nil
 }
 
 // RestoreCheckpoint restores all containers associated with the named checkpoint.
+// Restores are performed sequentially to avoid port-binding races when CRIU
+// re-binds the original network sockets.
 func RestoreCheckpoint(providerName, name string) error {
 	if providerName != "podman" {
 		return fmt.Errorf("state restores (CRIU) are only supported on the native podman provider. Current provider: %s", providerName)
@@ -103,32 +116,18 @@ func RestoreCheckpoint(providerName, name string) error {
 
 	fmt.Printf("🔄 Restoring %d containers from checkpoint %q...\n", len(archives), name)
 
-	var wg sync.WaitGroup
-	errs := make(chan error, len(archives))
-
+	// Restore sequentially to avoid port-binding races during CRIU socket restoration
+	var restoreErrs []string
 	for _, arch := range archives {
-		wg.Add(1)
-		go func(archivePath string) {
-			defer wg.Done()
-			
-			// Command: podman container restore --import <archive>
-			cmd := exec.Command("podman", "container", "restore", "-i", archivePath)
-			if out, err := cmd.CombinedOutput(); err != nil {
-				errs <- fmt.Errorf("failed to restore %s: %w\n%s", filepath.Base(archivePath), err, string(out))
-			}
-		}(arch)
+		fmt.Printf("  → Restoring %s...\n", filepath.Base(arch))
+		cmd := exec.Command("podman", "container", "restore", "-i", arch)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			restoreErrs = append(restoreErrs, fmt.Sprintf("failed to restore %s: %v\n%s", filepath.Base(arch), err, string(out)))
+		}
 	}
 
-	wg.Wait()
-	close(errs)
-
-	var combinedErrs []string
-	for e := range errs {
-		combinedErrs = append(combinedErrs, e.Error())
-	}
-
-	if len(combinedErrs) > 0 {
-		return fmt.Errorf("restore failed with errors:\n%s", strings.Join(combinedErrs, "\n"))
+	if len(restoreErrs) > 0 {
+		return fmt.Errorf("restore failed with errors:\n%s", strings.Join(restoreErrs, "\n"))
 	}
 
 	return nil
@@ -161,20 +160,52 @@ func teardownRunningDevxContainers() error {
 	return nil
 }
 
-// ListCheckpoints returns a list of all existing checkpoint names.
-func ListCheckpoints() ([]string, error) {
+// CheckpointInfo holds metadata about a stored checkpoint.
+type CheckpointInfo struct {
+	Name           string `json:"name"`
+	ContainerCount int    `json:"container_count"`
+	SizeBytes      int64  `json:"size_bytes"`
+	CreatedAt      string `json:"created_at"`
+}
+
+// ListCheckpoints returns metadata for all existing checkpoints.
+func ListCheckpoints() ([]CheckpointInfo, error) {
 	entries, err := os.ReadDir(CheckpointsDir())
 	if os.IsNotExist(err) {
-		return []string{}, nil
+		return []CheckpointInfo{}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	var results []string
+	var results []CheckpointInfo
 	for _, e := range entries {
-		if e.IsDir() {
-			results = append(results, e.Name())
+		if !e.IsDir() {
+			continue
 		}
+		cpDir := filepath.Join(CheckpointsDir(), e.Name())
+
+		// Count archives and sum sizes
+		archives, _ := filepath.Glob(filepath.Join(cpDir, "*.tar.gz"))
+		var totalSize int64
+		for _, a := range archives {
+			if fi, err := os.Stat(a); err == nil {
+				totalSize += fi.Size()
+			}
+		}
+
+		// Use directory mod time as creation proxy
+		info, _ := e.Info()
+		created := ""
+		if info != nil {
+			created = info.ModTime().Format("2006-01-02 15:04:05")
+		}
+
+		results = append(results, CheckpointInfo{
+			Name:           e.Name(),
+			ContainerCount: len(archives),
+			SizeBytes:      totalSize,
+			CreatedAt:      created,
+		})
 	}
 	return results, nil
 }
