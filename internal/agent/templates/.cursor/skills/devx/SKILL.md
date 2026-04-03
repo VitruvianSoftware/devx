@@ -1,31 +1,71 @@
 ---
 name: devx-orchestrator
-description: "Agent Skill: Use when managing the devx local environment including the Container VM, Database spawning, Cloudflare Tunnel Exposing, or networking management."
-argument-hint: Ask the user to clarify what devx component they are seeking to manage if unclear.
+description: Defines the standard operating procedures and CLI flags for AI agents interacting with the Devx virtualized local development environment.
 ---
-# Cursor AI Rules for Devx
 
-This repository orchestrates `devx`, a local VM environment manager covering Podman, Cloudflare Tunnels, and Tailscale.
+# Devx AI Agent Guidelines
 
-When interacting with tasks related to environment provisioning, database spawning, or network exposure, DO NOT write shell scripts. Instead, use the `devx` CLI interface natively provided in this project.
+You are operating in a repository that uses `devx`, a Go-based CLI tool orchestrating Podman, Cloudflared, and Tailscale for local development.
 
-## Agent Restrictions
-1. **Interactive Prompts**: You do not have a TTY interface. If you run a devx command that asks a question using the `huh` library or `survey`, it will block your execution forever. You MUST append `--non-interactive` (or `-y`) to mutating commands:
-   - `devx init -y`
-   - `devx vm teardown -y`
-   - `devx db rm postgres -y`
+When you need to interact with the local infrastructure, databases, or environment networking, ALWAYS use `devx` CLI commands rather than manually writing shell scripts for docker/podman or cloudflared.
 
-2. **Parsing Status Output**: Never try to parse `devx vm status` strings using regex. Devx supports structurally deterministic output for AI parsers. You MUST use `--json`:
-   - `devx vm status --json`
-   - `devx tunnel list --json`
-   - `devx db list --json`
+## 🤖 1. Machine-Readable Context (`--json`)
 
-3. **Safe Destructive Checks**: When attempting to delete development state (databases, tunnels, VMs), ALWAYS use `--dry-run` first to test exactly what the tool will do, echo it to the user, and ask for confirmation before submitting the destructive `-y` flag.
-   - `devx db rm redis --dry-run`
-   - `devx vm teardown --dry-run`
+Never try to parse the human-readable TUI output of devx status commands using Regular Expressions or text slitting. Devx has full support for strictly deterministic structural state via the `--json` flag.
 
-4. **Exit Codes**: Devx silences error usage dumps and provides programmatic exit codes. Trap these explicitly in your terminal evaluation loop:
-   - `Exit 15`: VM is asleep/dormant.
-   - `Exit 16`: VM does not exist (Requires you to run `devx init`).
-   - `Exit 22`: Port Address Collision on the host (`devx db spawn <engine>` failed).
-   - `Exit 41`: Cloudflared is unauthenticated on the dev machine.
+Always append `--json` when you are querying the environment state:
+- `devx vm status --json`: Returns a JSON object with VM health, Tailscale auth state, and Cloudflare domains.
+- `devx db list --json`: Returns a JSON array of running PostgreSQL/MySQL/Redis engines and their exposed ports.
+- `devx tunnel list --json`: Returns a JSON array summarizing active localhost internet exposures.
+
+## 🛑 2. Non-interactive Execution (`--non-interactive` / `-y`)
+
+Many devx commands invoke interactive terminal surveys (via `charmbracelet/huh`) to ask the human developer for confirmation before acting. As an AI Agent, you lack a TTY to press 'Enter', which will cause you to stall indefinitely.
+
+**You must ALWAYS use the `--non-interactive` (or `-y`) flag on mutating commands:**
+- `devx vm teardown -y` (Will skip the deletion confirm warning and execute instantly)
+- `devx db rm postgres -y` (Will skip data deletion warnings and execute instantly)
+- `devx init -y` (Will hard-fail immediately with an exit error if required credentials are not in `.env`, rather than freezing to ask for them)
+
+## 🦺 3. Safe Preflight Testing (`--dry-run`)
+
+If you are asked to clean up the environment, but you are not 100% confident in the scope of the destruction, use the `--dry-run` flag.
+
+- `devx vm teardown --dry-run`
+- `devx db rm <engine> --dry-run`
+- `devx tunnel unexpose --dry-run`
+
+Devx will intercept the execution path and safely echo out precisely which containers, internet URLs, and persistent data volumes *would* be destroyed, allowing you to ask the human for approval.
+
+## 🚦 4. Deterministic Exit Codes
+
+When running a command that fails, `devx` avoids polluting standard error with useless `--help` output. Instead, it utilizes predictive numeric Exit Codes to signal exactly what went wrong so you can programmatically trap and rescue the state cleanly:
+
+- `Exit 15 (CodeVMDormant)`: The VM exists but is sleeping. It could not automatically wake up.
+- `Exit 16 (CodeVMNotFound)`: The VM has been deleted. You must run `devx vm init`.
+- `Exit 22 (CodeHostPortInUse)`: You attempted to run `devx db spawn <engine>`, but the host port is already allocated by another daemon. Try a different port using `-p <port>`.
+- `Exit 41 (CodeNotLoggedIn)`: You attempted to expose a tunnel, but `cloudflared` is not authenticated on this machine. Request that the user run `cloudflared tunnel login`.
+
+## 🗺️ 5. Architectural Awareness (`devx map`)
+
+If you are dropped into a `devx` workspace and need to quickly understand how the services, databases, and network bounds interact, do NOT manually read through a massive `devx.yaml` file line-by-line.
+Instead, use `devx map` to generate an instant, agent-readable Mermaid.js topology graph. You can pipe this out via `devx map --output /tmp/topology.md` to see the exact component dependencies, healthcheck conditions, and tunnel exposures.
+
+## 🔀 6. Advanced Orchestration (`devx up`)
+
+You do not need to manually boot components sequentially and wait for them. `devx` features a robust DAG (Directed Acyclic Graph) orchestrator.
+Running `devx up` will automatically spawn all mapped databases, native services, and network tunnels in parallel, natively respecting `depends_on` wait conditions.
+If you or the user require a different topological slice of the system (e.g. bypassing the frontend React app to work only on the APIs), you can apply additive overlays to the execution via flags like `devx up --profile backend-only`.
+
+## 🌐 7. Dynamic Port Shifting & Discovery
+
+`devx` automatically negotiates and shifts ports if collisions (like a ghost `node` process on `:8080`) occur. Do NOT blindly assume services or databases map statically to their default host ports.
+To discover where a service or database is actually running, ALWAYS query the machine-readable state via `devx db list --json` and `devx tunnel list --json`. When writing scripts, always rely on the dynamically injected `.env` variables (e.g., `$PORT`, `$DATABASE_URL`) rather than hardcoding port strings.
+
+## 📚 8. Documentation is Mandatory (Definition of Done)
+
+When shipping features on the `devx` CLI, the task is **not done** until the official documentation has been updated. Missing or outdated documentation directly harms the Developer Experience (DevX) mission.
+
+- **Checklist Requirement:** Every implementation plan (`implementation_plan.md`) and task tracker (`task.md`) you create MUST include a mandatory phase: `Documentation Updating`.
+- **Validation:** Before running the `/push` workflow to cut a release, PR, or commit, you must pause and explicitly review the `docs/guide/` directory to ensure all new commands, flags, and `devx.yaml` schema fields are documented.
+- **Example configs:** Schema changes MUST be reflected with thorough examples in `devx.yaml.example`.
