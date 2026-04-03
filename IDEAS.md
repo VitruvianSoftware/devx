@@ -25,13 +25,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 ## 🟡 P2 — Build Later (Good Ideas, Need Refinement)
 
 
-### 42. Local CI Pipeline Emulation
-* **Priority:** 🟡 P2
-* **Effort:** High
-* **Impact:** High — every developer wants this, nobody has built it well. The "fix ci" commit loop is a universal pain point and `act` is the closest competitor but riddled with environment parity issues. Even 80% parity would be valuable. However, maintaining a runner image becomes a perpetual ops tax that must be budgeted for.
-* **The Problem:** Developers often have to commit and push 10 times ("fix ci", "fix ci again") to debug GitHub Actions because tools like `act` are clunky or lack exact environment parity.
-* **The Solution:** `devx ci run` natively parses `.github/workflows/` and executes the steps inside the isolated `devx` Podman machine, perfectly replicating the GitHub Ubuntu runner environment and injecting necessary vault secrets so pipelines can be debugged 100% locally.
-
 ### 43. Smart File Syncing (Zero-Rebuild Hot Reloading)
 * **Priority:** 🟡 P2
 * **Effort:** Very High

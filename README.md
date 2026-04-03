@@ -31,6 +31,7 @@ We go far beyond basic container networking by natively integrating the premium 
 * 🤖 **AI-Native from Day 1:** Fully compliant with AI Agents (Cursor, Claude Code, Gemina) via deterministic `--json` outputs, `--dry-run` safety mechanisms, and native Agent Skill discovery.
 * 🚦 **Intelligent Service Orchestration:** Seamless DAG-based `depends_on` startup sequences rivaling Docker Compose and Skaffold, completely eliminating local "Connection Refused" loops.
 * ⏪ **Time-Travel Debugging:** Snapshot and restore complete macro-topology states (RAM, volumes, networks) using CRIU, plus redact-safe diagnostic dumps for frictionless support (`devx state`).
+* 🔬 **Local CI Emulation:** Debug your GitHub Actions locally with `devx ci run` — matrix expansion, job DAGs, and parallel execution without the "fix ci" commit loop.
 * 🛠️ **Frictionless Resilience:** Built-in automatic Port-Shifting transparently overrides `EADDRINUSE` conflicts, and native `devx` crash-tailing instantly pinpoints startup failures precisely inline.
 * 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
 
