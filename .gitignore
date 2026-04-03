@@ -27,3 +27,4 @@ config.ign
 .vscode/
 *.swp
 *~
+cmd/var/
