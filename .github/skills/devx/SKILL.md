@@ -69,3 +69,21 @@ When shipping features on the `devx` CLI, the task is **not done** until the off
 - **Checklist Requirement:** Every implementation plan (`implementation_plan.md`) and task tracker (`task.md`) you create MUST include a mandatory phase: `Documentation Updating`.
 - **Validation:** Before running the `/push` workflow to cut a release, PR, or commit, you must pause and explicitly review the `docs/guide/` directory to ensure all new commands, flags, and `devx.yaml` schema fields are documented.
 - **Example configs:** Schema changes MUST be reflected with thorough examples in `devx.yaml.example`.
+
+## 🚀 9. Ship Code with `devx agent ship` (MANDATORY)
+
+You are **FORBIDDEN** from using raw `git push` in this repository. A pre-push git hook will block you if you try. Instead, you MUST use `devx agent ship` to commit, push, and verify CI:
+
+```bash
+devx agent ship -m "feat: your commit message"
+```
+
+This command orchestrates the full lifecycle:
+1. **Pre-flight:** Runs local tests, lint, and build automatically
+2. **Commit & Push:** Stages, commits, pushes (it bypasses the hook internally)
+3. **PR & Merge:** Creates a GitHub PR and squash-merges it
+4. **CI Poll:** Blocks your terminal until the CI pipeline returns green or red
+
+If the pipeline fails, `devx agent ship` returns Exit Code `53` with condensed failure logs. You MUST fix the issue and re-run `devx agent ship` immediately.
+
+For machine-readable output: `devx agent ship -m "message" --json`

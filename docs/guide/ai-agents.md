@@ -84,3 +84,59 @@ The next `devx agent init` will offer the new skill automatically.
 ## Why It Matters
 
 When an AI agent opens your project, it immediately reads these skill files to understand your architecture and rules — without needing to read the entire codebase first. It also enforces team standards that would otherwise need to be repeated in every prompt.
+
+## `devx agent ship` — Deterministic Pipeline Guardrail
+
+AI agents have a fundamental weakness: they forget to verify CI pipelines after merging code. `devx agent ship` eliminates this by wrapping the entire commit → push → PR → CI lifecycle into a single blocking command.
+
+### Usage
+
+```bash
+devx agent ship -m "feat: implement new feature"
+```
+
+This command executes four phases sequentially:
+
+| Phase | Description |
+|---|---|
+| **Pre-flight** | Runs local tests, lint, and build for the auto-detected stack |
+| **Commit & Push** | Stages, commits, and pushes (bypassing the pre-push hook internally) |
+| **PR & Merge** | Creates a GitHub PR and squash-merges it |
+| **CI Poll** | **Blocks the terminal** until the CI pipeline completes on main |
+
+The command returns deterministic exit codes:
+
+| Exit Code | Meaning |
+|---|---|
+| `0` | Success — CI is green |
+| `50` | Pre-flight failure (tests/lint/build) |
+| `51` | Git push failed |
+| `52` | PR creation or merge failed |
+| `53` | CI pipeline failed |
+| `54` | CI pipeline timed out |
+| `55` | Documentation check failed |
+| `56` | Nothing to ship |
+
+### Machine-Readable Output
+
+```bash
+devx agent ship -m "fix: resolve bug" --json
+```
+
+### Pre-Push Hook (The Forcing Function)
+
+To prevent agents (or forgetful humans) from bypassing `devx agent ship`:
+
+```bash
+devx agent ship --install-hook
+```
+
+This installs a `.git/hooks/pre-push` hook that **blocks all direct `git push` commands**. When triggered, it prints:
+
+```
+✋ Direct 'git push' is blocked by devx.
+   AI Agents MUST use:   devx agent ship -m "commit message"
+   Humans can bypass:    git push --no-verify
+```
+
+The hook is automatically detected by `devx doctor`, which will warn if it's missing.
