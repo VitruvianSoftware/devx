@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/doctor"
+	"github.com/VitruvianSoftware/devx/internal/ship"
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
 
@@ -110,6 +112,26 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 			detail = tui.StyleDetailError.Render("needs: " + f.missing)
 		}
 		fmt.Printf("    %s  %s  %s\n", icon, tui.StyleStepName.Render(f.command), detail)
+	}
+	fmt.Println()
+
+	// ── Agentic Guardrails ─────────────────────────────────────────
+	fmt.Println(tui.StyleTitle.Render("  Agentic Guardrails"))
+
+	cwd, _ := os.Getwd()
+	hookInstalled := ship.IsPrePushHookInstalled(cwd)
+	if hookInstalled {
+		fmt.Printf("    %s  %-24s %s\n",
+			tui.IconDone,
+			"pre-push hook",
+			tui.StyleDetailDone.Render("installed (devx agent ship enforced)"),
+		)
+	} else {
+		fmt.Printf("    %s  %-24s %s\n",
+			tui.IconFailed,
+			"pre-push hook",
+			tui.StyleDetailError.Render("not installed — run: devx agent ship --install-hook"),
+		)
 	}
 	fmt.Println()
 
@@ -230,6 +252,11 @@ func computeFeatureReadiness(r doctor.Report) []featureReadiness {
 			command: "devx config pull",
 			ready:   tools["op"] || tools["bw"] || tools["gcloud"],
 			missing: "op, bw, or gcloud",
+		},
+		{
+			command: "devx agent ship",
+			ready:   tools["gh"],
+			missing: missingList(tools, "gh"),
 		},
 	}
 }
