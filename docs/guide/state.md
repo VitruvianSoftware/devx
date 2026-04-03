@@ -53,8 +53,13 @@ devx state restore pre-migration
 
 ```bash
 devx state list
+```
+*(Outputs the checkpoint name, container count, storage size, and creation timestamp)*
+
+```bash
 devx state rm pre-migration
 ```
+*(Prompts for interactive confirmation before destructively removing the checkpoint directory and all related archives)*
 
 ### Limitations
 - **Provider Restriction:** Time-travel checkpointing requires `podman` as the underlying virtualizer (`--provider=podman`). Docker Mac and OrbStack usually do not ship with natively supported, un-flagged CRIU support compiled into their kernels and daemon.
