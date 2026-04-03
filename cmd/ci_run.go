@@ -61,7 +61,7 @@ func init() {
 }
 
 func runCIRun(cmd *cobra.Command, args []string) error {
-	projectDir := "."
+	projectDir, _ := filepath.Abs(".")
 
 	var workflowPath string
 
