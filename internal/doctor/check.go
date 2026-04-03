@@ -140,6 +140,16 @@ func allTools() []toolDef {
 			InstallBrew: "google-cloud-sdk",
 			Note:        "for GCP Secret Manager integration",
 		},
+		{
+			Name:        "Mutagen",
+			Binary:      "mutagen",
+			FeatureArea: "File Sync",
+			Required:    false,
+			VersionFlag: "version",
+			InstallBrew: "mutagen",
+			InstallTap:  "mutagen-io/mutagen",
+			Note:        "for zero-rebuild hot reloading (devx sync)",
+		},
 	}
 }
 
