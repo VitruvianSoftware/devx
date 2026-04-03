@@ -307,3 +307,31 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** If a developer spins up two apps or forgets they have a ghost Node process running on port 8080, `devx` currently throws an `EADDRINUSE` failure, stopping their workflow until they hunt down and kill the process.
 * **The Solution:** Auto-detect port collisions and dynamically shift to an available port (e.g., `8081`). Because `devx` controls the entire tunnel routing and environment variable injection, the ingress and local `.env` variables mapped into the app update seamlessly, acting completely transparent to the user.
 * **Key files:** `internal/network/ports.go`
+
+---
+
+## 🟢 P1 — Build Next (High-Value Polish)
+
+> **Recommended Sprint:** Ship 37 + 38 + 39 together as the "polish pass" after P0 lands.
+
+### 37. Environment Overlays & Profiles (DONE)
+* **Priority:** 🟢 P1
+* **Effort:** Low-Medium
+* **Impact:** High — essential for teams larger than 1. The moment two developers need different local topologies (frontend dev doesn't need Kafka, backend dev doesn't need the React app), you need profiles. Without them, `devx.yaml` becomes a monolith that everyone forks locally and never commits back. Skaffold nailed this; `devx` can do it better with first-class `--profile` support.
+* **The Problem:** Switching between a lightweight local stack and a full integration stack involves manually commenting/uncommenting sections of `devx.yaml`, which risks polluting commits.
+* **The Solution:** Add Skaffold-style `--profile` flagging. `devx.yaml` can define specific blocks (e.g., `profiles: staging`) that conditionally override the base configuration, allowing developers to swap entire environments instantly.
+
+### 38. Native Secrets Redaction in Logs (DONE)
+* **Priority:** 🟢 P1
+* **Effort:** Low-Medium
+* **Impact:** High (security) — a sleeper hit. The moment someone screenshares a `devx logs` session on Zoom and leaks a production API key, you'll wish you'd built this. The architectural advantage is that `devx` already knows every secret value from vault integration. Most log redaction tools guess patterns; `devx` can do exact-match replacement. That's rare and powerful.
+* **The Problem:** As `devx` natively integrates Vault secrets into the environment, developers risk accidentally screensharing or screenshotting `devx logs` or `webhook catch` TUIs that output real API keys in plaintext.
+* **The Solution:** Build a middleware masking engine into the Bubble Tea TUI components. `devx` already knows the exact values of secrets pulled from vaults; it can automatically redact them in all `devx logs` output and webhook payloads.
+* **Key files:** `internal/logs/redactor.go`, `internal/webhook/tui.go`
+
+### 39. Visual Architecture Map Generator (DONE)
+* **Priority:** 🟢 P1
+* **Effort:** Low
+* **Impact:** High (onboarding) — `devx map` parsing `devx.yaml` and emitting a Mermaid diagram is ~200 lines of Go. But the impact on onboarding is outsized — a new engineer clones a repo, runs `devx map`, and instantly *sees* how 8 services connect. This is a demo-day feature. It sells the tool.
+* **The Problem:** For onboarding engineers, looking at a 300-line `devx.yaml` is overwhelming and the logical flow of which app talks to what database is lost.
+* **The Solution:** Implement `devx map`. It parses the internal routing, volumes, and `devx.yaml` dependencies to instantly spit out an interactive SVG or Mermaid.js graph to `<project_root>/devx-map.html`, giving visual tangibility to the stack.
