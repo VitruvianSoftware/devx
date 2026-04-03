@@ -80,6 +80,7 @@ type Node struct {
 	Runtime     Runtime
 	Command     []string
 	Env         map[string]string
+	Dir         string // Working directory for host process execution (set by include resolver for multirepo)
 
 	// Runtime state
 	process *exec.Cmd
@@ -276,6 +277,11 @@ func startHostProcess(ctx context.Context, n *Node) error {
 
 	cmd := exec.CommandContext(childCtx, n.Command[0], n.Command[1:]...)
 
+	// Idea 44: Set working directory for services from included (sibling) repositories.
+	// When empty, inherits the parent's CWD (existing single-project behavior).
+	if n.Dir != "" {
+		cmd.Dir = n.Dir
+	}
 	// Setup logging to ~/.devx/logs/<name>.log
 	logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
 	_ = os.MkdirAll(logDir, 0755)

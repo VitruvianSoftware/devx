@@ -24,12 +24,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 ## 🟡 P3 — Backlog (Conditional / Needs Prerequisites)
 
-### 44. Unified Multirepo Orchestration
-* **Priority:** 🟡 P3
-* **Effort:** High
-* **Impact:** Medium — the `include` directive from Compose is a good reference, but relative path resolution, conflicting port definitions, secret scoping, and "who owns the network?" questions make this treacherous. Takes 2 weeks to build, 6 months to get right. **Prerequisite:** Idea 34 must ship first — without dependency graphs, multi-repo is chaos squared.
-* **The Problem:** Running a company's entire infrastructure often means juggling 10 different repository directories. `devx.yaml` only orchestrates what's in the current folder.
-* **The Solution:** Introduce an `include` directive (borrowed from modern Compose) that allows a parent `devx.yaml` to reference and spool up configurations from relative paths in sibling repositories, creating a localized master-node orchestrator without Kubernetes.
 
 ### 45. Predictive Background Pre-Building
 * **Priority:** 🟡 P3

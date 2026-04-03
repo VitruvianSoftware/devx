@@ -5,6 +5,23 @@
 # Run 'devx up' in the same directory as this file to provision dependencies 
 # and expose services.
 
+# --- Idea 44: Unified Multirepo Orchestration ---
+# Compose multiple sibling repositories into a single orchestrated topology.
+# Each included project's commands execute from its own directory — 'go run ./cmd/api'
+# in payments-api runs from ../payments-api, not from this directory.
+# Fail-fast conflict detection prevents accidental service name/database collisions.
+#
+# Short syntax:
+# include:
+#   - path: ../payments-api/devx.yaml
+#   - path: ../user-service/devx.yaml
+#
+# Long syntax (per-include env override):
+# include:
+#   - path: ../payments-api/devx.yaml
+#   - path: ../user-service/devx.yaml
+#     env_file: ../user-service/.env.local
+
 # Project name determines the base subdomain for all nested services below.
 # E.g. If your dev name is 'james', the base domain is 'james-prj-demo-app'
 name: demo-app

@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	ephemeraltest "github.com/VitruvianSoftware/devx/internal/testing"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -59,13 +57,10 @@ func runTestUI(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load devx.yaml for database topology and YAML-level test config
-	yamlPath := "devx.yaml"
+	// Idea 44: Use resolveConfig so include blocks are processed
 	var cfgYaml DevxConfig
-
-	if b, err := os.ReadFile(yamlPath); err == nil {
-		if err := yaml.Unmarshal(b, &cfgYaml); err != nil {
-			return fmt.Errorf("failed to parse devx.yaml: %w", err)
-		}
+	if cfg, err := resolveConfig("devx.yaml", ""); err == nil {
+		cfgYaml = *cfg
 	}
 
 	// CLI flags take precedence over YAML values (CLI + YAML parity)

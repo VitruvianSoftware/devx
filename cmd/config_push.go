@@ -6,7 +6,6 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/envvault"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var configPushCmd = &cobra.Command{
@@ -17,18 +16,10 @@ remote vault locations configured in your devx.yaml.
 This is helpful to migrate existing projects into remote vaults 
 or to update remote shared values securely.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		yamlData, err := os.ReadFile("devx.yaml")
+		// Idea 44: use resolveConfig so env sources from included projects are merged
+		cfg, err := resolveConfig("devx.yaml", "")
 		if err != nil {
 			return fmt.Errorf("could not read devx.yaml: %w", err)
-		}
-
-		type envConfig struct {
-			Env []string `yaml:"env"`
-		}
-
-		var cfg envConfig
-		if err := yaml.Unmarshal(yamlData, &cfg); err != nil {
-			return err
 		}
 
 		if len(cfg.Env) == 0 {

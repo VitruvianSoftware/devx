@@ -9,7 +9,6 @@ import (
 
 	devxsync "github.com/VitruvianSoftware/devx/internal/sync"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var syncUpRuntime string
@@ -36,32 +35,15 @@ func init() {
 	syncCmd.AddCommand(syncUpCmd)
 }
 
-// syncYAML mirrors the devx.yaml structure for sync parsing.
-type syncYAML struct {
-	Services []struct {
-		Name string `yaml:"name"`
-		Sync []struct {
-			Container string   `yaml:"container"`
-			Src       string   `yaml:"src"`
-			Dest      string   `yaml:"dest"`
-			Ignore    []string `yaml:"ignore"`
-		} `yaml:"sync"`
-	} `yaml:"services"`
-}
-
 func runSyncUp(_ *cobra.Command, args []string) error {
 	if !devxsync.IsInstalled() {
 		return fmt.Errorf("mutagen is not installed. Run: devx doctor install --all")
 	}
 
-	b, err := os.ReadFile("devx.yaml")
+	// Idea 44: use the unified config resolver so include blocks are processed
+	cfg, err := resolveConfig("devx.yaml", "")
 	if err != nil {
 		return fmt.Errorf("could not read devx.yaml: %w", err)
-	}
-
-	var cfg syncYAML
-	if err := yaml.Unmarshal(b, &cfg); err != nil {
-		return fmt.Errorf("failed parsing devx.yaml: %w", err)
 	}
 
 	// Collect all sync mappings
@@ -87,10 +69,15 @@ func runSyncUp(_ *cobra.Command, args []string) error {
 		if len(wantSet) > 0 && !wantSet[strings.ToLower(svc.Name)] {
 			continue
 		}
+		// Idea 44: use svc.Dir for services from included projects, fallback to cwd
+		baseDir := svc.Dir
+		if baseDir == "" {
+			baseDir = cwd
+		}
 		for _, s := range svc.Sync {
 			src := s.Src
 			if !filepath.IsAbs(src) {
-				src = filepath.Join(cwd, src)
+				src = filepath.Join(baseDir, src)
 			}
 			targets = append(targets, syncTarget{
 				ServiceName: svc.Name,
