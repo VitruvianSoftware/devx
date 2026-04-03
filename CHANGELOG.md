@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.2](https://github.com/VitruvianSoftware/devx/compare/v0.27.1...v0.27.2) (2026-04-03)
+
+
+### Bug Fixes
+
+* **docs:** escape vue interpolations in markdown ([605dd89](https://github.com/VitruvianSoftware/devx/commit/605dd892b3715a2b61b4caa43b842fa63155f031))
+* **docs:** escape vue interpolations in markdown ([766ceb0](https://github.com/VitruvianSoftware/devx/commit/766ceb08b9395613f915e0424a9c2643cfcf0b00))
+
 ## [0.27.1](https://github.com/VitruvianSoftware/devx/compare/v0.27.0...v0.27.1) (2026-04-03)
 
 
