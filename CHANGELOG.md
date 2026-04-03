@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.3](https://github.com/VitruvianSoftware/devx/compare/v0.27.2...v0.27.3) (2026-04-03)
+
+
+### Bug Fixes
+
+* **ci:** resolve golangci-lint warnings in ci parser and executor ([#113](https://github.com/VitruvianSoftware/devx/issues/113)) ([88e830c](https://github.com/VitruvianSoftware/devx/commit/88e830ce6b05b2d7e6618daf90d9e1b40d26a8d4))
+
 ## [0.27.2](https://github.com/VitruvianSoftware/devx/compare/v0.27.1...v0.27.2) (2026-04-03)
 
 
