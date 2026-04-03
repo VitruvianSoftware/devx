@@ -45,3 +45,11 @@ When running a command that fails, `devx` avoids polluting standard error with u
 - `Exit 16 (CodeVMNotFound)`: The VM has been deleted. You must run `devx vm init`.
 - `Exit 22 (CodeHostPortInUse)`: You attempted to run `devx db spawn <engine>`, but the host port is already allocated by another daemon. Try a different port using `-p <port>`.
 - `Exit 41 (CodeNotLoggedIn)`: You attempted to expose a tunnel, but `cloudflared` is not authenticated on this machine. Request that the user run `cloudflared tunnel login`.
+
+## 📚 5. Documentation is Mandatory (Definition of Done)
+
+When shipping features on the `devx` CLI, the task is **not done** until the official documentation has been updated. Missing or outdated documentation directly harms the Developer Experience (DevX) mission.
+
+- **Checklist Requirement:** Every implementation plan (`implementation_plan.md`) and task tracker (`task.md`) you create MUST include a mandatory phase: `Documentation Updating`.
+- **Validation:** Before running the `/push` workflow to cut a release, PR, or commit, you must pause and explicitly review the `docs/guide/` directory to ensure all new commands, flags, and `devx.yaml` schema fields are documented.
+- **Example configs:** Schema changes MUST be reflected with thorough examples in `devx.yaml.example`.
