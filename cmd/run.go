@@ -80,7 +80,7 @@ Global flags are parsed before '--':
 		var exitCode int
 
 		if telemetry.IsGoTestCmd(args) {
-			exitCode, err = telemetry.RunGoTestWithTelemetry(args, cwd, outWriter, errWriter)
+			exitCode, _ = telemetry.RunGoTestWithTelemetry(args, cwd, outWriter, errWriter)
 		} else {
 			command := exec.Command(args[0], args[1:]...)
 			command.Dir = cwd

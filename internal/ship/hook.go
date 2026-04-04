@@ -34,7 +34,7 @@ fi
 # Step 2: Block direct push (agents must use devx agent ship)
 echo ""
 echo "╭──────────────────────────────────────────────────────────────────╮"
-echo "│  ✋ Direct 'git push' is blocked by devx.                        │"
+echo "│  ✋ Direct 'git push' is blocked by devx.                         │"
 echo "│                                                                  │"
 echo "│  AI Agents MUST use:   devx agent ship -m \"commit message\"       │"
 echo "│  Humans can bypass:    git push --no-verify                      │"
