@@ -82,14 +82,19 @@ func TestRecordEvent_CorruptedFileRecovery(t *testing.T) {
 func TestNudgeIfSlow_BelowThreshold(t *testing.T) {
 	// Capture stderr
 	old := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stderr = w
 
 	NudgeIfSlow("build", 30*time.Second, 60*time.Second, false)
 
 	w.Close()
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("buf.ReadFrom: %v", err)
+	}
 	os.Stderr = old
 
 	if buf.Len() != 0 {
@@ -99,14 +104,19 @@ func TestNudgeIfSlow_BelowThreshold(t *testing.T) {
 
 func TestNudgeIfSlow_AboveThreshold(t *testing.T) {
 	old := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stderr = w
 
 	NudgeIfSlow("build", 65*time.Second, 60*time.Second, false)
 
 	w.Close()
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("buf.ReadFrom: %v", err)
+	}
 	os.Stderr = old
 
 	if buf.Len() == 0 {
@@ -119,14 +129,19 @@ func TestNudgeIfSlow_AboveThreshold(t *testing.T) {
 
 func TestNudgeIfSlow_SuppressedInJSONMode(t *testing.T) {
 	old := os.Stderr
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
 	os.Stderr = w
 
 	NudgeIfSlow("build", 120*time.Second, 60*time.Second, true)
 
 	w.Close()
 	var buf bytes.Buffer
-	buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		t.Fatalf("buf.ReadFrom: %v", err)
+	}
 	os.Stderr = old
 
 	if buf.Len() != 0 {
