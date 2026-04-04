@@ -200,6 +200,14 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 			return nil, fmt.Errorf("resolving include path %q from %s: %w", inc.Path, absPath, err)
 		}
 
+		if inc.EnvFile != "" {
+			envAbs := inc.EnvFile
+			if !filepath.IsAbs(envAbs) {
+				envAbs = filepath.Join(baseDir, envAbs)
+			}
+			cfg.Env = append(cfg.Env, "file://"+envAbs)
+		}
+
 		if _, err := os.Stat(incAbsPath); os.IsNotExist(err) {
 			return nil, fmt.Errorf("include resolution failed: cannot read %s: no such file", incAbsPath)
 		}
@@ -292,4 +300,106 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 	}
 
 	return &cfg, nil
+}
+
+// mergeProfile applies an additive overlay onto the base config.
+// For databases, tunnels, services, and mocks: entries with matching names/engines
+// have their fields merged (profile wins). New entries are appended.
+func mergeProfile(cfg *DevxConfig, profile DevxConfigProfile) {
+	// Merge databases by engine
+	for _, pdb := range profile.Databases {
+		found := false
+		for i, bdb := range cfg.Databases {
+			if bdb.Engine == pdb.Engine {
+				if pdb.Port != 0 {
+					cfg.Databases[i].Port = pdb.Port
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Databases = append(cfg.Databases, pdb)
+		}
+	}
+
+	// Merge tunnels by name
+	for _, pt := range profile.Tunnels {
+		found := false
+		for i, bt := range cfg.Tunnels {
+			if bt.Name == pt.Name {
+				if pt.Port != 0 {
+					cfg.Tunnels[i].Port = pt.Port
+				}
+				if pt.BasicAuth != "" {
+					cfg.Tunnels[i].BasicAuth = pt.BasicAuth
+				}
+				if pt.Throttle != "" {
+					cfg.Tunnels[i].Throttle = pt.Throttle
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Tunnels = append(cfg.Tunnels, pt)
+		}
+	}
+
+	// Merge services by name
+	for _, ps := range profile.Services {
+		found := false
+		for i, bs := range cfg.Services {
+			if bs.Name == ps.Name {
+				if ps.Runtime != "" {
+					cfg.Services[i].Runtime = ps.Runtime
+				}
+				if len(ps.Command) > 0 {
+					cfg.Services[i].Command = ps.Command
+				}
+				if ps.Port != 0 {
+					cfg.Services[i].Port = ps.Port
+				}
+				if len(ps.DependsOn) > 0 {
+					cfg.Services[i].DependsOn = ps.DependsOn
+				}
+				if ps.Healthcheck.HTTP != "" || ps.Healthcheck.TCP != "" {
+					cfg.Services[i].Healthcheck = ps.Healthcheck
+				}
+				if len(ps.Env) > 0 {
+					if cfg.Services[i].Env == nil {
+						cfg.Services[i].Env = make(map[string]string)
+					}
+					for k, v := range ps.Env {
+						cfg.Services[i].Env[k] = v
+					}
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Services = append(cfg.Services, ps)
+		}
+	}
+
+	// Merge mocks by name
+	for _, pm := range profile.Mocks {
+		found := false
+		for i, bm := range cfg.Mocks {
+			if bm.Name == pm.Name {
+				if pm.URL != "" {
+					cfg.Mocks[i].URL = pm.URL
+				}
+				if pm.Port != 0 {
+					cfg.Mocks[i].Port = pm.Port
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.Mocks = append(cfg.Mocks, pm)
+		}
+	}
 }
