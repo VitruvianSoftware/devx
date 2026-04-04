@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/telemetry"
 	"github.com/spf13/cobra"
@@ -98,6 +99,19 @@ func runTraceSpawn(_ *cobra.Command, args []string) error {
 
 	fmt.Println()
 	fmt.Printf("✅ %s is running!\n\n", cfg.Name)
+
+	// Auto-provision the devx Build Metrics dashboard for Grafana
+	if engineName == telemetry.EngineGrafana {
+		// Wait briefly for Grafana to be ready
+		fmt.Printf("  📊 Provisioning devx Build Metrics dashboard...")
+		time.Sleep(3 * time.Second)
+		if err := telemetry.ProvisionDashboard(); err != nil {
+			fmt.Printf(" ⚠️  skipped (%v)\n", err)
+		} else {
+			fmt.Printf(" ✓\n")
+		}
+	}
+
 	printTraceInfo(engineName)
 	return nil
 }
@@ -112,10 +126,12 @@ func printTraceInfo(engine telemetry.Engine) {
 		fmt.Println("  OTLP gRPC:  :4317")
 		fmt.Println("  OTLP HTTP:  :4318")
 		fmt.Println("  Grafana UI: http://localhost:3000  (admin / admin)")
+		fmt.Println("  Dashboard:  http://localhost:3000/d/devx-build-metrics/devx-build-metrics")
 		fmt.Println("  Prometheus: http://localhost:9090")
 		fmt.Println("  Tempo:      :3200")
 	}
 	fmt.Println()
 	fmt.Println("  Run 'devx shell' to have OTEL_EXPORTER_OTLP_ENDPOINT auto-injected.")
+	fmt.Println("  Run 'devx agent ship' to start recording build metrics.")
 	fmt.Printf("  Stop: devx trace rm %s\n", engine)
 }

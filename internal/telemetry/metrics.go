@@ -25,9 +25,10 @@ func metricsPath() string {
 	return filepath.Join(home, ".devx", "metrics.json")
 }
 
-// RecordEvent appends a timestamped duration entry to ~/.devx/metrics.json.
+// RecordEvent appends a timestamped duration entry to ~/.devx/metrics.json
+// and opportunistically exports an OTel span to localhost:4318 if a backend is running.
 // Safe for concurrent use (file-level flock). Silently no-ops on any I/O error.
-func RecordEvent(event string, duration time.Duration) {
+func RecordEvent(event string, duration time.Duration, attrs ...Attribute) {
 	p := metricsPath()
 	_ = os.MkdirAll(filepath.Dir(p), 0755)
 
@@ -70,6 +71,9 @@ func RecordEvent(event string, duration time.Duration) {
 	_ = f.Truncate(0)
 	_, _ = f.Seek(0, 0)
 	_, _ = f.Write(out)
+
+	// Dual-write: opportunistically export to local OTel backend (fire-and-forget)
+	go ExportSpan(event, duration, attrs...)
 }
 
 // NudgeIfSlow prints an actionable tip to stderr if duration exceeds threshold.
