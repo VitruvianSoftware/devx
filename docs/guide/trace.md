@@ -69,6 +69,8 @@ The dashboard is accessible at `http://localhost:3000/d/devx-build-metrics/devx-
 | Recent Builds | Table with stack, branch, and pass/fail outcomes |
 | Test/Lint/Build Results | Pie charts showing pass/fail/skip breakdown |
 
+![Grafana devx Build Metrics Dashboard](/images/grafana-build-metrics.png)
+
 Each `devx agent ship` run exports an enriched span with attributes like `devx.stack`, `devx.branch`, `devx.test.pass`, `devx.lint.pass`, and `devx.build.pass` — all queryable directly in Tempo's TraceQL explorer.
 
 ::: tip DOGFOODING
