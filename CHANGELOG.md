@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0](https://github.com/VitruvianSoftware/devx/compare/v0.29.0...v0.30.0) (2026-04-04)
+
+
+### Features
+
+* **observability:** Implement granular test telemetry and fix Tempo metrics ([#123](https://github.com/VitruvianSoftware/devx/issues/123)) ([e19bf58](https://github.com/VitruvianSoftware/devx/commit/e19bf5830d8974212d6e2de1c5636584e37ab05d))
+
+
+### Bug Fixes
+
+* **docs:** resolve Vitepress build failure from absolute paths ([0c521d2](https://github.com/VitruvianSoftware/devx/commit/0c521d2565eb598580ab3ba9b1f18c0b7db6fdc4))
+* ineffectual assignment in run.go ([3c5524b](https://github.com/VitruvianSoftware/devx/commit/3c5524b42231578bd6702d35bb712a4b680289d6))
+
 ## [0.29.0](https://github.com/VitruvianSoftware/devx/compare/v0.28.0...v0.29.0) (2026-04-04)
 
 
