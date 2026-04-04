@@ -51,6 +51,30 @@ To find your traces:
 
 ![Grafana Tempo Trace Detail](/images/grafana-tempo.png)
 
+## devx Build Metrics Dashboard
+
+When you spawn the Grafana backend, `devx` automatically provisions a **Build Metrics** dashboard that visualizes your CI performance from `devx agent ship`:
+
+```bash
+devx trace spawn grafana
+```
+
+The dashboard is accessible at `http://localhost:3000/d/devx-build-metrics/devx-build-metrics` and includes:
+
+| Panel | Description |
+|-------|-------------|
+| Total Builds | Count of all build events |
+| P50/P90 Build Time | Percentile latency from Tempo spans |
+| Build Duration Over Time | Time series showing build duration trends |
+| Recent Builds | Table with stack, branch, and pass/fail outcomes |
+| Test/Lint/Build Results | Pie charts showing pass/fail/skip breakdown |
+
+Each `devx agent ship` run exports an enriched span with attributes like `devx.stack`, `devx.branch`, `devx.test.pass`, `devx.lint.pass`, and `devx.build.pass` — all queryable directly in Tempo's TraceQL explorer.
+
+::: tip DOGFOODING
+We use this dashboard ourselves during `devx` development — every commit to the `devx` CLI generates build metrics that we monitor to catch performance regressions.
+:::
+
 ## Managing Backends
 
 You can list running backends and remove them when finished:

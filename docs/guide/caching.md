@@ -85,3 +85,24 @@ services:
 - ✅ You frequently edit dependency files (`go.mod`, `package.json`)
 - ❌ Your builds take under 5 seconds (no benefit, wastes CPU)
 - ❌ You're on battery power and want to conserve resources
+
+## Grafana Observability Integration
+
+When a local [distributed tracing backend](/guide/trace) is running, `devx` automatically exports build telemetry as OpenTelemetry spans. This means you can visualize your build performance in Grafana with zero configuration:
+
+```bash
+# Spawn the Grafana LGTM stack (auto-provisions the devx dashboard)
+devx trace spawn grafana
+
+# Ship code — telemetry is exported automatically
+devx agent ship -m "feat: my feature"
+```
+
+Open `http://localhost:3000` and navigate to the **devx Build Metrics** dashboard to see:
+
+- **Build duration over time** — spot regressions instantly
+- **P50/P90/P99 latency** — understand your build performance profile
+- **Test/Lint/Build pass rates** — track your CI health locally
+- **Recent builds table** — full history with stack, branch, and outcomes
+
+Each span carries rich attributes (`devx.stack`, `devx.branch`, `devx.test.pass`, `devx.lint.pass`, `devx.build.pass`) that you can query directly in Tempo.

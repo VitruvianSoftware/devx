@@ -114,6 +114,8 @@ func DetectStack(dir string) *stackInfo {
 
 // RunPreFlight executes local tests, linter, and build for the detected stack.
 func RunPreFlight(dir string, verbose bool) (*PreFlightResult, error) {
+	preflightStart := time.Now()
+
 	stack := DetectStack(dir)
 	if stack == nil {
 		return &PreFlightResult{Stack: "unknown"}, nil
@@ -176,6 +178,20 @@ func RunPreFlight(dir string, verbose bool) (*PreFlightResult, error) {
 		result.BuildSkipped = true
 		result.BuildPass = true
 	}
+
+	// Record enriched preflight span with full outcomes
+	preflightDur := time.Since(preflightStart)
+	telemetry.RecordEvent("agent_ship_preflight", preflightDur,
+		telemetry.Attr("devx.stack", stack.Name),
+		telemetry.Attr("devx.test.pass", result.TestPass),
+		telemetry.Attr("devx.test.skipped", result.TestSkipped),
+		telemetry.Attr("devx.lint.pass", result.LintPass),
+		telemetry.Attr("devx.lint.skipped", result.LintSkipped),
+		telemetry.Attr("devx.build.pass", result.BuildPass),
+		telemetry.Attr("devx.build.skipped", result.BuildSkipped),
+		telemetry.Attr("devx.project", filepath.Base(dir)),
+		telemetry.Attr("devx.branch", currentBranch(dir)),
+	)
 
 	return result, nil
 }
@@ -334,6 +350,17 @@ func CurrentBranch(dir string) string {
 		return "unknown"
 	}
 	return strings.TrimSpace(out)
+}
+
+// currentBranch returns the current git branch name, or "unknown" on error.
+func currentBranch(dir string) string {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
