@@ -66,12 +66,19 @@ The dashboard is accessible at `http://localhost:3000/d/devx-build-metrics/devx-
 | Total Builds | Count of all build events |
 | P50/P90 Build Time | Percentile latency from Tempo spans |
 | Build Duration Over Time | Time series showing build duration trends |
-| Recent Builds | Table with stack, branch, and pass/fail outcomes |
-| Test/Lint/Build Results | Pie charts showing pass/fail/skip breakdown |
+| Recent Agent Ship Preflights | Table with stack, branch, and pass/fail outcomes |
+| Test Details | Table containing individual granular test spans (Go only) |
+| Test/Lint/Build Results | Bar Gauges showing pass/fail/skip breakdown |
 
 ![Grafana devx Build Metrics Dashboard](/images/grafana-build-metrics.png)
 
-Each `devx agent ship` run exports an enriched span with attributes like `devx.stack`, `devx.branch`, `devx.test.pass`, `devx.lint.pass`, and `devx.build.pass` — all queryable directly in Tempo's TraceQL explorer.
+### Dashboard Verification
+
+Here is an automated verification of the Build Metrics dashboard in action:
+
+![Grafana devx Build Metrics Verification](/images/grafana-build-metrics-recording.webp)
+
+Each `devx agent ship` and `devx run` execution exports an enriched span. `devx agent ship` pre-flights attach attributes like `devx.stack`, `devx.branch`, `devx.test.pass`, `devx.lint.pass`, and `devx.build.pass`. Furthermore, `devx run -- go test` emits individual test spans with `devx.test.name` and `devx.test.status`. All data is queryable directly in Tempo's TraceQL metrics explorer.
 
 ::: tip DOGFOODING
 We use this dashboard ourselves during `devx` development — every commit to the `devx` CLI generates build metrics that we monitor to catch performance regressions.

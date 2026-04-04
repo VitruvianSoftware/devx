@@ -7,6 +7,7 @@ package ship
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -464,6 +465,16 @@ func currentBranch(dir string) string {
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 func runCmd(dir string, args []string, verbose bool) error {
+	if telemetry.IsGoTestCmd(args) {
+		var outWriter, errWriter io.Writer
+		if verbose {
+			outWriter = os.Stdout
+			errWriter = os.Stderr
+		}
+		_, err := telemetry.RunGoTestWithTelemetry(args, dir, outWriter, errWriter)
+		return err
+	}
+
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
 	if verbose {

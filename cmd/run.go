@@ -66,46 +66,53 @@ Global flags are parsed before '--':
 		}
 
 		cwd, _ := os.Getwd()
-		command := exec.Command(args[0], args[1:]...)
-		command.Dir = cwd
 
-		// Setup multi-writers to route to both terminal and log file
+		var outWriter, errWriter io.Writer
 		if logFile != nil {
-			command.Stdout = io.MultiWriter(os.Stdout, logFile)
-			command.Stderr = io.MultiWriter(os.Stderr, logFile)
+			outWriter = io.MultiWriter(os.Stdout, logFile)
+			errWriter = io.MultiWriter(os.Stderr, logFile)
 		} else {
-			command.Stdout = os.Stdout
-			command.Stderr = os.Stderr
+			outWriter = os.Stdout
+			errWriter = os.Stderr
 		}
-		command.Stdin = os.Stdin
 
-		// ── Execute with timing ─────────────────────────────────────
 		start := time.Now()
+		var exitCode int
 
-		err = command.Start()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to start process: %v\n", err)
-			os.Exit(1)
-		}
+		if telemetry.IsGoTestCmd(args) {
+			exitCode, err = telemetry.RunGoTestWithTelemetry(args, cwd, outWriter, errWriter)
+		} else {
+			command := exec.Command(args[0], args[1:]...)
+			command.Dir = cwd
+			command.Stdout = outWriter
+			command.Stderr = errWriter
+			command.Stdin = os.Stdin
 
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			<-sigChan
-			_ = command.Process.Signal(syscall.SIGINT)
-		}()
+			err = command.Start()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to start process: %v\n", err)
+				os.Exit(1)
+			}
 
-		err = command.Wait()
-		duration := time.Since(start)
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+			go func() {
+				<-sigChan
+				_ = command.Process.Signal(syscall.SIGINT)
+			}()
 
-		exitCode := 0
-		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				exitCode = exitErr.ExitCode()
-			} else {
-				exitCode = 1
+			err = command.Wait()
+
+			if err != nil {
+				if exitErr, ok := err.(*exec.ExitError); ok {
+					exitCode = exitErr.ExitCode()
+				} else {
+					exitCode = 1
+				}
 			}
 		}
+
+		duration := time.Since(start)
 
 		// ── Record telemetry ────────────────────────────────────────
 		projName := name
@@ -117,6 +124,7 @@ Global flags are parsed before '--':
 			telemetry.Attr("devx.command", cmdDisplay),
 			telemetry.Attr("devx.exit_code", exitCode),
 			telemetry.Attr("devx.project", projName),
+			telemetry.Attr("devx.name", name),
 		)
 
 		if !outputJSON {

@@ -93,9 +93,13 @@ When a [distributed tracing backend](/guide/trace) is running, `devx run` spans 
 
 ```bash
 devx trace spawn grafana
-devx run -- go test ./...
+devx run --name test -- go test ./...
 # Open http://localhost:3000/d/devx-build-metrics/devx-build-metrics
 ```
+
+### Granular Test Telemetry (Go Only)
+
+For Go projects, `devx run` and `devx agent ship` automatically intercept `go test` commands, inject `-json`, and reconstruct the output. This captures precise duration and pass/fail status for every individual test case in your OTLP backend, enabling granular dashboards without extra configuration.
 
 ## Integration with `devx agent ship`
 
