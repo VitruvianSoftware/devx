@@ -104,7 +104,16 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 			fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 1:"), "Pre-flight checks")
 		}
 
-		pfResult, err := ship.RunPreFlight(cwd, shipVerbose)
+		// Load explicit pipeline from devx.yaml if present
+		var pipeline *ship.PipelineConfig
+		if cfg, err := resolveConfig("devx.yaml", ""); err == nil && cfg.Pipeline != nil {
+			pipeline = convertPipeline(cfg.Pipeline)
+			if !outputJSON {
+				fmt.Printf("    %s  using devx.yaml pipeline config\n", shipStyleMuted.Render("ℹ"))
+			}
+		}
+
+		pfResult, err := ship.RunPreFlight(cwd, shipVerbose, pipeline)
 		result.PreFlight = pfResult
 
 		if err != nil {
@@ -284,4 +293,28 @@ func init() {
 		"Show full output from pre-flight commands")
 
 	agentCmd.AddCommand(agentShipCmd)
+}
+
+// convertPipeline bridges the devx.yaml config model to the ship package's PipelineConfig.
+func convertPipeline(p *DevxConfigPipeline) *ship.PipelineConfig {
+	if p == nil {
+		return nil
+	}
+	return &ship.PipelineConfig{
+		Test:   convertStage(p.Test),
+		Lint:   convertStage(p.Lint),
+		Build:  convertStage(p.Build),
+		Verify: convertStage(p.Verify),
+	}
+}
+
+func convertStage(s *DevxConfigPipelineStage) *ship.PipelineStage {
+	if s == nil {
+		return nil
+	}
+	cmds := s.Cmds()
+	if len(cmds) == 0 {
+		return nil
+	}
+	return &ship.PipelineStage{Cmds: cmds}
 }

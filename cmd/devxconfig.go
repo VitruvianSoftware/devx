@@ -110,18 +110,56 @@ type DevxConfigProfile struct {
 	Mocks     []DevxConfigMock     `yaml:"mocks"`
 }
 
+// DevxConfigPipelineStage defines a single pipeline step (test, lint, build, verify).
+// The Before/After hooks are scaffolded for Idea 45.3 — parsed and validated but
+// not executed in 45.2.
+type DevxConfigPipelineStage struct {
+	Command  []string   `yaml:"command,omitempty"`  // Single command shorthand
+	Commands [][]string `yaml:"commands,omitempty"` // Multi-command sequential execution
+	Before   [][]string `yaml:"before,omitempty"`   // Pre-stage hooks (Idea 45.3)
+	After    [][]string `yaml:"after,omitempty"`    // Post-stage hooks (Idea 45.3)
+}
+
+// Cmds returns the resolved command list, preferring 'commands' over 'command'.
+func (ps *DevxConfigPipelineStage) Cmds() [][]string {
+	if len(ps.Commands) > 0 {
+		return ps.Commands
+	}
+	if len(ps.Command) > 0 {
+		return [][]string{ps.Command}
+	}
+	return nil
+}
+
+// DevxConfigPipeline declares optional explicit pipeline stage overrides.
+// When present, auto-detection via DetectStack is bypassed entirely ("Explicit Wins").
+type DevxConfigPipeline struct {
+	Test   *DevxConfigPipelineStage `yaml:"test,omitempty"`
+	Lint   *DevxConfigPipelineStage `yaml:"lint,omitempty"`
+	Build  *DevxConfigPipelineStage `yaml:"build,omitempty"`
+	Verify *DevxConfigPipelineStage `yaml:"verify,omitempty"`
+}
+
+// DevxConfigCustomAction defines a named, on-demand task (scaffolded for Idea 45.3).
+type DevxConfigCustomAction struct {
+	Command  []string   `yaml:"command,omitempty"`
+	Commands [][]string `yaml:"commands,omitempty"`
+}
+
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
-	Name      string                       `yaml:"name"`      // Project name
-	Domain    string                       `yaml:"domain"`    // Custom domain (BYOD)
-	Env       []string                     `yaml:"env"`       // Vault sources for secret injection
-	Include   []DevxConfigInclude          `yaml:"include"`   // External devx.yaml files to compose (Idea 44)
-	Tunnels   []DevxConfigTunnel           `yaml:"tunnels"`   // List of ports to expose
-	Databases []DevxConfigDatabase         `yaml:"databases"` // List of databases to provision
-	Services  []DevxConfigService          `yaml:"services"`  // List of applications to orchestrate
-	Test      DevxConfigTest               `yaml:"test"`      // Test configuration
-	Mocks     []DevxConfigMock             `yaml:"mocks"`     // List of OpenAPI mock servers to provision
-	Profiles  map[string]DevxConfigProfile `yaml:"profiles"`  // Named environment overlays
+	Name          string                              `yaml:"name"`            // Project name
+	Domain        string                              `yaml:"domain"`          // Custom domain (BYOD)
+	Env           []string                            `yaml:"env"`             // Vault sources for secret injection
+	Include       []DevxConfigInclude                 `yaml:"include"`         // External devx.yaml files to compose (Idea 44)
+	Tunnels       []DevxConfigTunnel                  `yaml:"tunnels"`         // List of ports to expose
+	Databases     []DevxConfigDatabase                `yaml:"databases"`       // List of databases to provision
+	Services      []DevxConfigService                 `yaml:"services"`        // List of applications to orchestrate
+	Test          DevxConfigTest                      `yaml:"test"`            // Test configuration
+	Mocks         []DevxConfigMock                    `yaml:"mocks"`           // List of OpenAPI mock servers to provision
+	Profiles      map[string]DevxConfigProfile        `yaml:"profiles"`        // Named environment overlays
+	Pipeline      *DevxConfigPipeline                 `yaml:"pipeline"`        // Explicit pipeline stages (Idea 45.2)
+	CustomActions map[string]DevxConfigCustomAction   `yaml:"customActions"`   // Named tasks (scaffolded for Idea 45.3)
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────

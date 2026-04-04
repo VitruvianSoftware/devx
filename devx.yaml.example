@@ -191,3 +191,45 @@ profiles:
       - engine: postgres
         port: 5433  # Different port to avoid conflicts with local dev DB
 
+# --- Idea 45.2: Declarative Pipeline Stages ---
+# Override auto-detected build/test/lint commands with explicit definitions.
+# If omitted, devx auto-detects commands from marker files (go.mod, package.json, etc.)
+# When present, auto-detection is bypassed entirely ("Explicit Wins").
+#
+# Single command shorthand:
+# pipeline:
+#   test:
+#     command: ["pytest", "-v", "--cov=app"]
+#   lint:
+#     command: ["ruff", "check", "."]
+#   build:
+#     command: ["docker", "build", "-t", "myapp", "."]
+#   verify:
+#     command: ["./scripts/integration-test.sh"]
+#
+# Multi-command (runs sequentially, fails fast):
+# pipeline:
+#   test:
+#     commands:
+#       - ["go", "test", "./..."]
+#       - ["go", "vet", "./..."]
+#   build:
+#     command: ["go", "build", "./..."]
+#
+# Lifecycle hooks (scaffolded — executed in Idea 45.3):
+# pipeline:
+#   build:
+#     before:
+#       - ["echo", "Preparing build..."]
+#     command: ["go", "build", "./..."]
+#     after:
+#       - ["echo", "Build complete!"]
+
+# --- Idea 45.3: Custom Actions (scaffolded) ---
+# Named, on-demand tasks triggered via 'devx exec <action-name>'.
+# customActions:
+#   seed-db:
+#     command: ["npm", "run", "db:seed"]
+#   generate-mocks:
+#     commands:
+#       - ["mockgen", "-source=./internal/...", "-destination=./internal/mock/..."]

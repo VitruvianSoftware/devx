@@ -2,23 +2,23 @@
 
 ## Core Implementation
 
-- [ ] Create `internal/telemetry/export.go` — OTLP HTTP JSON export (fire-and-forget)
-- [ ] Create `internal/telemetry/export_test.go` — payload construction, unreachable endpoint, trace ID
-- [ ] Modify `internal/telemetry/metrics.go` — add `Attribute` type + variadic attrs, dual-write to OTel
-- [ ] Create `internal/telemetry/dashboard.go` — Grafana dashboard JSON + provisioning API
-- [ ] Modify `internal/ship/ship.go` — enrich preflight RecordEvent with test/lint/build/branch/stack attrs
-- [ ] Modify `cmd/trace_spawn.go` — call ProvisionDashboard after Grafana spawn
+- [x] Create `internal/telemetry/export.go` — OTLP HTTP JSON export (fire-and-forget)
+- [x] Create `internal/telemetry/export_test.go` — payload construction, unreachable endpoint, trace ID
+- [x] Modify `internal/telemetry/metrics.go` — add `Attribute` type + variadic attrs, dual-write to OTel
+- [x] Create `internal/telemetry/dashboard.go` — Grafana dashboard JSON + provisioning API
+- [x] Modify `internal/ship/ship.go` — enrich preflight RecordEvent with test/lint/build/branch/stack attrs
+- [x] Modify `cmd/trace_spawn.go` — call ProvisionDashboard after Grafana spawn
 
 ## Documentation
 
-- [ ] Update `docs/guide/caching.md` — add OTel observability section
-- [ ] Update `docs/guide/trace.md` — add devx build metrics dashboard section
-- [ ] Update `FEATURES.md` — add Idea 45.1 entry
+- [x] Update `docs/guide/caching.md` — add OTel observability section
+- [x] Update `docs/guide/trace.md` — add devx build metrics dashboard section + embedded screenshot
+- [x] Update `FEATURES.md` — add Idea 45.1 entry
 
 ## Verification
 
-- [ ] `go vet ./...` clean
-- [ ] `go test ./...` all pass
-- [ ] Manual: `devx trace spawn grafana` + `devx agent ship` → spans in Grafana
-- [ ] Screenshot: capture Grafana dashboard via browser subagent
-- [ ] Ship via `devx agent ship`
+- [x] `go vet ./...` clean
+- [x] `go test ./...` all pass
+- [x] Manual: `devx trace spawn grafana` + mock telemetry generator → spans in Grafana
+- [x] Screenshot: captured Grafana dashboard via browser subagent and mapped into `docs/public/images/grafana-build-metrics.png`
+- [x] Ship via `devx agent ship`

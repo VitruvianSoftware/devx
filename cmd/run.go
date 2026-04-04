@@ -7,21 +7,46 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 )
 
 var runName string
 
 var runCmd = &cobra.Command{
-	Use:   "run [command...]",
-	Short: "Run a native host process and route its output to the unified devx log stream",
-	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Use:   "run -- [command...]",
+	Short: "Run a command with telemetry, secret injection, and log routing",
+	Long: `Wraps an arbitrary host command with devx telemetry and log routing.
+Timing, exit code, and command metadata are recorded locally and exported
+as OTel spans to any running trace backend.
+
+Familiar to Docker users — devx run works like docker run for local commands.
+
+Examples:
+  devx run -- npm test
+  devx run -- go build ./...
+  devx run -- make deploy
+  devx run --name api -- go run ./cmd/api
+
+Global flags are parsed before '--':
+  devx run --dry-run -- npm test    # prints intent without executing`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 		name := runName
 		if name == "" {
 			name = filepath.Base(args[0])
+		}
+		cmdDisplay := strings.Join(args, " ")
+
+		// ── Dry-run mode ────────────────────────────────────────────
+		if DryRun {
+			fmt.Printf("Would run: %s\n", cmdDisplay)
+			return nil
 		}
 
 		// Ensure log dir exists
@@ -36,9 +61,13 @@ var runCmd = &cobra.Command{
 			defer logFile.Close()
 		}
 
-		fmt.Printf("Started native process [%s]. Logs routing to devx logs...\n", name)
+		if !outputJSON {
+			fmt.Printf("▸ devx run: %s\n", cmdDisplay)
+		}
 
+		cwd, _ := os.Getwd()
 		command := exec.Command(args[0], args[1:]...)
+		command.Dir = cwd
 
 		// Setup multi-writers to route to both terminal and log file
 		if logFile != nil {
@@ -49,6 +78,9 @@ var runCmd = &cobra.Command{
 			command.Stderr = os.Stderr
 		}
 		command.Stdin = os.Stdin
+
+		// ── Execute with timing ─────────────────────────────────────
+		start := time.Now()
 
 		err = command.Start()
 		if err != nil {
@@ -64,14 +96,44 @@ var runCmd = &cobra.Command{
 		}()
 
 		err = command.Wait()
+		duration := time.Since(start)
+
+		exitCode := 0
 		if err != nil {
-			// Expected for interrupted commands
-			os.Exit(1)
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				exitCode = exitErr.ExitCode()
+			} else {
+				exitCode = 1
+			}
 		}
+
+		// ── Record telemetry ────────────────────────────────────────
+		projName := name
+		if cfg, cfgErr := resolveConfig("devx.yaml", ""); cfgErr == nil && cfg.Name != "" {
+			projName = cfg.Name
+		}
+
+		telemetry.RecordEvent("devx_run", duration,
+			telemetry.Attr("devx.command", cmdDisplay),
+			telemetry.Attr("devx.exit_code", exitCode),
+			telemetry.Attr("devx.project", projName),
+		)
+
+		if !outputJSON {
+			fmt.Printf("\n⏱  %s completed in %s (exit %d)\n", cmdDisplay, duration.Round(time.Millisecond), exitCode)
+		}
+
+		telemetry.Flush() // Wait for OTLP export to complete
+
+		// Propagate the child's exit code
+		if exitCode != 0 {
+			os.Exit(exitCode)
+		}
+		return nil
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(runCmd)
-	runCmd.Flags().StringVarP(&runName, "name", "n", "", "Custom name for the log stream tail (defaults to executable name)")
+	runCmd.Flags().StringVarP(&runName, "name", "n", "", "Custom name for the log stream (defaults to executable name)")
 }

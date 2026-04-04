@@ -112,8 +112,106 @@ func DetectStack(dir string) *stackInfo {
 	return nil
 }
 
-// RunPreFlight executes local tests, linter, and build for the detected stack.
-func RunPreFlight(dir string, verbose bool) (*PreFlightResult, error) {
+// PipelineStage defines a single pipeline step with support for multi-command.
+type PipelineStage struct {
+	Cmds [][]string // Resolved commands to run sequentially
+}
+
+// PipelineConfig holds explicit pipeline stage overrides from devx.yaml.
+// When non-nil, auto-detection via DetectStack is bypassed entirely ("Explicit Wins").
+type PipelineConfig struct {
+	Test   *PipelineStage
+	Lint   *PipelineStage
+	Build  *PipelineStage
+	Verify *PipelineStage
+}
+
+// RunPreFlight executes local tests, linter, and build.
+// If an explicit pipeline is provided, it takes precedence over auto-detection.
+func RunPreFlight(dir string, verbose bool, pipeline *PipelineConfig) (*PreFlightResult, error) {
+	if pipeline != nil {
+		return runExplicitPipeline(dir, verbose, pipeline)
+	}
+	return runAutoDetectedPipeline(dir, verbose)
+}
+
+// runExplicitPipeline executes pipeline stages from devx.yaml config.
+func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*PreFlightResult, error) {
+	preflightStart := time.Now()
+	result := &PreFlightResult{Stack: "pipeline"}
+
+	// Test
+	if pipeline.Test != nil && len(pipeline.Test.Cmds) > 0 {
+		for _, cmd := range pipeline.Test.Cmds {
+			if err := runCmd(dir, cmd, verbose); err != nil {
+				return result, fmt.Errorf("tests failed: %w", err)
+			}
+		}
+		result.TestPass = true
+	} else {
+		result.TestSkipped = true
+		result.TestPass = true
+	}
+
+	// Lint
+	if pipeline.Lint != nil && len(pipeline.Lint.Cmds) > 0 {
+		for _, cmd := range pipeline.Lint.Cmds {
+			if err := runCmd(dir, cmd, verbose); err != nil {
+				return result, fmt.Errorf("linter failed: %w", err)
+			}
+		}
+		result.LintPass = true
+	} else {
+		result.LintSkipped = true
+		result.LintPass = true
+	}
+
+	// Build
+	if pipeline.Build != nil && len(pipeline.Build.Cmds) > 0 {
+		buildStart := time.Now()
+		for _, cmd := range pipeline.Build.Cmds {
+			if err := runCmd(dir, cmd, verbose); err != nil {
+				return result, fmt.Errorf("build failed: %w", err)
+			}
+		}
+		result.BuildPass = true
+		buildDur := time.Since(buildStart)
+		telemetry.RecordEvent("agent_ship_build", buildDur)
+		telemetry.NudgeIfSlow("build", buildDur, 60*time.Second, false)
+	} else {
+		result.BuildSkipped = true
+		result.BuildPass = true
+	}
+
+	// Verify (new stage — pipeline only)
+	if pipeline.Verify != nil && len(pipeline.Verify.Cmds) > 0 {
+		for _, cmd := range pipeline.Verify.Cmds {
+			if err := runCmd(dir, cmd, verbose); err != nil {
+				return result, fmt.Errorf("verify failed: %w", err)
+			}
+		}
+	}
+
+	// Record enriched preflight span
+	preflightDur := time.Since(preflightStart)
+	telemetry.RecordEvent("agent_ship_preflight", preflightDur,
+		telemetry.Attr("devx.stack", "pipeline"),
+		telemetry.Attr("devx.pipeline", true),
+		telemetry.Attr("devx.test.pass", result.TestPass),
+		telemetry.Attr("devx.test.skipped", result.TestSkipped),
+		telemetry.Attr("devx.lint.pass", result.LintPass),
+		telemetry.Attr("devx.lint.skipped", result.LintSkipped),
+		telemetry.Attr("devx.build.pass", result.BuildPass),
+		telemetry.Attr("devx.build.skipped", result.BuildSkipped),
+		telemetry.Attr("devx.project", filepath.Base(dir)),
+		telemetry.Attr("devx.branch", currentBranch(dir)),
+	)
+
+	return result, nil
+}
+
+// runAutoDetectedPipeline executes the existing auto-detection logic.
+func runAutoDetectedPipeline(dir string, verbose bool) (*PreFlightResult, error) {
 	preflightStart := time.Now()
 
 	stack := DetectStack(dir)

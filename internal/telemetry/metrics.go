@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -73,7 +74,27 @@ func RecordEvent(event string, duration time.Duration, attrs ...Attribute) {
 	_, _ = f.Write(out)
 
 	// Dual-write: opportunistically export to local OTel backend (fire-and-forget)
-	go ExportSpan(event, duration, attrs...)
+	exportWg.Add(1)
+	go func() {
+		defer exportWg.Done()
+		ExportSpan(event, duration, attrs...)
+	}()
+}
+
+var exportWg sync.WaitGroup
+
+// Flush waits up to 100ms for pending OTLP exports to complete.
+// Call this before exiting the CLI to ensure telemetry spans aren't dropped.
+func Flush() {
+	c := make(chan struct{})
+	go func() {
+		exportWg.Wait()
+		close(c)
+	}()
+	select {
+	case <-c:
+	case <-time.After(100 * time.Millisecond):
+	}
 }
 
 // NudgeIfSlow prints an actionable tip to stderr if duration exceeds threshold.

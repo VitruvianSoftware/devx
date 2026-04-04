@@ -48,6 +48,7 @@ export default defineConfig({
           { text: 'Smart File Syncing', link: '/guide/sync' },
           { text: 'Multirepo Orchestration', link: '/guide/multirepo' },
           { text: 'Predictive Pre-Building', link: '/guide/caching' },
+          { text: 'Pipeline Stages', link: '/guide/pipeline' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }

@@ -81,9 +81,9 @@ func dashboardJSON() map[string]interface{} {
 
 			// Row 2: Build duration over time + Recent builds table
 			timeSeriesPanel("Build Duration Over Time", 0, 4, 12, 8,
-				`{resource.service.name="devx" && name="agent_ship_build"}`),
-			tablePanel("Recent Builds", 12, 4, 12, 8,
-				`{resource.service.name="devx" && name="agent_ship_preflight"}`),
+				`{resource.service.name="devx" && (name="agent_ship_build" || name="devx_run")}`),
+			tablePanel("Recent Commands (devx run)", 12, 4, 12, 8,
+				`{resource.service.name="devx" && name="devx_run"}`),
 
 			// Row 3: Pass/fail breakdown
 			piePanel("Test Results", 0, 12, 8, 6,
@@ -95,6 +95,10 @@ func dashboardJSON() map[string]interface{} {
 			piePanel("Build Results", 16, 12, 8, 6,
 				`{resource.service.name="devx" && name="agent_ship_preflight"}`,
 				"span.devx.build.pass"),
+			
+			// Row 4: Recent Preflights
+			tablePanel("Recent Agent Ship Preflights", 0, 18, 24, 8,
+				`{resource.service.name="devx" && name="agent_ship_preflight"}`),
 		},
 	}
 }
