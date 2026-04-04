@@ -41,7 +41,7 @@ func RecordEvent(event string, duration time.Duration) {
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
 		return
 	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
 	var entries []MetricEntry
 	data, _ := os.ReadFile(p)
