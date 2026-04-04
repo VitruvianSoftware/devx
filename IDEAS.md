@@ -25,14 +25,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 ## 🟡 P3 — Backlog (Conditional / Needs Prerequisites)
 
 
-### 45. Predictive Background Pre-Building
-* **Priority:** 🟡 P3
-* **Effort:** Medium
-* **Impact:** Conditional — if builds take 2 seconds, pre-building saves nothing. If builds take 60 seconds, this is transformative. Value is highly dependent on the user's specific stack. Instrument build times first (via telemetry) and only invest if data shows builds are a top-3 friction point.
-* **The Problem:** Even with fast builds, typing "restart" and waiting 15 seconds to rebuild a Docker image breaks the "Inner Development Loop" flow state.
-* **The Solution:** `devx` runs a silent file-watcher. The moment a critical dependency definition changes (like `go.mod` or `package.json`), `devx` pre-builds the heavy image layers in the background. When the user manually issues a restart, the cache is instantly primed, returning the container completely immediately.
-* **Key files:** `internal/build/watcher.go`
-
 ### 46. Hybrid Edge-to-Local Cloud Routing
 * **Priority:** 🟡 P3
 * **Effort:** Very High

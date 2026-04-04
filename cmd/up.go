@@ -19,6 +19,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/network"
 	"github.com/VitruvianSoftware/devx/internal/orchestrator"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
 	"github.com/spf13/cobra"
 )
@@ -265,7 +266,9 @@ var upCmd = &cobra.Command{
 			defer cancel()
 
 			var dagErr error
+			dagStart := time.Now()
 			dagCleanup, dagErr = dag.Execute(ctx)
+			telemetry.RecordEvent("up_startup", time.Since(dagStart))
 			if dagErr != nil {
 				if dagCleanup != nil {
 					dagCleanup()

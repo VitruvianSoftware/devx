@@ -146,6 +146,13 @@ services:
         dest: /app/src
         ignore: ["*.test.ts", "coverage/"]
 
+    # --- Idea 45: Predictive Background Pre-Building (opt-in) ---
+    # When enabled, devx silently watches dependency manifests (go.mod, package.json,
+    # Cargo.toml, requirements.txt) during 'devx up'. If a change is detected, it
+    # pre-builds the container image in the background so the next restart is instant.
+    # Recommended for projects where build times exceed 60 seconds.
+    # predictive_build: true
+
 # --- Idea 37: Environment Profiles ---
 # Profiles apply additive/merge overlays on top of the base config above.
 # Uses Docker Compose override semantics:

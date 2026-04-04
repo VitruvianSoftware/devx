@@ -47,6 +47,7 @@ export default defineConfig({
           { text: 'Local CI Emulation', link: '/guide/ci' },
           { text: 'Smart File Syncing', link: '/guide/sync' },
           { text: 'Multirepo Orchestration', link: '/guide/multirepo' },
+          { text: 'Predictive Pre-Building', link: '/guide/caching' },
           { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       }
