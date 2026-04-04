@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0](https://github.com/VitruvianSoftware/devx/compare/v0.28.0...v0.29.0) (2026-04-04)
+
+
+### Features
+
+* bridge build telemetry to local OTel observability with auto-provisioned Grafana dashboard (Idea 45.1) ([#122](https://github.com/VitruvianSoftware/devx/issues/122)) ([7413a71](https://github.com/VitruvianSoftware/devx/commit/7413a71ca713775edc49f0c6b20948a9a5ce25a6))
+* implement unified multirepo orchestration (Idea 44) ([#117](https://github.com/VitruvianSoftware/devx/issues/117)) ([5ed867f](https://github.com/VitruvianSoftware/devx/commit/5ed867f1d1879399125c8f795de74ff5b35e1716))
+* predictive pre-building telemetry + devx stats (Idea 45, Phase 1-2) ([#120](https://github.com/VitruvianSoftware/devx/issues/120)) ([70badb3](https://github.com/VitruvianSoftware/devx/commit/70badb3a4f3f26125aa5ce61cb24c3ba635cd292))
+
+
+### Bug Fixes
+
+* resolve EnvFile included variables and relocate mergeProfile (Idea 44 follow-up) ([#119](https://github.com/VitruvianSoftware/devx/issues/119)) ([fc3fcce](https://github.com/VitruvianSoftware/devx/commit/fc3fcce74126f74f42d0d9dbd977b7e3dd88765f))
+* resolve errcheck lint violations in telemetry tests ([8ca20d3](https://github.com/VitruvianSoftware/devx/commit/8ca20d3abc6ef851da15eea3ca97a5b77606e6ea))
+* satisfy errcheck on deferred flock unlock in telemetry metrics ([#121](https://github.com/VitruvianSoftware/devx/issues/121)) ([096b6f1](https://github.com/VitruvianSoftware/devx/commit/096b6f1f99b426428ad439eae39a508638a71b67))
+
 ## [0.28.0](https://github.com/VitruvianSoftware/devx/compare/v0.27.3...v0.28.0) (2026-04-03)
 
 
