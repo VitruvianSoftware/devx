@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 )
 
 // ExitCodes for deterministic agent error handling.
@@ -156,6 +158,7 @@ func RunPreFlight(dir string, verbose bool) (*PreFlightResult, error) {
 
 	// Build
 	if len(stack.BuildCmd) > 0 {
+		buildStart := time.Now()
 		if err := runCmd(dir, stack.BuildCmd, verbose); err != nil {
 			if stack.Name == "Node/JS/TS" && strings.Contains(err.Error(), "Missing script") {
 				result.BuildSkipped = true
@@ -166,6 +169,9 @@ func RunPreFlight(dir string, verbose bool) (*PreFlightResult, error) {
 		} else {
 			result.BuildPass = true
 		}
+		buildDur := time.Since(buildStart)
+		telemetry.RecordEvent("agent_ship_build", buildDur)
+		telemetry.NudgeIfSlow("build", buildDur, 60*time.Second, false)
 	} else {
 		result.BuildSkipped = true
 		result.BuildPass = true
