@@ -58,7 +58,7 @@ The `tablePanel` TraceQL query was `{name="go_test"}` which only returned standa
 
 ### Dashboard Screenshot (all panels rendering)
 
-![devx Build Metrics Dashboard — All Panels Active](/Users/james/.gemini/antigravity/brain/7a97cc94-aad6-489d-b3fe-660a2723febd/devx_dashboard_top_1775294902028.png)
+![devx Build Metrics Dashboard — All Panels Active](/images/grafana-build-metrics.png)
 
 | Panel | Status | Value |
 |-------|--------|-------|
@@ -75,4 +75,4 @@ The `tablePanel` TraceQL query was `{name="go_test"}` which only returned standa
 
 ### Browser Recording
 
-![Dashboard Verification Recording](/Users/james/.gemini/antigravity/brain/7a97cc94-aad6-489d-b3fe-660a2723febd/dashboard_verification_1775294810436.webp)
+![Dashboard Verification Recording](/images/grafana-build-metrics-recording.webp)
