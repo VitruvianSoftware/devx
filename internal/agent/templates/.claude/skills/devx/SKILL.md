@@ -99,3 +99,39 @@ This command orchestrates the full lifecycle:
 If the pipeline fails, `devx agent ship` returns Exit Code `53` with condensed failure logs. You MUST fix the issue and re-run `devx agent ship` immediately.
 
 For machine-readable output: `devx agent ship -m "message" --json`
+
+## 🔗 11. Hybrid Bridge (`devx bridge`)
+
+Connect the local environment to remote Kubernetes services. Bridge follows the **Client-Driven Architecture** principle — no permanent cluster-side controllers.
+
+### Commands
+- `devx bridge connect --json`: Establish outbound bridge to remote cluster services
+- `devx bridge status --json`: Show active bridge sessions
+- `devx bridge disconnect -y`: Tear down all active bridges
+
+### CLI Flags
+- `--kubeconfig`: Override kubeconfig path
+- `--context`: Override kube context
+- `-n, --namespace`: Default namespace for targets
+- `-t, --target`: Ad-hoc target (repeatable): `service:port` or `service:port:localport`
+
+### State Files
+- `~/.devx/bridge.json`: Active session state (consumed by `bridge status` and `bridge disconnect`)
+- `~/.devx/bridge.env`: Environment variables (auto-injected by `devx shell`)
+
+### Exit Codes
+| Code | Meaning |
+|------|---------|
+| 60 | Kubeconfig not found |
+| 61 | Cluster unreachable |
+| 62 | Namespace not found |
+| 63 | Service not found |
+| 64 | Port-forward failed |
+
+### Environment Variables
+Bridge generates these per-service variables in `~/.devx/bridge.env`:
+- `BRIDGE_<SERVICE>_URL=http://127.0.0.1:<port>`
+- `BRIDGE_<SERVICE>_HOST=127.0.0.1`
+- `BRIDGE_<SERVICE>_PORT=<port>`
+
+Service names are normalized: `payments-api` → `BRIDGE_PAYMENTS_API_URL`.
