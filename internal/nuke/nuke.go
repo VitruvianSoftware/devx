@@ -42,6 +42,9 @@ func Collect(projectDir, runtime string) (*Manifest, error) {
 	// 3. Mutagen sync sessions (Idea 43)
 	m.collectMutagenSessions()
 
+	// 4. Bridge session files (Idea 46.1)
+	m.collectBridgeFiles()
+
 	return m, nil
 }
 
@@ -204,6 +207,38 @@ func (m *Manifest) collectMutagenSessions() {
 				Kind:        "sync",
 			})
 		}
+	}
+}
+
+// collectBridgeFiles discovers bridge session state files (Idea 46.1).
+func (m *Manifest) collectBridgeFiles() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+
+	bridgeFiles := []struct {
+		name string
+		path string
+	}{
+		{"bridge session (bridge.json)", filepath.Join(home, ".devx", "bridge.json")},
+		{"bridge env vars (bridge.env)", filepath.Join(home, ".devx", "bridge.env")},
+	}
+
+	for _, bf := range bridgeFiles {
+		info, err := os.Stat(bf.path)
+		if err != nil {
+			continue
+		}
+		m.Items = append(m.Items, Item{
+			Category:    "bridge",
+			Label:       bf.name,
+			Path:        bf.path,
+			SizeBytes:   info.Size(),
+			SizeDisplay: formatBytes(info.Size()),
+			Kind:        "file",
+		})
+		m.TotalSize += info.Size()
 	}
 }
 

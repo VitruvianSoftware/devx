@@ -12,6 +12,13 @@ const (
 
 	// Auth/Authentication Errors
 	CodeNotLoggedIn = 41
+
+	// Bridge Errors (Idea 46.1)
+	CodeBridgeKubeconfigNotFound = 60 // kubeconfig file does not exist
+	CodeBridgeContextUnreachable = 61 // cluster context exists but API server is unreachable
+	CodeBridgeNamespaceNotFound  = 62 // target namespace does not exist
+	CodeBridgeServiceNotFound    = 63 // target service does not exist in namespace
+	CodeBridgePortForwardFailed  = 64 // kubectl port-forward crashed or timed out
 )
 
 // DevxError wraps a standard error with a stable machine-readable exit code.

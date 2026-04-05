@@ -88,6 +88,7 @@ devx
 ├── shell       # Devcontainer-based isolated shells
 ├── config      # Credential and configuration management
 ├── exec        # Raw passthrough to infrastructure tools
+├── bridge      # Hybrid edge-to-local K8s routing (Idea 46)
 └── up          # Declarative provisioning from devx.yaml
 ```
 
@@ -96,3 +97,14 @@ Each subcommand group is self-contained in `cmd/` and communicates with backend 
 - `internal/cloudflare/` — Cloudflare API client (DNS, tunnels)
 - `internal/github/` — GitHub API client (Pages, repos)
 - `internal/ignition/` — Butane/Ignition config generation
+- `internal/bridge/` — Kubernetes port-forward orchestration and session management
+
+## Bridge Layer (Remote Cluster Access)
+
+`devx bridge` extends the local environment to remote Kubernetes clusters following the **Client-Driven Architecture** principle:
+
+- **Idea 46.1 (Shipped):** Outbound connectivity via `kubectl port-forward` — purely client-side, no cluster modifications
+- **Idea 46.2 (Future):** Inbound traffic interception via ephemeral agent pods that auto-clean on session end
+- **Idea 46.3 (Future):** Full hybrid topology orchestrated by `devx up`
+
+Bridge injects `BRIDGE_*_URL` environment variables into `devx shell`, enabling local code to reach remote services without application-level changes.
