@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0](https://github.com/VitruvianSoftware/devx/compare/v0.31.0...v0.32.0) (2026-04-05)
+
+
+### Features
+
+* **bridge:** implement full hybrid topology (Idea 46.3) ([d536902](https://github.com/VitruvianSoftware/devx/commit/d536902907bedb4e8efa46d90126841123ec32e6))
+* implement Idea 46.1 hybrid edge-to-local bridge via kubectl port-forward ([#127](https://github.com/VitruvianSoftware/devx/issues/127)) ([563ddcb](https://github.com/VitruvianSoftware/devx/commit/563ddcbf6f0b68784447ab3869f2fccf6f691948))
+* implement idea 46.2 inbound traffic interception ([c3731b7](https://github.com/VitruvianSoftware/devx/commit/c3731b7a31c19dcb75d8be6bf28fa1bdd59154d5))
+* refine devx action ui and telemetry metrics ([424e234](https://github.com/VitruvianSoftware/devx/commit/424e234a9e20f28afa76adf9c61b5f6f3ad10a0f))
+
+
+### Bug Fixes
+
+* **bridge:** preserve DAG sessions during disconnect and fix SA4010 ([3b0efcf](https://github.com/VitruvianSoftware/devx/commit/3b0efcf4147bf22c23f3e0a852b211bc9eb10747))
+* resolve golangci-lint unhandled errors and ineffectual assignment ([#128](https://github.com/VitruvianSoftware/devx/issues/128)) ([2d5f7d4](https://github.com/VitruvianSoftware/devx/commit/2d5f7d4043a0cd85c9c239dcb1c85ca25d6fbd2a))
+
 ## [0.31.0](https://github.com/VitruvianSoftware/devx/compare/v0.30.0...v0.31.0) (2026-04-05)
 
 
