@@ -225,8 +225,8 @@ profiles:
 #     after:
 #       - ["echo", "Build complete!"]
 
-# --- Idea 45.3: Custom Actions (scaffolded) ---
-# Named, on-demand tasks triggered via 'devx exec <action-name>'.
+# --- Idea 45.4: Custom Actions ---
+# Named, on-demand tasks triggered via 'devx action <action-name>'.
 # customActions:
 #   seed-db:
 #     command: ["npm", "run", "db:seed"]

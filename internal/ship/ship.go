@@ -113,9 +113,12 @@ func DetectStack(dir string) *stackInfo {
 	return nil
 }
 
-// PipelineStage defines a single pipeline step with support for multi-command.
+// PipelineStage defines a single pipeline step with support for multi-command
+// and lifecycle hooks (before/after).
 type PipelineStage struct {
-	Cmds [][]string // Resolved commands to run sequentially
+	Cmds   [][]string // Resolved commands to run sequentially
+	Before [][]string // Pre-stage hooks (run before Cmds)
+	After  [][]string // Post-stage hooks (run after Cmds)
 }
 
 // PipelineConfig holds explicit pipeline stage overrides from devx.yaml.
@@ -136,6 +139,31 @@ func RunPreFlight(dir string, verbose bool, pipeline *PipelineConfig) (*PreFligh
 	return runAutoDetectedPipeline(dir, verbose)
 }
 
+// runStageWithHooks executes before → cmds → after for a single pipeline stage.
+// If the stage is nil or has no commands, it returns nil (no-op).
+// Fail-fast: if a before hook fails, main commands and after hooks are skipped.
+func runStageWithHooks(dir string, stage *PipelineStage, name string, verbose bool) error {
+	if stage == nil || len(stage.Cmds) == 0 {
+		return nil
+	}
+	for _, hook := range stage.Before {
+		if err := runCmd(dir, hook, verbose); err != nil {
+			return fmt.Errorf("%s before hook failed: %w", name, err)
+		}
+	}
+	for _, cmd := range stage.Cmds {
+		if err := runCmd(dir, cmd, verbose); err != nil {
+			return fmt.Errorf("%s failed: %w", name, err)
+		}
+	}
+	for _, hook := range stage.After {
+		if err := runCmd(dir, hook, verbose); err != nil {
+			return fmt.Errorf("%s after hook failed: %w", name, err)
+		}
+	}
+	return nil
+}
+
 // runExplicitPipeline executes pipeline stages from devx.yaml config.
 func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*PreFlightResult, error) {
 	preflightStart := time.Now()
@@ -143,10 +171,8 @@ func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*P
 
 	// Test
 	if pipeline.Test != nil && len(pipeline.Test.Cmds) > 0 {
-		for _, cmd := range pipeline.Test.Cmds {
-			if err := runCmd(dir, cmd, verbose); err != nil {
-				return result, fmt.Errorf("tests failed: %w", err)
-			}
+		if err := runStageWithHooks(dir, pipeline.Test, "test", verbose); err != nil {
+			return result, err
 		}
 		result.TestPass = true
 	} else {
@@ -156,10 +182,8 @@ func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*P
 
 	// Lint
 	if pipeline.Lint != nil && len(pipeline.Lint.Cmds) > 0 {
-		for _, cmd := range pipeline.Lint.Cmds {
-			if err := runCmd(dir, cmd, verbose); err != nil {
-				return result, fmt.Errorf("linter failed: %w", err)
-			}
+		if err := runStageWithHooks(dir, pipeline.Lint, "lint", verbose); err != nil {
+			return result, err
 		}
 		result.LintPass = true
 	} else {
@@ -170,10 +194,8 @@ func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*P
 	// Build
 	if pipeline.Build != nil && len(pipeline.Build.Cmds) > 0 {
 		buildStart := time.Now()
-		for _, cmd := range pipeline.Build.Cmds {
-			if err := runCmd(dir, cmd, verbose); err != nil {
-				return result, fmt.Errorf("build failed: %w", err)
-			}
+		if err := runStageWithHooks(dir, pipeline.Build, "build", verbose); err != nil {
+			return result, err
 		}
 		result.BuildPass = true
 		buildDur := time.Since(buildStart)
@@ -184,13 +206,9 @@ func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*P
 		result.BuildPass = true
 	}
 
-	// Verify (new stage — pipeline only)
-	if pipeline.Verify != nil && len(pipeline.Verify.Cmds) > 0 {
-		for _, cmd := range pipeline.Verify.Cmds {
-			if err := runCmd(dir, cmd, verbose); err != nil {
-				return result, fmt.Errorf("verify failed: %w", err)
-			}
-		}
+	// Verify (pipeline only)
+	if err := runStageWithHooks(dir, pipeline.Verify, "verify", verbose); err != nil {
+		return result, err
 	}
 
 	// Record enriched preflight span

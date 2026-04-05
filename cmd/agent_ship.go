@@ -313,8 +313,12 @@ func convertStage(s *DevxConfigPipelineStage) *ship.PipelineStage {
 		return nil
 	}
 	cmds := s.Cmds()
-	if len(cmds) == 0 {
+	if len(cmds) == 0 && len(s.Before) == 0 && len(s.After) == 0 {
 		return nil
 	}
-	return &ship.PipelineStage{Cmds: cmds}
+	return &ship.PipelineStage{
+		Cmds:   cmds,
+		Before: s.Before,
+		After:  s.After,
+	}
 }

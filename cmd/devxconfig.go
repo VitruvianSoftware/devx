@@ -146,6 +146,17 @@ type DevxConfigCustomAction struct {
 	Commands [][]string `yaml:"commands,omitempty"`
 }
 
+// Cmds returns the resolved command list, preferring 'commands' over 'command'.
+func (ca *DevxConfigCustomAction) Cmds() [][]string {
+	if len(ca.Commands) > 0 {
+		return ca.Commands
+	}
+	if len(ca.Command) > 0 {
+		return [][]string{ca.Command}
+	}
+	return nil
+}
+
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
 	Name          string                              `yaml:"name"`            // Project name
