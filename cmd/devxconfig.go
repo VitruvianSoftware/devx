@@ -108,6 +108,7 @@ type DevxConfigProfile struct {
 	Tunnels   []DevxConfigTunnel   `yaml:"tunnels"`
 	Services  []DevxConfigService  `yaml:"services"`
 	Mocks     []DevxConfigMock     `yaml:"mocks"`
+	Bridge    *DevxConfigBridge    `yaml:"bridge"` // Idea 46.1: override bridge config per profile
 }
 
 // DevxConfigPipelineStage defines a single pipeline step (test, lint, build, verify).
@@ -157,6 +158,24 @@ func (ca *DevxConfigCustomAction) Cmds() [][]string {
 	return nil
 }
 
+// DevxConfigBridgeTarget defines a remote K8s service to bridge locally (Idea 46.1).
+type DevxConfigBridgeTarget struct {
+	Service   string `yaml:"service"`    // K8s service name (e.g., "payments-api")
+	Namespace string `yaml:"namespace"` // K8s namespace (default: from bridge.namespace)
+	Port      int    `yaml:"port"`       // Remote service port to forward
+	LocalPort int    `yaml:"local_port"` // Local port to bind (0 = auto)
+}
+
+// DevxConfigBridge defines the hybrid edge-to-local routing configuration (Idea 46.1).
+// Enables developers to connect their local environment to remote K8s services
+// via kubectl port-forward, following the "Client-Driven Architecture" principle.
+type DevxConfigBridge struct {
+	Kubeconfig string                   `yaml:"kubeconfig"` // Path to kubeconfig (default: ~/.kube/config)
+	Context    string                   `yaml:"context"`    // Kube context to use
+	Namespace  string                   `yaml:"namespace"`  // Default namespace for targets
+	Targets    []DevxConfigBridgeTarget `yaml:"targets"`    // Remote services to bridge
+}
+
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
 	Name          string                              `yaml:"name"`            // Project name
@@ -171,6 +190,7 @@ type DevxConfig struct {
 	Profiles      map[string]DevxConfigProfile        `yaml:"profiles"`        // Named environment overlays
 	Pipeline      *DevxConfigPipeline                 `yaml:"pipeline"`        // Explicit pipeline stages (Idea 45.2)
 	CustomActions map[string]DevxConfigCustomAction   `yaml:"customActions"`   // Named tasks (scaffolded for Idea 45.3)
+	Bridge        *DevxConfigBridge                   `yaml:"bridge"`          // Hybrid edge-to-local routing (Idea 46.1)
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────
@@ -333,6 +353,11 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 			cfg.Mocks = append(cfg.Mocks, m)
 		}
 
+		// Merge: bridge (first-defined wins — parent takes precedence)
+		if cfg.Bridge == nil && incCfg.Bridge != nil {
+			cfg.Bridge = incCfg.Bridge
+		}
+
 		// Merge env (vault) sources — deduplicate
 		for _, envSrc := range incCfg.Env {
 			found := false
@@ -430,6 +455,11 @@ func mergeProfile(cfg *DevxConfig, profile DevxConfigProfile) {
 		if !found {
 			cfg.Services = append(cfg.Services, ps)
 		}
+	}
+
+	// Merge bridge (profile wins entirely if present)
+	if profile.Bridge != nil {
+		cfg.Bridge = profile.Bridge
 	}
 
 	// Merge mocks by name

@@ -233,3 +233,24 @@ profiles:
 #   generate-mocks:
 #     commands:
 #       - ["mockgen", "-source=./internal/...", "-destination=./internal/mock/..."]
+
+# --- Idea 46.1: Hybrid Edge-to-Local Bridge ---
+# Connect your local environment to remote Kubernetes services via kubectl port-forward.
+# Environment variables (BRIDGE_<SERVICE>_URL, _HOST, _PORT) are auto-injected into devx shell.
+#
+# bridge:
+#   kubeconfig: ~/.kube/config            # Path to kubeconfig (default: ~/.kube/config)
+#   context: gke_my-org_us-central1_staging  # Kube context to use
+#   namespace: default                    # Default namespace for targets
+#   targets:
+#     - service: payments-api              # K8s service name
+#       port: 8080                         # Remote service port
+#     - service: user-service
+#       port: 3000
+#     - service: redis
+#       namespace: cache                   # Override namespace per target
+#       port: 6379
+#       local_port: 16379                  # Pin to specific local port (0 = auto)
+#
+# Future (Idea 46.1.5): DNS proxy for native *.svc.cluster.local resolution.
+# Future (Idea 46.2): Inbound traffic interception via ephemeral agent pods.

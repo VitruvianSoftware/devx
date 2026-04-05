@@ -94,4 +94,5 @@ func init() {
 	rootCmd.AddCommand(tunnelCmd)
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(execCmd)
+	rootCmd.AddCommand(bridgeCmd)
 }

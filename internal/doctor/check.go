@@ -150,6 +150,15 @@ func allTools() []toolDef {
 			InstallTap:  "mutagen-io/mutagen",
 			Note:        "for zero-rebuild hot reloading (devx sync)",
 		},
+		{
+			Name:        "Kubectl",
+			Binary:      "kubectl",
+			FeatureArea: "Bridge",
+			Required:    false,
+			VersionFlag: "version --client --short",
+			InstallBrew: "kubectl",
+			Note:        "for hybrid bridge to remote K8s clusters (devx bridge)",
+		},
 	}
 }
 
@@ -330,6 +339,9 @@ func parseVersion(binary, raw string) string {
 				return strings.TrimSpace(strings.TrimPrefix(l, "Google Cloud SDK"))
 			}
 		}
+	case "kubectl":
+		// "Client Version: v1.31.0" or "Client Version: vX.Y.Z"
+		return strings.TrimPrefix(strings.TrimSpace(line), "Client Version: ")
 	}
 
 	// Fallback: return first line, trimmed

@@ -263,6 +263,11 @@ func computeFeatureReadiness(r doctor.Report) []featureReadiness {
 			ready:   tools["mutagen"],
 			missing: missingList(tools, "mutagen"),
 		},
+		{
+			command: "devx bridge connect",
+			ready:   tools["kubectl"],
+			missing: missingList(tools, "kubectl"),
+		},
 	}
 }
 

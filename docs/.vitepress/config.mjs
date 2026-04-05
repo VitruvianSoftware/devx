@@ -49,7 +49,8 @@ export default defineConfig({
           { text: 'Multirepo Orchestration', link: '/guide/multirepo' },
           { text: 'Predictive Pre-Building', link: '/guide/caching' },
           { text: 'Pipeline Stages', link: '/guide/pipeline' },
-          { text: 'AI Agent Skills', link: '/guide/ai-agents' }
+          { text: 'AI Agent Skills', link: '/guide/ai-agents' },
+          { text: 'Hybrid Bridge', link: '/guide/bridge' }
         ]
       }
     ],

@@ -26,11 +26,16 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 
 ### 46. Hybrid Edge-to-Local Cloud Routing
-* **Priority:** 🟡 P3
-* **Effort:** Very High
-* **Impact:** Niche — this is essentially Telepresence reimplemented inside `devx`. Telepresence itself has gone through multiple rewrites and is now commercial. Traffic interception requires either a cluster-side agent (breaking the "Client-Side Only" design principle) or DNS-level routing tricks. Genuinely useful for ~10% of developers debugging cross-service staging issues, but huge build for a narrow audience.
+* **Priority:** 🟢 P1 (phased delivery)
+* **Effort:** Very High (total across all phases)
+* **Impact:** Enables real-time cross-boundary debugging against staging infrastructure without running all microservices locally. Amended design principle from "Client-Side Only" to "Client-Driven Architecture."
 * **The Problem:** Complex bugs sometimes only happen with real staging integration data. Running all 50 microservices locally is impossible, but testing a local fix against the remote cluster is tedious.
-* **The Solution:** Similar to Telepresence, `devx bridge` securely intercepts traffic from a specific microservice in a remote K8s staging environment and tunnels it perfectly down into the developer's local `devx` container to allow real-time cross-boundary testing.
+* **The Solution:** `devx bridge` provides hybrid edge-to-local routing between remote Kubernetes clusters and local containers.
+
+* **46.1 — Outbound Bridge (✅ Shipped):** `devx bridge connect` establishes kubectl port-forward tunnels and injects `BRIDGE_*_URL` env vars into `devx shell`. Purely client-side.
+* **46.1.5 — DNS Proxy (Deferred):** Optional `--dns` flag for native `*.svc.cluster.local` resolution. Requires sudo.
+* **46.2 — Inbound Interception (Future):** Deploy ephemeral agent pods to route real cluster traffic to local containers.
+* **46.3 — Full Hybrid Topology (Future):** First-class `runtime: bridge` in `devx.yaml` services, orchestrated by `devx up`.
 
 
 
@@ -67,5 +72,5 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 ### ~~54. Instant "PR Preview" Cloud Ejection~~
 * **Priority:** 🔴 Cut
-* **Verdict:** Directly violates the "Client-Side Only Architecture" design principle from PRODUCT_ANALYSIS.md. The moment `devx` ships local state to a cloud provider, you own: cloud credentials, billing, container registries, DNS, SSL, teardown TTLs, data residency compliance, and "who pays the Fly.io bill?" Corporate security teams will reject this instantly. This is what Vercel/Netlify/Render preview deploys exist for.
+* **Verdict:** Directly violates the \"Client-Driven Architecture\" design principle from PRODUCT_ANALYSIS.md. The moment `devx` ships local state to a cloud provider, you own: cloud credentials, billing, container registries, DNS, SSL, teardown TTLs, data residency compliance, and "who pays the Fly.io bill?" Corporate security teams will reject this instantly. This is what Vercel/Netlify/Render preview deploys exist for.
 * **Alternative:** None — let deployment platforms own this complexity. `devx` should stay local-first.

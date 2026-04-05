@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/VitruvianSoftware/devx/internal/ai"
+	"github.com/VitruvianSoftware/devx/internal/bridge"
 	"github.com/VitruvianSoftware/devx/internal/devcontainer"
 	"github.com/VitruvianSoftware/devx/internal/envvault"
 	"github.com/VitruvianSoftware/devx/internal/telemetry"
@@ -163,6 +164,15 @@ func runShell(_ *cobra.Command, _ []string) error {
 		fmt.Printf("☁️  Injected %d cloud emulator endpoints (STORAGE_EMULATOR_HOST, etc.)\n", len(cloudEnvs))
 	}
 
+	// Hybrid Bridge: Auto-inject BRIDGE_*_URL env vars from an active bridge session.
+	// This connects the container to remote K8s services without code changes (Idea 46.1).
+	if bridgeEnvs, err := loadBridgeEnvVars(); err == nil && len(bridgeEnvs) > 0 {
+		for k, v := range bridgeEnvs {
+			args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+		}
+		fmt.Printf("🔗 Bridge active — injected %d BRIDGE_* env vars from staging cluster\n", len(bridgeEnvs))
+	}
+
 	// Auto-inject SMTP_HOST / SMTP_PORT / MAIL_CATCHER_URL if MailHog is running.
 	if mailEnvs := discoverMailEnvVars(runtime); len(mailEnvs) > 0 {
 		for k, v := range mailEnvs {
@@ -302,4 +312,13 @@ func runShell(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 	return err
+}
+
+// loadBridgeEnvVars reads BRIDGE_* env vars from ~/.devx/bridge.env when
+// an active bridge session exists (Idea 46.1).
+func loadBridgeEnvVars() (map[string]string, error) {
+	if !bridge.IsActive() {
+		return nil, nil
+	}
+	return bridge.LoadEnvVars()
 }
