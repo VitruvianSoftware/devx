@@ -97,14 +97,16 @@ Each subcommand group is self-contained in `cmd/` and communicates with backend 
 - `internal/cloudflare/` — Cloudflare API client (DNS, tunnels)
 - `internal/github/` — GitHub API client (Pages, repos)
 - `internal/ignition/` — Butane/Ignition config generation
-- `internal/bridge/` — Kubernetes port-forward orchestration and session management
+- `internal/bridge/` — Kubernetes port-forward orchestration, intercept lifecycle, Yamux tunnels, and session management
+- `internal/bridge/agent/` — Standalone Go module for the self-healing agent binary (deployed as a Kubernetes Job)
 
 ## Bridge Layer (Remote Cluster Access)
 
 `devx bridge` extends the local environment to remote Kubernetes clusters following the **Client-Driven Architecture** principle:
 
 - **Idea 46.1 (Shipped):** Outbound connectivity via `kubectl port-forward` — purely client-side, no cluster modifications
-- **Idea 46.2 (Future):** Inbound traffic interception via ephemeral agent pods that auto-clean on session end
+- **Idea 46.2 (Shipped):** Inbound traffic interception via self-healing agent pods. Deploys an ephemeral agent Job that mirrors the target Service's ports, swaps the selector, and tunnels inbound cluster traffic to the developer's local machine via Yamux multiplexing over `kubectl port-forward`
 - **Idea 46.3 (Future):** Full hybrid topology orchestrated by `devx up`
 
 Bridge injects `BRIDGE_*_URL` environment variables into `devx shell`, enabling local code to reach remote services without application-level changes.
+

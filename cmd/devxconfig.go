@@ -166,14 +166,25 @@ type DevxConfigBridgeTarget struct {
 	LocalPort int    `yaml:"local_port"` // Local port to bind (0 = auto)
 }
 
-// DevxConfigBridge defines the hybrid edge-to-local routing configuration (Idea 46.1).
+// DevxConfigBridgeIntercept defines an inbound traffic intercept target (Idea 46.2).
+type DevxConfigBridgeIntercept struct {
+	Service   string `yaml:"service"`    // K8s service to intercept
+	Namespace string `yaml:"namespace"`  // Override namespace (default: bridge.namespace)
+	Port      int    `yaml:"port"`       // Remote service port to intercept
+	LocalPort int    `yaml:"local_port"` // Local port to route traffic to (default: same as port)
+	Mode      string `yaml:"mode"`       // "steal" or "mirror" (required)
+}
+
+// DevxConfigBridge defines the hybrid edge-to-local routing configuration (Idea 46).
 // Enables developers to connect their local environment to remote K8s services
 // via kubectl port-forward, following the "Client-Driven Architecture" principle.
 type DevxConfigBridge struct {
-	Kubeconfig string                   `yaml:"kubeconfig"` // Path to kubeconfig (default: ~/.kube/config)
-	Context    string                   `yaml:"context"`    // Kube context to use
-	Namespace  string                   `yaml:"namespace"`  // Default namespace for targets
-	Targets    []DevxConfigBridgeTarget `yaml:"targets"`    // Remote services to bridge
+	Kubeconfig string                      `yaml:"kubeconfig"`   // Path to kubeconfig (default: ~/.kube/config)
+	Context    string                      `yaml:"context"`      // Kube context to use
+	Namespace  string                      `yaml:"namespace"`    // Default namespace for targets
+	AgentImage string                      `yaml:"agent_image"`  // Override agent container image (Idea 46.2)
+	Targets    []DevxConfigBridgeTarget    `yaml:"targets"`      // Outbound: remote services to bridge (46.1)
+	Intercepts []DevxConfigBridgeIntercept `yaml:"intercepts"`   // Inbound: traffic intercept targets (46.2)
 }
 
 // DevxConfig is the root devx.yaml schema.

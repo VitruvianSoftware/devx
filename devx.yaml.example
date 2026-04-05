@@ -242,6 +242,9 @@ profiles:
 #   kubeconfig: ~/.kube/config            # Path to kubeconfig (default: ~/.kube/config)
 #   context: gke_my-org_us-central1_staging  # Kube context to use
 #   namespace: default                    # Default namespace for targets
+#   agent_image: ""                       # Override agent container image (for air-gapped clusters)
+#
+#   # Outbound connectivity (Idea 46.1) — connect to remote services
 #   targets:
 #     - service: payments-api              # K8s service name
 #       port: 8080                         # Remote service port
@@ -252,5 +255,11 @@ profiles:
 #       port: 6379
 #       local_port: 16379                  # Pin to specific local port (0 = auto)
 #
+#   # Inbound traffic interception (Idea 46.2) — route cluster traffic to local
+#   intercepts:
+#     - service: payments-api
+#       port: 8080
+#       mode: steal                        # Required: "steal" (full redirect)
+#       local_port: 8080                   # Local port where traffic is routed
+#
 # Future (Idea 46.1.5): DNS proxy for native *.svc.cluster.local resolution.
-# Future (Idea 46.2): Inbound traffic interception via ephemeral agent pods.

@@ -34,7 +34,7 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 * **46.1 — Outbound Bridge (✅ Shipped):** `devx bridge connect` establishes kubectl port-forward tunnels and injects `BRIDGE_*_URL` env vars into `devx shell`. Purely client-side.
 * **46.1.5 — DNS Proxy (Deferred):** Optional `--dns` flag for native `*.svc.cluster.local` resolution. Requires sudo.
-* **46.2 — Inbound Interception (Future):** Deploy ephemeral agent pods to route real cluster traffic to local containers.
+* **46.2 — Inbound Interception (Implemented):** Deploy ephemeral self-healing agent pods to route real cluster traffic to local containers via Yamux tunnels. Includes `devx bridge intercept`, `devx bridge rbac`, dynamic port mirroring, and automatic crash recovery.
 * **46.3 — Full Hybrid Topology (Future):** First-class `runtime: bridge` in `devx.yaml` services, orchestrated by `devx up`.
 
 

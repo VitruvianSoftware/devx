@@ -19,6 +19,16 @@ const (
 	CodeBridgeNamespaceNotFound  = 62 // target namespace does not exist
 	CodeBridgeServiceNotFound    = 63 // target service does not exist in namespace
 	CodeBridgePortForwardFailed  = 64 // kubectl port-forward crashed or timed out
+
+	// Bridge Intercept Errors (Idea 46.2)
+	CodeBridgeAgentDeployFailed       = 65 // Agent Job failed to deploy or reach Running state
+	CodeBridgeAgentHealthFailed       = 66 // Agent /healthz did not return 200 within timeout
+	CodeBridgeSelectorPatchFailed     = 67 // Failed to patch Service selector
+	CodeBridgeRBACInsufficient        = 68 // Insufficient RBAC permissions for intercept
+	CodeBridgeInterceptActive         = 69 // Another intercept is already active for this service
+	CodeBridgeUnsupportedProtocol     = 70 // Target port uses UDP (not supported in 46.2)
+	CodeBridgeTunnelFailed            = 71 // Yamux tunnel failed to establish or dropped
+	CodeBridgeServiceNotInterceptable = 72 // Service has no selector or is ExternalName type
 )
 
 // DevxError wraps a standard error with a stable machine-readable exit code.

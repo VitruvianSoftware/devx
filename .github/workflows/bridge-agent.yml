@@ -1,0 +1,59 @@
+name: Bridge Agent
+
+on:
+  push:
+    paths:
+      - 'internal/bridge/agent/**'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'internal/bridge/agent/**'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-agent:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: internal/bridge/agent
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o devx-bridge-agent .
+
+      - name: Set up Docker Buildx
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v5
+        with:
+          context: internal/bridge/agent
+          push: true
+          tags: |
+            ghcr.io/vitruviansoftware/devx-bridge-agent:latest
+            ghcr.io/vitruviansoftware/devx-bridge-agent:${{ github.sha }}

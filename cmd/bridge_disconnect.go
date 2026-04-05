@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -30,7 +31,10 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("reading bridge session: %w", err)
 	}
 
-	if session == nil || len(session.Entries) == 0 {
+	hasEntries := session != nil && len(session.Entries) > 0
+	hasIntercepts := session != nil && len(session.Intercepts) > 0
+
+	if !hasEntries && !hasIntercepts {
 		if outputJSON {
 			fmt.Println(`{"disconnected": false, "reason": "no active session"}`)
 			return nil
@@ -42,12 +46,14 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 	if DryRun {
 		if outputJSON {
 			type dryRunOutput struct {
-				DryRun  bool                  `json:"dry_run"`
-				Entries []bridge.SessionEntry `json:"entries_to_disconnect"`
+				DryRun     bool                  `json:"dry_run"`
+				Entries    []bridge.SessionEntry  `json:"entries_to_disconnect"`
+				Intercepts []bridge.InterceptEntry `json:"intercepts_to_disconnect"`
 			}
 			out := dryRunOutput{
-				DryRun:  true,
-				Entries: session.Entries,
+				DryRun:     true,
+				Entries:    session.Entries,
+				Intercepts: session.Intercepts,
 			}
 			enc, _ := json.MarshalIndent(out, "", "  ")
 			fmt.Println(string(enc))
@@ -64,30 +70,68 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 				e.LocalPort,
 			)
 		}
-		fmt.Printf("\n  [dry-run] Would disconnect %d bridge(s) and clean up session files.\n\n", len(session.Entries))
+		for _, ic := range session.Intercepts {
+			fmt.Printf("  %s  Would stop intercept: %s/%s :%d → localhost:%d (%s)\n",
+				tui.StyleDetailRunning.Render("→"),
+				tui.StyleMuted.Render(ic.Namespace),
+				tui.StyleStepName.Render(ic.Service),
+				ic.TargetPort,
+				ic.LocalPort,
+				ic.Mode,
+			)
+		}
+		total := len(session.Entries) + len(session.Intercepts)
+		fmt.Printf("\n  [dry-run] Would disconnect %d session(s) and clean up.\n\n", total)
 		return nil
 	}
 
-	// Execute cleanup
+	// Tear down intercepts first (restore selectors + remove agents)
+	for _, ic := range session.Intercepts {
+		if !outputJSON {
+			fmt.Printf("  %s Restoring %s/%s selector...\n",
+				tui.StyleDetailRunning.Render("●"),
+				ic.Namespace, ic.Service)
+		}
+
+		svcState := &bridge.ServiceState{
+			Name:             ic.Service,
+			Namespace:        ic.Namespace,
+			OriginalSelector: ic.OriginalSelector,
+		}
+		if err := bridge.RestoreServiceSelector(session.Kubeconfig, session.Context, svcState); err != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Failed to restore %s selector: %v\n", ic.Service, err)
+		}
+		_ = bridge.RemoveAgent(session.Kubeconfig, session.Context, ic.Namespace, ic.SessionID)
+
+		if !outputJSON {
+			fmt.Printf("  %s  %s/%s restored and agent removed\n", tui.IconDone, ic.Namespace, ic.Service)
+		}
+	}
+
+	// Clean up session files
 	if err := bridge.ClearSession(); err != nil {
 		return fmt.Errorf("cleaning session: %w", err)
 	}
 
+	total := len(session.Entries) + len(session.Intercepts)
+
 	if outputJSON {
 		type disconnectOutput struct {
-			Disconnected bool `json:"disconnected"`
-			Count        int  `json:"count"`
+			Disconnected    bool `json:"disconnected"`
+			BridgeCount     int  `json:"bridge_count"`
+			InterceptCount  int  `json:"intercept_count"`
 		}
 		enc, _ := json.MarshalIndent(disconnectOutput{
-			Disconnected: true,
-			Count:        len(session.Entries),
+			Disconnected:   true,
+			BridgeCount:    len(session.Entries),
+			InterceptCount: len(session.Intercepts),
 		}, "", "  ")
 		fmt.Println(string(enc))
 		return nil
 	}
 
-	fmt.Printf("\n%s Disconnected %d bridge(s). Session files cleaned.\n\n",
-		tui.IconDone, len(session.Entries))
+	fmt.Printf("\n%s Disconnected %d session(s). All resources cleaned.\n\n",
+		tui.IconDone, total)
 
 	return nil
 }

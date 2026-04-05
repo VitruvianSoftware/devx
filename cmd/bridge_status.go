@@ -30,13 +30,13 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("reading bridge session: %w", err)
 	}
 
-	if session == nil || len(session.Entries) == 0 {
+	if session == nil || (len(session.Entries) == 0 && len(session.Intercepts) == 0) {
 		if outputJSON {
-			fmt.Println(`{"active": false, "entries": []}`)
+			fmt.Println(`{"active": false, "entries": [], "intercepts": []}`)
 			return nil
 		}
 		fmt.Printf("\n  %s No active bridge session.\n", tui.StyleMuted.Render("○"))
-		fmt.Printf("  %s\n\n", tui.StyleMuted.Render("Run: devx bridge connect"))
+		fmt.Printf("  %s\n\n", tui.StyleMuted.Render("Run: devx bridge connect  or  devx bridge intercept <service> --steal"))
 		return nil
 	}
 
@@ -50,12 +50,22 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 			URL        string `json:"url"`
 			EnvVar     string `json:"env_var"`
 		}
+		type jsonIntercept struct {
+			Service    string `json:"service"`
+			Namespace  string `json:"namespace"`
+			TargetPort int    `json:"target_port"`
+			LocalPort  int    `json:"local_port"`
+			Mode       string `json:"mode"`
+			AgentPod   string `json:"agent_pod"`
+			SessionID  string `json:"session_id"`
+		}
 		type jsonOutput struct {
-			Active     bool        `json:"active"`
-			Kubeconfig string      `json:"kubeconfig"`
-			Context    string      `json:"context"`
-			StartedAt  time.Time   `json:"started_at"`
-			Entries    []jsonEntry `json:"entries"`
+			Active     bool            `json:"active"`
+			Kubeconfig string          `json:"kubeconfig"`
+			Context    string          `json:"context"`
+			StartedAt  time.Time       `json:"started_at"`
+			Entries    []jsonEntry     `json:"entries"`
+			Intercepts []jsonIntercept `json:"intercepts"`
 		}
 
 		out := jsonOutput{
@@ -73,6 +83,17 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 				State:      e.State,
 				URL:        fmt.Sprintf("http://127.0.0.1:%d", e.LocalPort),
 				EnvVar:     bridgeEnvKey(e.Service),
+			})
+		}
+		for _, ic := range session.Intercepts {
+			out.Intercepts = append(out.Intercepts, jsonIntercept{
+				Service:    ic.Service,
+				Namespace:  ic.Namespace,
+				TargetPort: ic.TargetPort,
+				LocalPort:  ic.LocalPort,
+				Mode:       ic.Mode,
+				AgentPod:   ic.AgentPod,
+				SessionID:  ic.SessionID,
 			})
 		}
 		enc, _ := json.MarshalIndent(out, "", "  ")
@@ -115,6 +136,23 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 			tui.StyleMuted.Render("env:"),
 			tui.StyleMuted.Render(fmt.Sprintf("%s=http://127.0.0.1:%d", bridgeEnvKey(e.Service), e.LocalPort)),
 		)
+	}
+
+	// Display intercept sessions
+	if len(session.Intercepts) > 0 {
+		fmt.Printf("\n  %s\n\n", tui.StyleTitle.Render("Active Intercepts"))
+
+		for _, ic := range session.Intercepts {
+			fmt.Printf("    %s  %s/%s :%d → localhost:%d  %s  (agent: %s)\n",
+				tui.IconDone,
+				tui.StyleMuted.Render(ic.Namespace),
+				tui.StyleStepName.Render(ic.Service),
+				ic.TargetPort,
+				ic.LocalPort,
+				tui.StyleDetailRunning.Render(ic.Mode),
+				tui.StyleMuted.Render(ic.AgentPod),
+			)
+		}
 	}
 
 	fmt.Printf("\n  %s  %s\n",

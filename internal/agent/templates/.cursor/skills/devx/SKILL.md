@@ -105,18 +105,34 @@ For machine-readable output: `devx agent ship -m "message" --json`
 Connect the local environment to remote Kubernetes services. Bridge follows the **Client-Driven Architecture** principle — no permanent cluster-side controllers.
 
 ### Commands
-- `devx bridge connect --json`: Establish outbound bridge to remote cluster services
-- `devx bridge status --json`: Show active bridge sessions
-- `devx bridge disconnect -y`: Tear down all active bridges
 
-### CLI Flags
+**Outbound (Idea 46.1):**
+- `devx bridge connect --json`: Establish outbound bridge to remote cluster services
+- `devx bridge status --json`: Show active bridge and intercept sessions
+- `devx bridge disconnect -y`: Tear down all active bridges and intercepts
+
+**Inbound (Idea 46.2):**
+- `devx bridge intercept <service> --steal --json`: Intercept inbound cluster traffic to local
+- `devx bridge intercept <service> --steal --dry-run`: Preview without modifying cluster
+- `devx bridge rbac`: Generate minimum-privilege RBAC manifest for intercept
+- `devx bridge rbac -n staging`: Namespace-scoped RBAC
+
+### Connect CLI Flags
 - `--kubeconfig`: Override kubeconfig path
 - `--context`: Override kube context
 - `-n, --namespace`: Default namespace for targets
 - `-t, --target`: Ad-hoc target (repeatable): `service:port` or `service:port:localport`
 
+### Intercept CLI Flags
+- `--steal`: Full traffic redirect (required — explicit acknowledgment)
+- `--mirror`: Duplicate traffic only (not yet implemented — 46.2b)
+- `-p, --port`: Remote port to intercept (default: first port on Service)
+- `--local-port`: Local port to route traffic to (default: same as --port)
+- `--agent-image`: Override default agent container image (air-gapped clusters)
+- `--kubeconfig`, `--context`, `-n`: Same as connect
+
 ### State Files
-- `~/.devx/bridge.json`: Active session state (consumed by `bridge status` and `bridge disconnect`)
+- `~/.devx/bridge.json`: Active session state (port-forwards + intercepts)
 - `~/.devx/bridge.env`: Environment variables (auto-injected by `devx shell`)
 
 ### Exit Codes
@@ -127,6 +143,14 @@ Connect the local environment to remote Kubernetes services. Bridge follows the 
 | 62 | Namespace not found |
 | 63 | Service not found |
 | 64 | Port-forward failed |
+| 65 | Agent Job failed to deploy |
+| 66 | Agent health check timed out |
+| 67 | Failed to patch Service selector |
+| 68 | Insufficient RBAC permissions |
+| 69 | Service already intercepted |
+| 70 | UDP port (not supported) |
+| 71 | Yamux tunnel failed |
+| 72 | Service not interceptable (ExternalName / no selector) |
 
 ### Environment Variables
 Bridge generates these per-service variables in `~/.devx/bridge.env`:
@@ -135,3 +159,12 @@ Bridge generates these per-service variables in `~/.devx/bridge.env`:
 - `BRIDGE_<SERVICE>_PORT=<port>`
 
 Service names are normalized: `payments-api` → `BRIDGE_PAYMENTS_API_URL`.
+
+### Intercept Architecture
+The agent is a self-healing Kubernetes Job with:
+- **Dynamic Pod spec** — mirrors target Service's `containerPorts` (including named ports)
+- **Yamux tunnel** — multiplexed over `kubectl port-forward` for bidirectional traffic
+- **Dedicated ServiceAccount** — narrow RBAC scoped to `update` on the target Service
+- **Self-healing** — on tunnel drop or SIGTERM, agent restores the original selector before exiting
+- **activeDeadlineSeconds: 14400** (4h auto-cleanup safety net)
+

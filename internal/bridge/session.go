@@ -19,12 +19,26 @@ type SessionEntry struct {
 	StartedAt  time.Time `json:"started_at"`
 }
 
+// InterceptEntry represents an active traffic intercept (Idea 46.2).
+type InterceptEntry struct {
+	Service          string            `json:"service"`
+	Namespace        string            `json:"namespace"`
+	TargetPort       int               `json:"target_port"`
+	LocalPort        int               `json:"local_port"`
+	Mode             string            `json:"mode"`              // "steal" or "mirror"
+	AgentPod         string            `json:"agent_pod"`
+	SessionID        string            `json:"session_id"`
+	OriginalSelector map[string]string `json:"original_selector"` // for restore on teardown
+	StartedAt        time.Time         `json:"started_at"`
+}
+
 // Session represents the full bridge session state persisted to ~/.devx/bridge.json.
 type Session struct {
-	Kubeconfig string         `json:"kubeconfig"`
-	Context    string         `json:"context"`
-	Entries    []SessionEntry `json:"entries"`
-	StartedAt  time.Time      `json:"started_at"`
+	Kubeconfig string           `json:"kubeconfig"`
+	Context    string           `json:"context"`
+	Entries    []SessionEntry   `json:"entries"`
+	Intercepts []InterceptEntry `json:"intercepts,omitempty"` // Idea 46.2
+	StartedAt  time.Time        `json:"started_at"`
 }
 
 // SessionPath returns the path to the bridge session file (~/.devx/bridge.json).
@@ -102,11 +116,11 @@ func ClearSession() error {
 	return nil
 }
 
-// IsActive checks whether a bridge session exists and has entries.
+// IsActive checks whether a bridge session exists and has entries or intercepts.
 func IsActive() bool {
 	session, err := LoadSession()
 	if err != nil || session == nil {
 		return false
 	}
-	return len(session.Entries) > 0
+	return len(session.Entries) > 0 || len(session.Intercepts) > 0
 }
