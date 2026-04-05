@@ -263,3 +263,49 @@ profiles:
 #       local_port: 8080                   # Local port where traffic is routed
 #
 # Future (Idea 46.1.5): DNS proxy for native *.svc.cluster.local resolution.
+#
+# ─── Hybrid Topology (Idea 46.3) ─────────────────────────────────────────────
+# Bridge services can also be declared inline in the services: array using
+# `runtime: bridge`. This integrates them into the devx up DAG orchestrator,
+# enabling dependency ordering with local services and unified lifecycle.
+#
+# The top-level bridge: section above is for standalone `devx bridge connect`
+# and `devx bridge intercept` commands. The services: entries below are for
+# DAG-orchestrated bridge operations via `devx up`.
+#
+# services:
+#   # Outbound bridge: remote K8s service available locally via port-forward
+#   - name: remote-payments
+#     runtime: bridge
+#     bridge_target:
+#       service: payments-api          # K8s service name
+#       namespace: staging             # optional (default: bridge.namespace)
+#       port: 8080                     # remote port
+#       local_port: 8080               # optional: local port (0 = auto)
+#     healthcheck:
+#       tcp: "localhost:8080"           # validates bridge is forwarding
+#       timeout: "15s"
+#
+#   # Inbound intercept: steal traffic from remote → local
+#   - name: user-svc-intercept
+#     runtime: bridge
+#     bridge_intercept:
+#       service: user-service          # K8s service to intercept
+#       namespace: staging
+#       port: 3000
+#       local_port: 3000
+#       mode: steal                    # required: "steal" (mirror: future)
+#     depends_on:
+#       - name: local-user-svc         # local service must be ready first
+#         condition: service_healthy
+#
+#   # Local service that depends on bridged remote services
+#   - name: local-api
+#     runtime: host
+#     command: ["go", "run", "./cmd/api"]
+#     port: 9090
+#     depends_on:
+#       - name: remote-payments         # waits for bridge to be healthy
+#         condition: service_healthy
+#       - name: postgres
+#         condition: service_healthy

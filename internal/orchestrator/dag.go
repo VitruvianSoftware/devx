@@ -28,7 +28,29 @@ const (
 	RuntimeContainer  Runtime = "container"
 	RuntimeKubernetes Runtime = "kubernetes"
 	RuntimeCloud      Runtime = "cloud"
+	RuntimeBridge     Runtime = "bridge" // Idea 46.3: hybrid bridge services
 )
+
+// BridgeMode distinguishes between outbound and inbound bridge operations.
+type BridgeMode string
+
+const (
+	BridgeModeConnect   BridgeMode = "connect"   // Outbound: kubectl port-forward
+	BridgeModeIntercept BridgeMode = "intercept" // Inbound: agent + yamux tunnel
+)
+
+// BridgeNodeConfig holds bridge-specific configuration for a DAG node.
+type BridgeNodeConfig struct {
+	Kubeconfig    string
+	Context       string
+	Namespace     string
+	TargetService string
+	RemotePort    int
+	LocalPort     int
+	AgentImage    string
+	Mode          BridgeMode
+	InterceptMode string // "steal" or "mirror"
+}
 
 // HealthcheckConfig defines how to verify a service is ready.
 type HealthcheckConfig struct {
@@ -82,9 +104,14 @@ type Node struct {
 	Env         map[string]string
 	Dir         string // Working directory for host process execution (set by include resolver for multirepo)
 
+	// Bridge-specific fields (Idea 46.3)
+	BridgeMode   BridgeMode       // for RuntimeBridge nodes
+	BridgeConfig *BridgeNodeConfig // bridge-specific parameters
+
 	// Runtime state
-	process *exec.Cmd
-	cancel  context.CancelFunc
+	process     *exec.Cmd
+	cancel      context.CancelFunc
+	bridgeState *BridgeNodeState // runtime state for bridge cleanup
 }
 
 // DAG is a directed acyclic graph of nodes.
@@ -198,6 +225,12 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 	cleanupFn := func() {
 		for i := len(startedNodes) - 1; i >= 0; i-- {
 			n := startedNodes[i]
+
+			// Bridge cleanup: restore selectors, remove agents, stop port-forwards
+			if n.bridgeState != nil {
+				n.bridgeState.Cleanup()
+			}
+
 			if n.cancel != nil {
 				n.cancel()
 			}
@@ -220,19 +253,28 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			go func(n *Node) {
 				defer wg.Done()
 
-				if n.Type == NodeService && len(n.Command) > 0 {
-					// Resolve port conflicts for services
-					if n.Port > 0 {
-						actual, shifted, warning := network.ResolvePort(n.Port)
-						if shifted {
-							fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
-							n.Port = actual
+			if n.Type == NodeService {
+					switch n.Runtime {
+					case RuntimeBridge:
+						if err := startBridgeNode(ctx, n); err != nil {
+							errCh <- fmt.Errorf("failed to start bridge service %q: %w", n.Name, err)
+							return
 						}
-					}
+					default:
+						if len(n.Command) > 0 {
+							if n.Port > 0 {
+								actual, shifted, warning := network.ResolvePort(n.Port)
+								if shifted {
+									fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
+									n.Port = actual
+								}
+							}
 
-					if err := startHostProcess(ctx, n); err != nil {
-						errCh <- fmt.Errorf("failed to start service %q: %w", n.Name, err)
-						return
+							if err := startHostProcess(ctx, n); err != nil {
+								errCh <- fmt.Errorf("failed to start service %q: %w", n.Name, err)
+								return
+							}
+						}
 					}
 				}
 
@@ -252,8 +294,29 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 		// Wait for health checks on this tier before moving to the next tier
 		for _, name := range tier {
 			node := d.Nodes[name]
+
+			// Bridge-native health path: intercept nodes are already healthy when
+			// startBridgeIntercept returns nil. Connect nodes use pf.State().
+			if node.Runtime == RuntimeBridge && node.bridgeState != nil {
+				if node.BridgeMode == BridgeModeIntercept {
+					// Intercept: returning nil from startBridgeIntercept IS the readiness signal
+					fmt.Printf("  \u2705 %s is healthy (intercept active)\n", name)
+					continue
+				}
+				if node.BridgeMode == BridgeModeConnect && node.bridgeState.PortForward != nil {
+					// Connect: poll pf.State() instead of naive TCP
+					fmt.Printf("  \u23f3 Waiting for %s bridge to become healthy...\n", name)
+					if err := waitForBridgeHealthy(ctx, node); err != nil {
+						cleanupFn()
+						return nil, fmt.Errorf("bridge healthcheck failed for %q: %w", name, err)
+					}
+					fmt.Printf("  \u2705 %s is healthy\n", name)
+					continue
+				}
+			}
+
 			if node.Healthcheck.HTTP != "" || node.Healthcheck.TCP != "" {
-				fmt.Printf("  ⏳ Waiting for %s to become healthy...\n", name)
+				fmt.Printf("  \u23f3 Waiting for %s to become healthy...\n", name)
 				if err := waitForHealthy(ctx, node); err != nil {
 					// Idea 35: Tail crash logs inline
 					if node.Type == NodeService {
@@ -262,7 +325,7 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 					cleanupFn()
 					return nil, fmt.Errorf("healthcheck failed for %q: %w", name, err)
 				}
-				fmt.Printf("  ✅ %s is healthy\n", name)
+				fmt.Printf("  \u2705 %s is healthy\n", name)
 			}
 		}
 	}

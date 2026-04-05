@@ -32,6 +32,7 @@ services:
 
 The `runtime` parameter gives development teams ultimate execution flexibility:
 * `host` (Default): Runs the process natively on your machine via standard execution (e.g. `npm run dev`).
+* `bridge`: Connects to a remote Kubernetes service via `bridge_target` (outbound port-forward) or `bridge_intercept` (inbound traffic steal). Fully managed by the DAG with correct dependency ordering and lifecycle. See [Bridge Guide](bridge.md#hybrid-topology).
 * `container`: (Coming soon) Runs the process isolated within a defined sandbox.
 * `kubernetes`: (Coming soon) Runs the process natively via an injected pod specification into the `devx k8s` local cluster.
 * `cloud`: (Coming soon) Runs the process attached remotely to GCP Cloud Run or AWS ECS via emulators.

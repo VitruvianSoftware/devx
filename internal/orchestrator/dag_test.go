@@ -159,3 +159,160 @@ func containsHelper(s, substr string) bool {
 	}
 	return false
 }
+
+// ─── Idea 46.3: Bridge DAG Tests ─────────────────────────────────────────────
+
+func TestTopologicalSort_BridgeBeforeService(t *testing.T) {
+	dag := NewDAG()
+
+	// Bridge node should be sorted before the service that depends on it
+	_ = dag.AddNode(&Node{
+		Name:       "remote-payments",
+		Type:       NodeService,
+		Runtime:    RuntimeBridge,
+		BridgeMode: BridgeModeConnect,
+		BridgeConfig: &BridgeNodeConfig{
+			TargetService: "payments-api",
+			Namespace:     "staging",
+			RemotePort:    8080,
+			LocalPort:     8080,
+			Mode:          BridgeModeConnect,
+		},
+	})
+	_ = dag.AddNode(&Node{
+		Name:      "local-api",
+		Type:      NodeService,
+		Runtime:   RuntimeHost,
+		DependsOn: []string{"remote-payments"},
+		Command:   []string{"go", "run", "./cmd/api"},
+	})
+
+	tiers, err := dag.TopologicalSort()
+	if err != nil {
+		t.Fatalf("TopologicalSort() failed: %v", err)
+	}
+
+	if len(tiers) != 2 {
+		t.Fatalf("expected 2 tiers, got %d: %v", len(tiers), tiers)
+	}
+	if tiers[0][0] != "remote-payments" {
+		t.Errorf("tier 0: expected [remote-payments], got %v", tiers[0])
+	}
+	if tiers[1][0] != "local-api" {
+		t.Errorf("tier 1: expected [local-api], got %v", tiers[1])
+	}
+}
+
+func TestTopologicalSort_InterceptDependsOnLocalService(t *testing.T) {
+	dag := NewDAG()
+
+	// Intercept depends on local service (must start local first, then steal traffic)
+	_ = dag.AddNode(&Node{
+		Name:    "local-user-svc",
+		Type:    NodeService,
+		Runtime: RuntimeHost,
+		Command: []string{"go", "run", "./cmd/user"},
+		Port:    3000,
+	})
+	_ = dag.AddNode(&Node{
+		Name:       "user-intercept",
+		Type:       NodeService,
+		Runtime:    RuntimeBridge,
+		BridgeMode: BridgeModeIntercept,
+		DependsOn:  []string{"local-user-svc"},
+		BridgeConfig: &BridgeNodeConfig{
+			TargetService: "user-service",
+			Namespace:     "staging",
+			RemotePort:    3000,
+			LocalPort:     3000,
+			Mode:          BridgeModeIntercept,
+			InterceptMode: "steal",
+		},
+	})
+
+	tiers, err := dag.TopologicalSort()
+	if err != nil {
+		t.Fatalf("TopologicalSort() failed: %v", err)
+	}
+
+	if len(tiers) != 2 {
+		t.Fatalf("expected 2 tiers, got %d: %v", len(tiers), tiers)
+	}
+	if tiers[0][0] != "local-user-svc" {
+		t.Errorf("tier 0: expected [local-user-svc], got %v", tiers[0])
+	}
+	if tiers[1][0] != "user-intercept" {
+		t.Errorf("tier 1: expected [user-intercept], got %v", tiers[1])
+	}
+}
+
+func TestTopologicalSort_MultipleBridgesParallel(t *testing.T) {
+	dag := NewDAG()
+
+	// Two independent bridge nodes should be in the same tier
+	_ = dag.AddNode(&Node{
+		Name: "bridge-a", Type: NodeService, Runtime: RuntimeBridge, BridgeMode: BridgeModeConnect,
+		BridgeConfig: &BridgeNodeConfig{TargetService: "svc-a", RemotePort: 8080, Mode: BridgeModeConnect},
+	})
+	_ = dag.AddNode(&Node{
+		Name: "bridge-b", Type: NodeService, Runtime: RuntimeBridge, BridgeMode: BridgeModeConnect,
+		BridgeConfig: &BridgeNodeConfig{TargetService: "svc-b", RemotePort: 9090, Mode: BridgeModeConnect},
+	})
+
+	tiers, err := dag.TopologicalSort()
+	if err != nil {
+		t.Fatalf("TopologicalSort() failed: %v", err)
+	}
+
+	if len(tiers) != 1 {
+		t.Fatalf("expected 1 tier (parallel), got %d: %v", len(tiers), tiers)
+	}
+	if len(tiers[0]) != 2 {
+		t.Errorf("expected 2 parallel bridge nodes, got %d", len(tiers[0]))
+	}
+}
+
+func TestBridgeEnvVars(t *testing.T) {
+	dag := NewDAG()
+
+	node := &Node{
+		Name:       "remote-payments",
+		Type:       NodeService,
+		Runtime:    RuntimeBridge,
+		BridgeMode: BridgeModeConnect,
+		Port:       8080,
+		BridgeConfig: &BridgeNodeConfig{
+			TargetService: "payments-api",
+			Namespace:     "staging",
+			RemotePort:    8080,
+			LocalPort:     8080,
+			Mode:          BridgeModeConnect,
+		},
+	}
+	// Simulate post-execution state
+	node.bridgeState = &BridgeNodeState{}
+	_ = dag.AddNode(node)
+
+	envs := dag.GenerateBridgeEnvVars()
+	expected := "http://localhost:8080"
+	if envs["BRIDGE_PAYMENTS_API_URL"] != expected {
+		t.Errorf("expected BRIDGE_PAYMENTS_API_URL=%q, got %q", expected, envs["BRIDGE_PAYMENTS_API_URL"])
+	}
+}
+
+func TestToEnvName(t *testing.T) {
+	tests := []struct {
+		input, expected string
+	}{
+		{"payments-api", "PAYMENTS_API"},
+		{"user.service", "USER_SERVICE"},
+		{"redis", "REDIS"},
+		{"ALREADY-UPPER", "ALREADY_UPPER"},
+	}
+	for _, tc := range tests {
+		got := toEnvName(tc.input)
+		if got != tc.expected {
+			t.Errorf("toEnvName(%q) = %q, want %q", tc.input, got, tc.expected)
+		}
+	}
+}

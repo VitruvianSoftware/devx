@@ -87,17 +87,36 @@ type DevxConfigTunnel struct {
 	Throttle  string `yaml:"throttle"`   // traffic shaping profile e.g. '3g'
 }
 
+// DevxConfigServiceBridgeTarget defines an inline bridge connect target on a service (Idea 46.3).
+type DevxConfigServiceBridgeTarget struct {
+	Service   string `yaml:"service"`    // K8s service name
+	Namespace string `yaml:"namespace"` // Override namespace (default: bridge.namespace)
+	Port      int    `yaml:"port"`       // Remote service port
+	LocalPort int    `yaml:"local_port"` // Local port to bind (0 = auto)
+}
+
+// DevxConfigServiceBridgeIntercept defines an inline bridge intercept on a service (Idea 46.3).
+type DevxConfigServiceBridgeIntercept struct {
+	Service   string `yaml:"service"`    // K8s service to intercept
+	Namespace string `yaml:"namespace"` // Override namespace (default: bridge.namespace)
+	Port      int    `yaml:"port"`       // Remote service port
+	LocalPort int    `yaml:"local_port"` // Local port to route traffic to
+	Mode      string `yaml:"mode"`       // "steal" or "mirror" (required)
+}
+
 // DevxConfigService defines a developer application in devx.yaml.
 type DevxConfigService struct {
-	Name        string                `yaml:"name"`
-	Runtime     string                `yaml:"runtime"`    // "host" (default), "container", "kubernetes", "cloud"
-	Command     []string              `yaml:"command"`    // e.g. ["npm", "run", "dev"]
-	DependsOn   []DevxConfigDependsOn `yaml:"depends_on"` // services/databases that must be healthy first
-	Healthcheck DevxConfigHealthcheck `yaml:"healthcheck"`
-	Port        int                   `yaml:"port"`
-	Env         map[string]string     `yaml:"env"`            // extra env vars
-	Sync        []DevxConfigSync      `yaml:"sync,omitempty"` // file sync mappings into containers
-	Dir         string                `yaml:"-"`              // Internal: working directory (set by include resolver)
+	Name            string                            `yaml:"name"`
+	Runtime         string                            `yaml:"runtime"`                      // "host" (default), "container", "kubernetes", "cloud", "bridge"
+	Command         []string                          `yaml:"command"`                      // e.g. ["npm", "run", "dev"]
+	DependsOn       []DevxConfigDependsOn             `yaml:"depends_on"`                   // services/databases that must be healthy first
+	Healthcheck     DevxConfigHealthcheck             `yaml:"healthcheck"`
+	Port            int                               `yaml:"port"`
+	Env             map[string]string                 `yaml:"env"`                          // extra env vars
+	Sync            []DevxConfigSync                  `yaml:"sync,omitempty"`               // file sync mappings into containers
+	BridgeTarget    *DevxConfigServiceBridgeTarget    `yaml:"bridge_target,omitempty"`       // Idea 46.3: inline outbound bridge
+	BridgeIntercept *DevxConfigServiceBridgeIntercept `yaml:"bridge_intercept,omitempty"`    // Idea 46.3: inline intercept
+	Dir             string                            `yaml:"-"`                            // Internal: working directory (set by include resolver)
 }
 
 // DevxConfigProfile defines a named overlay that merges additively onto the base config.
@@ -241,7 +260,56 @@ func resolveConfig(yamlPath, profile string) (*DevxConfig, error) {
 		fmt.Printf("📦 Applied profile: %s\n", profile)
 	}
 
+	if err := validateBridgeServices(cfg); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// validateBridgeServices checks that services with runtime: bridge are correctly configured.
+func validateBridgeServices(cfg *DevxConfig) error {
+	for _, svc := range cfg.Services {
+		if svc.Runtime != "bridge" {
+			continue
+		}
+
+		hasTarget := svc.BridgeTarget != nil
+		hasIntercept := svc.BridgeIntercept != nil
+
+		if !hasTarget && !hasIntercept {
+			return fmt.Errorf("service %q has runtime: bridge but neither bridge_target nor bridge_intercept is defined", svc.Name)
+		}
+		if hasTarget && hasIntercept {
+			return fmt.Errorf("service %q cannot have both bridge_target and bridge_intercept — use separate services", svc.Name)
+		}
+
+		if cfg.Bridge == nil {
+			return fmt.Errorf("service %q uses runtime: bridge but no top-level 'bridge:' section is defined in devx.yaml", svc.Name)
+		}
+
+		if hasTarget {
+			if svc.BridgeTarget.Port <= 0 {
+				return fmt.Errorf("service %q: bridge_target.port must be > 0", svc.Name)
+			}
+			if svc.BridgeTarget.Service == "" {
+				return fmt.Errorf("service %q: bridge_target.service is required", svc.Name)
+			}
+		}
+
+		if hasIntercept {
+			if svc.BridgeIntercept.Port <= 0 {
+				return fmt.Errorf("service %q: bridge_intercept.port must be > 0", svc.Name)
+			}
+			if svc.BridgeIntercept.Service == "" {
+				return fmt.Errorf("service %q: bridge_intercept.service is required", svc.Name)
+			}
+			if svc.BridgeIntercept.Mode != "steal" {
+				return fmt.Errorf("service %q: bridge_intercept.mode must be 'steal' (mirror not yet implemented)", svc.Name)
+			}
+		}
+	}
+	return nil
 }
 
 // loadAndResolve performs the recursive include resolution for a single devx.yaml file.
@@ -458,6 +526,12 @@ func mergeProfile(cfg *DevxConfig, profile DevxConfigProfile) {
 					for k, v := range ps.Env {
 						cfg.Services[i].Env[k] = v
 					}
+				}
+				if ps.BridgeTarget != nil {
+					cfg.Services[i].BridgeTarget = ps.BridgeTarget
+				}
+				if ps.BridgeIntercept != nil {
+					cfg.Services[i].BridgeIntercept = ps.BridgeIntercept
 				}
 				found = true
 				break

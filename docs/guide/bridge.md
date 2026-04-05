@@ -287,6 +287,66 @@ Generate the complete RBAC manifest with `devx bridge rbac`.
 
 Service mesh environments (Istio, Linkerd) are **not supported** in the current version. If a mesh sidecar is detected, `devx` prints a warning but proceeds. The selector swap may not work correctly with mesh-injected pods because the mesh control plane may override or ignore the selector change.
 
+## Hybrid Topology: `runtime: bridge` in `devx up` (Idea 46.3)
+
+The standalone `devx bridge connect` and `devx bridge intercept` commands remain available for ad-hoc use. But for full lifecycle integration, bridge services can be declared inline in `devx.yaml`'s `services:` array with `runtime: bridge`. This makes them first-class participants in the `devx up` DAG orchestrator — with dependency ordering, health gating, and unified cleanup.
+
+### Declaring Bridge Services
+
+```yaml
+bridge:
+  kubeconfig: ~/.kube/config
+  context: gke_my-org_us-central1_staging
+  namespace: staging
+
+services:
+  # Outbound: expose a remote K8s service locally
+  - name: remote-payments
+    runtime: bridge
+    bridge_target:
+      service: payments-api
+      port: 8080
+      local_port: 8080
+
+  # Inbound: steal cluster traffic to local dev server
+  - name: user-svc-intercept
+    runtime: bridge
+    bridge_intercept:
+      service: user-service
+      port: 3000
+      local_port: 3000
+      mode: steal
+    depends_on:
+      - name: local-user-svc
+        condition: service_healthy
+
+  # Local service depending on the bridged remote
+  - name: local-api
+    runtime: host
+    command: ["go", "run", "./cmd/api"]
+    port: 9090
+    depends_on:
+      - name: remote-payments
+        condition: service_healthy
+```
+
+### How It Works
+
+| Aspect | Connect (`bridge_target`) | Intercept (`bridge_intercept`) |
+|--------|---------------------------|-------------------------------|
+| **Blocking** | `pf.Start()` blocks forever → spawned in goroutine | Setup (deploy agent, patch selector, start tunnel) is finite (~10-30s) → runs synchronously |
+| **Healthcheck** | Polls `pf.State()` natively — avoids naive TCP | No separate healthcheck needed — returning `nil` from setup IS the readiness signal |
+| **Cleanup** | Kills `kubectl port-forward` subprocess | Restores selector → removes agent → stops Yamux tunnel |
+| **Session** | Entries marked `Origin: "dag"` | Entries marked `Origin: "dag"` |
+
+### Session Isolation
+
+DAG-managed bridge sessions are tagged with `Origin: "dag"` in `~/.devx/bridge.json`. Running `devx bridge disconnect` while `devx up` is active will **skip** these entries and print a warning — only standalone bridges are torn down. Stopping `devx up` (Ctrl+C) triggers the full DAG cleanup in reverse order.
+
+### Environment Variables
+
+After all bridge services are healthy, `devx up` auto-generates `~/.devx/bridge.env` with `BRIDGE_<SERVICE>_URL` variables. These are injected into `devx shell` automatically.
+
 ## Future: DNS Proxy (Idea 46.1.5)
 
 Currently, applications must use `BRIDGE_*_URL` environment variables to reach bridged services. A future enhancement will add an optional `--dns` flag that starts a lightweight DNS proxy, allowing apps to use native k8s DNS names (e.g., `payments-api.default.svc.cluster.local`) without code changes.

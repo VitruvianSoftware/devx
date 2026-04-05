@@ -213,7 +213,6 @@ var upCmd = &cobra.Command{
 				})
 			}
 
-			// Register service nodes
 			for _, svc := range cfgYaml.Services {
 				var deps []string
 				for _, d := range svc.DependsOn {
@@ -221,6 +220,9 @@ var upCmd = &cobra.Command{
 				}
 
 				rt := orchestrator.RuntimeHost
+				var bridgeMode orchestrator.BridgeMode
+				var bridgeCfg *orchestrator.BridgeNodeConfig
+
 				switch svc.Runtime {
 				case "container":
 					rt = orchestrator.RuntimeContainer
@@ -228,6 +230,52 @@ var upCmd = &cobra.Command{
 					rt = orchestrator.RuntimeKubernetes
 				case "cloud":
 					rt = orchestrator.RuntimeCloud
+				case "bridge":
+					rt = orchestrator.RuntimeBridge
+					// Build BridgeNodeConfig from inline fields + top-level bridge config
+					if svc.BridgeTarget != nil {
+						bridgeMode = orchestrator.BridgeModeConnect
+						ns := svc.BridgeTarget.Namespace
+						if ns == "" && cfgYaml.Bridge != nil {
+							ns = cfgYaml.Bridge.Namespace
+						}
+						if ns == "" {
+							ns = "default"
+						}
+						bridgeCfg = &orchestrator.BridgeNodeConfig{
+							Kubeconfig:    cfgYaml.Bridge.Kubeconfig,
+							Context:       cfgYaml.Bridge.Context,
+							Namespace:     ns,
+							TargetService: svc.BridgeTarget.Service,
+							RemotePort:    svc.BridgeTarget.Port,
+							LocalPort:     svc.BridgeTarget.LocalPort,
+							Mode:          orchestrator.BridgeModeConnect,
+						}
+					} else if svc.BridgeIntercept != nil {
+						bridgeMode = orchestrator.BridgeModeIntercept
+						ns := svc.BridgeIntercept.Namespace
+						if ns == "" && cfgYaml.Bridge != nil {
+							ns = cfgYaml.Bridge.Namespace
+						}
+						if ns == "" {
+							ns = "default"
+						}
+						agentImg := ""
+						if cfgYaml.Bridge != nil {
+							agentImg = cfgYaml.Bridge.AgentImage
+						}
+						bridgeCfg = &orchestrator.BridgeNodeConfig{
+							Kubeconfig:    cfgYaml.Bridge.Kubeconfig,
+							Context:       cfgYaml.Bridge.Context,
+							Namespace:     ns,
+							TargetService: svc.BridgeIntercept.Service,
+							RemotePort:    svc.BridgeIntercept.Port,
+							LocalPort:     svc.BridgeIntercept.LocalPort,
+							AgentImage:    agentImg,
+							Mode:          orchestrator.BridgeModeIntercept,
+							InterceptMode: svc.BridgeIntercept.Mode,
+						}
+					}
 				}
 
 				hc := orchestrator.HealthcheckConfig{}
@@ -246,15 +294,17 @@ var upCmd = &cobra.Command{
 				hc.Retries = svc.Healthcheck.Retries
 
 				_ = dag.AddNode(&orchestrator.Node{
-					Name:        svc.Name,
-					Type:        orchestrator.NodeService,
-					DependsOn:   deps,
-					Healthcheck: hc,
-					Port:        svc.Port,
-					Runtime:     rt,
-					Command:     svc.Command,
-					Env:         svc.Env,
-					Dir:         svc.Dir, // Idea 44: working directory for included projects
+					Name:         svc.Name,
+					Type:         orchestrator.NodeService,
+					DependsOn:    deps,
+					Healthcheck:  hc,
+					Port:         svc.Port,
+					Runtime:      rt,
+					Command:      svc.Command,
+					Env:          svc.Env,
+					Dir:          svc.Dir,
+					BridgeMode:   bridgeMode,
+					BridgeConfig: bridgeCfg,
 				})
 			}
 
@@ -276,6 +326,11 @@ var upCmd = &cobra.Command{
 				return fmt.Errorf("service orchestration failed: %w", dagErr)
 			}
 			fmt.Printf("\n✅ All services are running and healthy.\n")
+
+			// Idea 46.3: Generate bridge.env for devx shell after all bridge services are healthy
+			if err := dag.WriteBridgeEnvFile(); err != nil {
+				fmt.Fprintf(os.Stderr, "⚠️  Could not write bridge.env: %v\n", err)
+			}
 
 			// Idea 43: Hint about file syncing when sync blocks are present
 			hasSyncBlocks := false

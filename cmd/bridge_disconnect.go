@@ -85,8 +85,30 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	// Tear down intercepts first (restore selectors + remove agents)
+	// Filter out DAG-managed entries (Idea 46.3: owned by devx up)
+	var standaloneEntries []bridge.SessionEntry
+	for _, e := range session.Entries {
+		if e.Origin == "dag" {
+			if !outputJSON {
+				fmt.Printf("  ⚠️  Skipping DAG-managed bridge %q — managed by 'devx up'. Stop devx up to teardown.\n", e.Service)
+			}
+			continue
+		}
+		standaloneEntries = append(standaloneEntries, e)
+	}
+	var standaloneIntercepts []bridge.InterceptEntry
 	for _, ic := range session.Intercepts {
+		if ic.Origin == "dag" {
+			if !outputJSON {
+				fmt.Printf("  ⚠️  Skipping DAG-managed intercept %q — managed by 'devx up'. Stop devx up to teardown.\n", ic.Service)
+			}
+			continue
+		}
+		standaloneIntercepts = append(standaloneIntercepts, ic)
+	}
+
+	// Tear down standalone intercepts first (restore selectors + remove agents)
+	for _, ic := range standaloneIntercepts {
 		if !outputJSON {
 			fmt.Printf("  %s Restoring %s/%s selector...\n",
 				tui.StyleDetailRunning.Render("●"),

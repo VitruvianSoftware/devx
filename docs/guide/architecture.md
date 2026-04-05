@@ -106,7 +106,7 @@ Each subcommand group is self-contained in `cmd/` and communicates with backend 
 
 - **Idea 46.1 (Shipped):** Outbound connectivity via `kubectl port-forward` — purely client-side, no cluster modifications
 - **Idea 46.2 (Shipped):** Inbound traffic interception via self-healing agent pods. Deploys an ephemeral agent Job that mirrors the target Service's ports, swaps the selector, and tunnels inbound cluster traffic to the developer's local machine via Yamux multiplexing over `kubectl port-forward`
-- **Idea 46.3 (Future):** Full hybrid topology orchestrated by `devx up`
+- **Idea 46.3 (Shipped):** Full hybrid topology orchestrated by `devx up` — `runtime: bridge` services with connect/intercept modes participate in the DAG with correct dependency ordering, unified lifecycle, and bridge-native health checks
 
 Bridge injects `BRIDGE_*_URL` environment variables into `devx shell`, enabling local code to reach remote services without application-level changes.
 

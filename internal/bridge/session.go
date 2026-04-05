@@ -17,6 +17,7 @@ type SessionEntry struct {
 	State      string    `json:"state"`
 	PID        int       `json:"pid,omitempty"`
 	StartedAt  time.Time `json:"started_at"`
+	Origin     string    `json:"origin,omitempty"` // "standalone" or "dag" — prevents cross-teardown (Idea 46.3)
 }
 
 // InterceptEntry represents an active traffic intercept (Idea 46.2).
@@ -30,6 +31,7 @@ type InterceptEntry struct {
 	SessionID        string            `json:"session_id"`
 	OriginalSelector map[string]string `json:"original_selector"` // for restore on teardown
 	StartedAt        time.Time         `json:"started_at"`
+	Origin           string            `json:"origin,omitempty"` // "standalone" or "dag" — prevents cross-teardown (Idea 46.3)
 }
 
 // Session represents the full bridge session state persisted to ~/.devx/bridge.json.

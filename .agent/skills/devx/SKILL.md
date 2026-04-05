@@ -117,6 +117,14 @@ Connect the local environment to remote Kubernetes services. Bridge follows the 
 - `devx bridge rbac`: Generate minimum-privilege RBAC manifest for intercept
 - `devx bridge rbac -n staging`: Namespace-scoped RBAC
 
+**Hybrid Topology (Idea 46.3) — `runtime: bridge` in `devx up`:**
+Bridge services declared inline in `devx.yaml` with `runtime: bridge` participate in the `devx up` DAG orchestrator. Two sub-types:
+- `bridge_target`: Outbound port-forward to a remote K8s service
+- `bridge_intercept`: Inbound traffic steal from a remote K8s service to local
+
+DAG-managed sessions are tagged `Origin: "dag"` — `devx bridge disconnect` skips them.
+`bridge.env` is auto-generated after bridge nodes are healthy.
+
 ### Connect CLI Flags
 - `--kubeconfig`: Override kubeconfig path
 - `--context`: Override kube context

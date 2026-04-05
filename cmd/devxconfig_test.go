@@ -212,3 +212,305 @@ func contains(s, substr string) bool {
 			return false
 		}())
 }
+
+// ─── Idea 46.3: Bridge Validation Tests ──────────────────────────────────────
+
+func TestValidateBridgeServices_ValidTarget(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+bridge:
+  kubeconfig: ~/.kube/config
+  context: test-context
+  namespace: staging
+services:
+  - name: remote-payments
+    runtime: bridge
+    bridge_target:
+      service: payments-api
+      port: 8080
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Services) != 1 {
+		t.Fatalf("expected 1 service, got %d", len(cfg.Services))
+	}
+	if cfg.Services[0].Runtime != "bridge" {
+		t.Errorf("expected runtime 'bridge', got %q", cfg.Services[0].Runtime)
+	}
+	if cfg.Services[0].BridgeTarget == nil {
+		t.Fatal("expected BridgeTarget to be set")
+	}
+	if cfg.Services[0].BridgeTarget.Service != "payments-api" {
+		t.Errorf("expected target service 'payments-api', got %q", cfg.Services[0].BridgeTarget.Service)
+	}
+}
+
+func TestValidateBridgeServices_ValidIntercept(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+bridge:
+  kubeconfig: ~/.kube/config
+  context: test-context
+  namespace: staging
+services:
+  - name: intercept-svc
+    runtime: bridge
+    bridge_intercept:
+      service: user-service
+      port: 3000
+      local_port: 3000
+      mode: steal
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Services[0].BridgeIntercept == nil {
+		t.Fatal("expected BridgeIntercept to be set")
+	}
+	if cfg.Services[0].BridgeIntercept.Mode != "steal" {
+		t.Errorf("expected mode 'steal', got %q", cfg.Services[0].BridgeIntercept.Mode)
+	}
+}
+
+func TestValidateBridgeServices_NoBridgeSection(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+services:
+  - name: remote-svc
+    runtime: bridge
+    bridge_target:
+      service: payments-api
+      port: 8080
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := resolveConfig(yamlPath, "")
+	if err == nil {
+		t.Fatal("expected error when bridge section is missing, got nil")
+	}
+	if !contains(err.Error(), "no top-level 'bridge:' section") {
+		t.Errorf("expected bridge section error, got: %v", err)
+	}
+}
+
+func TestValidateBridgeServices_NeitherTargetNorIntercept(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+bridge:
+  context: test
+services:
+  - name: broken
+    runtime: bridge
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := resolveConfig(yamlPath, "")
+	if err == nil {
+		t.Fatal("expected error for bridge with no target/intercept, got nil")
+	}
+	if !contains(err.Error(), "neither bridge_target nor bridge_intercept") {
+		t.Errorf("expected neither error, got: %v", err)
+	}
+}
+
+func TestValidateBridgeServices_BothTargetAndIntercept(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+bridge:
+  context: test
+services:
+  - name: both
+    runtime: bridge
+    bridge_target:
+      service: svc-a
+      port: 8080
+    bridge_intercept:
+      service: svc-b
+      port: 3000
+      mode: steal
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := resolveConfig(yamlPath, "")
+	if err == nil {
+		t.Fatal("expected error for both target and intercept, got nil")
+	}
+	if !contains(err.Error(), "cannot have both") {
+		t.Errorf("expected 'cannot have both' error, got: %v", err)
+	}
+}
+
+func TestValidateBridgeServices_MissingTargetService(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+bridge:
+  context: test
+services:
+  - name: missing-svc
+    runtime: bridge
+    bridge_target:
+      port: 8080
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := resolveConfig(yamlPath, "")
+	if err == nil {
+		t.Fatal("expected error for missing target service name, got nil")
+	}
+	if !contains(err.Error(), "bridge_target.service is required") {
+		t.Errorf("expected service required error, got: %v", err)
+	}
+}
+
+func TestValidateBridgeServices_InvalidTargetPort(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+bridge:
+  context: test
+services:
+  - name: bad-port
+    runtime: bridge
+    bridge_target:
+      service: payments-api
+      port: 0
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := resolveConfig(yamlPath, "")
+	if err == nil {
+		t.Fatal("expected error for port 0, got nil")
+	}
+	if !contains(err.Error(), "bridge_target.port must be > 0") {
+		t.Errorf("expected port error, got: %v", err)
+	}
+}
+
+func TestValidateBridgeServices_InvalidInterceptMode(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-test
+bridge:
+  context: test
+services:
+  - name: bad-mode
+    runtime: bridge
+    bridge_intercept:
+      service: user-svc
+      port: 3000
+      mode: mirror
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := resolveConfig(yamlPath, "")
+	if err == nil {
+		t.Fatal("expected error for mirror mode, got nil")
+	}
+	if !contains(err.Error(), "mode must be 'steal'") {
+		t.Errorf("expected mode error, got: %v", err)
+	}
+}
+
+func TestValidateBridgeServices_ProfileMerge(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: bridge-profile-test
+bridge:
+  context: test
+  namespace: staging
+services:
+  - name: api
+    runtime: host
+    command: ["go", "run", "./cmd/api"]
+profiles:
+  hybrid:
+    services:
+      - name: remote-payments
+        runtime: bridge
+        bridge_target:
+          service: payments-api
+          port: 8080
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "hybrid")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Profile should add the bridge service
+	if len(cfg.Services) != 2 {
+		t.Fatalf("expected 2 services with hybrid profile, got %d: %+v", len(cfg.Services), cfg.Services)
+	}
+
+	var found bool
+	for _, svc := range cfg.Services {
+		if svc.Name == "remote-payments" {
+			found = true
+			if svc.Runtime != "bridge" {
+				t.Errorf("expected runtime 'bridge', got %q", svc.Runtime)
+			}
+			if svc.BridgeTarget == nil {
+				t.Error("expected BridgeTarget to be set after profile merge")
+			}
+		}
+	}
+	if !found {
+		t.Error("remote-payments service not found after profile merge")
+	}
+}
+
+func TestValidateBridgeServices_NonBridgeRuntimeIgnored(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	// A host service with no bridge fields should not trigger bridge validation
+	if err := os.WriteFile(yamlPath, []byte(`
+name: normal-test
+services:
+  - name: api
+    runtime: host
+    command: ["go", "run", "./cmd/api"]
+    port: 8080
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
+		t.Fatalf("non-bridge service should not trigger bridge validation: %v", err)
+	}
+	if cfg.Services[0].BridgeTarget != nil || cfg.Services[0].BridgeIntercept != nil {
+		t.Error("non-bridge service should have nil bridge fields")
+	}
+}
