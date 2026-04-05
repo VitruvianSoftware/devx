@@ -86,22 +86,27 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 	}
 
 	// Filter out DAG-managed entries (Idea 46.3: owned by devx up)
+	var dagEntries []bridge.SessionEntry
 	var standaloneEntries []bridge.SessionEntry
 	for _, e := range session.Entries {
 		if e.Origin == "dag" {
 			if !outputJSON {
 				fmt.Printf("  ⚠️  Skipping DAG-managed bridge %q — managed by 'devx up'. Stop devx up to teardown.\n", e.Service)
 			}
+			dagEntries = append(dagEntries, e)
 			continue
 		}
 		standaloneEntries = append(standaloneEntries, e)
 	}
+
+	var dagIntercepts []bridge.InterceptEntry
 	var standaloneIntercepts []bridge.InterceptEntry
 	for _, ic := range session.Intercepts {
 		if ic.Origin == "dag" {
 			if !outputJSON {
 				fmt.Printf("  ⚠️  Skipping DAG-managed intercept %q — managed by 'devx up'. Stop devx up to teardown.\n", ic.Service)
 			}
+			dagIntercepts = append(dagIntercepts, ic)
 			continue
 		}
 		standaloneIntercepts = append(standaloneIntercepts, ic)
@@ -130,12 +135,20 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Clean up session files
-	if err := bridge.ClearSession(); err != nil {
-		return fmt.Errorf("cleaning session: %w", err)
+	// Clean up session files or rewrite safely preserving DAG entries
+	if len(dagEntries) == 0 && len(dagIntercepts) == 0 {
+		if err := bridge.ClearSession(); err != nil {
+			return fmt.Errorf("cleaning session: %w", err)
+		}
+	} else {
+		session.Entries = dagEntries
+		session.Intercepts = dagIntercepts
+		if err := bridge.SaveSession(session); err != nil {
+			return fmt.Errorf("saving session: %w", err)
+		}
 	}
 
-	total := len(session.Entries) + len(session.Intercepts)
+	total := len(standaloneEntries) + len(standaloneIntercepts)
 
 	if outputJSON {
 		type disconnectOutput struct {
