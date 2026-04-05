@@ -51,7 +51,7 @@ func TestPortForwardStateTransitions(t *testing.T) {
 
 func TestPortForwardStartWithCancelledContext(t *testing.T) {
 	pf := NewPortForward("/tmp/nonexistent-kc", "ctx", "default", "test-svc", 8080, 0)
-	pf.ResolveLocalPort()
+	_, _ = pf.ResolveLocalPort()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately

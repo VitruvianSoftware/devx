@@ -15,7 +15,7 @@ func TestSessionSaveLoadClear(t *testing.T) {
 	defer func() { os.Setenv("HOME", origHome) }()
 
 	// Ensure .devx dir exists
-	os.MkdirAll(filepath.Join(tmpDir, ".devx"), 0o755)
+	_ = os.MkdirAll(filepath.Join(tmpDir, ".devx"), 0o755)
 
 	session := &Session{
 		Kubeconfig: "/tmp/kubeconfig",
@@ -122,7 +122,7 @@ func TestEnvPrefix(t *testing.T) {
 func TestGenerateEnvFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("HOME", tmpDir)
-	os.MkdirAll(filepath.Join(tmpDir, ".devx"), 0o755)
+	_ = os.MkdirAll(filepath.Join(tmpDir, ".devx"), 0o755)
 
 	entries := []SessionEntry{
 		{

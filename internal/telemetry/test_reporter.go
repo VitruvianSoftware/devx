@@ -212,7 +212,7 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 					projectName = "unknown"
 				}
 
-				spanName := "go_test"
+				var spanName string
 				if event.Test != "" {
 					spanName = "go_test: " + event.Test
 				} else {
