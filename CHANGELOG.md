@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0](https://github.com/VitruvianSoftware/devx/compare/v0.30.0...v0.31.0) (2026-04-05)
+
+
+### Features
+
+* **pipeline:** implement lifecycle hooks and custom actions (Idea 45.4) ([43a4660](https://github.com/VitruvianSoftware/devx/commit/43a4660f480237a7e02798ee29b5787dd10d8c19))
+
 ## [0.30.0](https://github.com/VitruvianSoftware/devx/compare/v0.29.0...v0.30.0) (2026-04-04)
 
 
