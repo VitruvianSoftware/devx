@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/VitruvianSoftware/devx/internal/secrets"
 )
 
 type FakeRuntime struct {
@@ -17,6 +19,9 @@ type FakeRuntime struct {
 // that intercept external tool executions (podman, docker, cloudflared).
 func SetupFakeRuntime(t *testing.T) *FakeRuntime {
 	t.Helper()
+
+	// Disable interactive prompts globally during test execution to prevent blocking or ANSI garbage
+	secrets.NonInteractive = true
 
 	baseDir := t.TempDir()
 	binDir := filepath.Join(baseDir, "bin")

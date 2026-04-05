@@ -489,7 +489,7 @@ func runCmd(dir string, args []string, verbose bool) error {
 			outWriter = os.Stdout
 			errWriter = os.Stderr
 		}
-		_, err := telemetry.RunGoTestWithTelemetry(args, dir, outWriter, errWriter)
+		_, err := telemetry.RunGoTestWithTelemetry(args, dir, outWriter, errWriter, verbose, nil)
 		return err
 	}
 

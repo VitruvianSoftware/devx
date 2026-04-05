@@ -51,7 +51,8 @@ func InjectJSONFlag(args []string) []string {
 
 // RunGoTestWithTelemetry runs the wrapped go test -json command,
 // parses output, emits spans, and reconstructs stdout.
-func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr io.Writer) (int, error) {
+// logWriter, if non-nil, always receives full detailed output regardless of the detailed flag.
+func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr io.Writer, detailed bool, logWriter io.Writer) (int, error) {
 	newArgs := InjectJSONFlag(args)
 
 	// Use discard writers if nil (e.g. non-verbose in ship.go)
@@ -77,6 +78,13 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 	// Track test start times for accurate duration on fast tests
 	testStarts := make(map[string]time.Time)
 
+	// Counters for the summary line
+	var totalPassed, totalFailed, totalSkipped int
+	var pkgCount int
+
+	// Buffer per-test output so we can dump it only on failure
+	testOutputBuf := make(map[string][]string) // key: "pkg/TestName"
+
 	// Use a WaitGroup to ensure the goroutine finishes processing before we return
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -91,62 +99,128 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 
 			var event GoTestEvent
 			if err := json.Unmarshal(line, &event); err != nil {
-				// Not JSON — compilation error or build failure. Pipe to stderr.
+				// Not JSON — compilation error or build failure. Always show.
 				fmt.Fprintln(stderr, string(line))
 				continue
 			}
 
 			switch event.Action {
 			case "run":
-				// Track start time for duration measurement
 				if event.Test != "" {
 					testStarts[event.Package+"/"+event.Test] = event.Time
 				}
 
 			case "output":
-				fmt.Fprint(stdout, event.Output)
+				// Always write to log file if available (full detail)
+				if logWriter != nil {
+					fmt.Fprint(logWriter, event.Output)
+				}
+
+				if detailed {
+					// Detailed mode: pass everything through verbatim
+					fmt.Fprint(stdout, event.Output)
+				} else {
+					// Default mode: buffer test-level output for failure replay
+					if event.Test != "" {
+						key := event.Package + "/" + event.Test
+						testOutputBuf[key] = append(testOutputBuf[key], event.Output)
+					}
+					// Suppress all stdout in default mode — only failures break through
+				}
 
 			case "pass", "fail", "skip":
 				if event.Test == "" {
-					// Package-level event — skip telemetry
+					// ── Package-level result ──
+					pkgCount++
+					if detailed {
+						continue // detailed mode already printed everything
+					}
+
+					pkg := event.Package
+					if idx := strings.Index(pkg, "/devx/"); idx != -1 {
+						pkg = pkg[idx+6:]
+					} else if strings.HasSuffix(pkg, "/devx") {
+						pkg = "."
+					}
+
+					dur := time.Duration(event.Elapsed * float64(time.Second))
+
+					switch event.Action {
+					case "pass":
+						fmt.Fprintf(stdout, "  ✓ %s (%s)\n", pkg, formatPkgDur(dur))
+					case "fail":
+						fmt.Fprintf(stdout, "  ✗ %s (%s)\n", pkg, formatPkgDur(dur))
+					}
 					continue
 				}
 
-				symbol := "✓"
-				if event.Action == "fail" {
-					symbol = "✗"
-				} else if event.Action == "skip" {
-					symbol = "○"
+				// ── Individual test result ──
+				switch event.Action {
+				case "pass":
+					totalPassed++
+				case "fail":
+					totalFailed++
+				case "skip":
+					totalSkipped++
 				}
 
-				// Calculate duration: use Elapsed if available, else wall clock
+				// Calculate duration
 				dur := time.Duration(event.Elapsed * float64(time.Second))
 				if dur == 0 {
-					// Fast tests report 0.00s. Use our tracked start time instead.
 					key := event.Package + "/" + event.Test
 					if start, ok := testStarts[key]; ok {
 						dur = event.Time.Sub(start)
 					}
-					// Floor at 1µs so the span has non-zero width
 					if dur <= 0 {
 						dur = time.Microsecond
 					}
 				}
 
-				durMs := dur.Milliseconds()
-				if durMs == 0 {
-					fmt.Fprintf(stdout, "%s %s  %s (<1ms)\n", symbol, strings.ToUpper(event.Action), event.Test)
-				} else {
-					fmt.Fprintf(stdout, "%s %s  %s (%dms)\n", symbol, strings.ToUpper(event.Action), event.Test, durMs)
+				if detailed {
+					// Detailed mode: print every test result
+					symbol := "✓"
+					if event.Action == "fail" {
+						symbol = "✗"
+					} else if event.Action == "skip" {
+						symbol = "○"
+					}
+					durMs := dur.Milliseconds()
+					if durMs == 0 {
+						fmt.Fprintf(stdout, "%s %s  %s (<1ms)\n", symbol, strings.ToUpper(event.Action), event.Test)
+					} else {
+						fmt.Fprintf(stdout, "%s %s  %s (%dms)\n", symbol, strings.ToUpper(event.Action), event.Test, durMs)
+					}
+				} else if event.Action == "fail" {
+					// Default mode: dump the buffered output for this failed test
+					key := event.Package + "/" + event.Test
+					fmt.Fprintf(stdout, "\n  ✗ FAIL %s\n", event.Test)
+					if buf, ok := testOutputBuf[key]; ok {
+						for _, line := range buf {
+							fmt.Fprintf(stdout, "    %s", line)
+						}
+					}
+					fmt.Fprintln(stdout)
 				}
 
-				// Emit telemetry span
+				// Clean up buffer
+				key := event.Package + "/" + event.Test
+				delete(testOutputBuf, key)
+
+				// Emit telemetry span (always, regardless of mode)
 				projectName := os.Getenv("DEVX_PROJECT")
 				if projectName == "" {
 					projectName = "unknown"
 				}
 
-				ExportSpan("go_test", dur,
+				spanName := "go_test"
+				if event.Test != "" {
+					spanName = "go_test: " + event.Test
+				} else {
+					// Default to package name for package-level events
+					spanName = "go_test: " + event.Package
+				}
+
+				ExportSpan(spanName, dur,
 					Attr("devx.test.name", event.Test),
 					Attr("devx.test.package", event.Package),
 					Attr("devx.test.status", event.Action),
@@ -160,6 +234,21 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 	pipeWriter.Close()
 	wg.Wait() // Wait for all output processing to complete
 
+	// Print summary line in default mode
+	if !detailed && totalPassed+totalFailed+totalSkipped > 0 {
+		parts := []string{}
+		if totalPassed > 0 {
+			parts = append(parts, fmt.Sprintf("%d passed", totalPassed))
+		}
+		if totalFailed > 0 {
+			parts = append(parts, fmt.Sprintf("%d failed", totalFailed))
+		}
+		if totalSkipped > 0 {
+			parts = append(parts, fmt.Sprintf("%d skipped", totalSkipped))
+		}
+		fmt.Fprintf(stdout, "  %d packages, %s\n", pkgCount, strings.Join(parts, ", "))
+	}
+
 	exitCode := 0
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -170,4 +259,15 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 	}
 
 	return exitCode, err
+}
+
+// formatPkgDur formats a package test duration for display.
+func formatPkgDur(d time.Duration) string {
+	if d < time.Millisecond {
+		return "<1ms"
+	}
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	return fmt.Sprintf("%.1fs", d.Seconds())
 }

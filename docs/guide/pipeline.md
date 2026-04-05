@@ -115,13 +115,18 @@ devx action ci              # run the full CI suite locally
 devx action seed-db          # seed the database
 devx action --list           # list all available actions
 devx action ci --dry-run     # preview commands without executing
+devx action ci --detailed    # show full verbose output instead of concise summary
 devx action ci --json        # machine-readable output
 ```
 
-Each action emits a single `devx_action` telemetry span containing the aggregate duration and exit code — visible in your Grafana dashboard alongside build metrics.
+### Action Telemetry & TUI Mode
+
+By default, `devx action` executes commands using a **Concise TUI Mode**. It fully suppresses messy `stdout` (like hundreds of `t.Log` traces or compilation steps) and renders clean `✓ package name` summary dots to your terminal. Full raw logs are silently appended to `~/.devx/logs/action-<name>.log` for auditing, and automatically dumped inline only if a step `✗ fails`.
+
+Additionally, every single step executed within an action natively emits `devx_run` telemetry spans containing execution duration and exit codes — beautifully populating your "Build & Run Activity" Grafana metrics automatically.
 
 ::: tip GO TEST INTERCEPTION
-If any sub-command inside a custom action is a `go test` invocation, it automatically gets the same granular per-test telemetry as `devx run -- go test` and `devx agent ship`.
+If any sub-command inside a custom action is a `go test` invocation, it gets deeply intercepted. `devx` automatically instruments `-json`, aggregates pass/fail states into the TUI, and streams microscopic `go_test: TestName` spans to Grafana for unparalleled metrics.
 :::
 
 ## `devx run` — Universal Telemetry Wrapper

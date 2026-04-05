@@ -18,6 +18,7 @@ var envFile string
 var outputJSON bool
 var NonInteractive bool
 var DryRun bool
+var DetailedOutput bool
 
 var rootCmd = &cobra.Command{
 	Use:   "devx",
@@ -86,6 +87,8 @@ func init() {
 		"Bypass interactive prompts and auto-confirm destructive actions")
 	rootCmd.PersistentFlags().BoolVar(&DryRun, "dry-run", false,
 		"Print what destructive actions would do without executing them")
+	rootCmd.PersistentFlags().BoolVar(&DetailedOutput, "detailed", false,
+		"Enable detailed Go test output (shows individual passing tests instead of just package summaries)")
 
 	rootCmd.AddCommand(vmCmd)
 	rootCmd.AddCommand(tunnelCmd)

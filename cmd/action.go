@@ -79,6 +79,9 @@ func runAction(_ *cobra.Command, args []string) error {
 			action := cfg.CustomActions[name]
 			cmds := action.Cmds()
 			fmt.Printf("  %-20s  (%d command%s)\n", name, len(cmds), pluralize(len(cmds)))
+			for _, cmdArgs := range cmds {
+				fmt.Printf("    - %s\n", strings.Join(cmdArgs, " "))
+			}
 		}
 		return nil
 	}
@@ -161,20 +164,25 @@ func runAction(_ *cobra.Command, args []string) error {
 
 		// Go test interception for granular telemetry
 		if telemetry.IsGoTestCmd(cmdArgs) {
-			code, _ := telemetry.RunGoTestWithTelemetry(cmdArgs, cwd, outWriter, errWriter)
+			// For go test: terminal gets clean summary, log file gets full detail
+			var testLog io.Writer
+			if logFile != nil {
+				testLog = logFile
+			}
+			code, _ := telemetry.RunGoTestWithTelemetry(cmdArgs, cwd, os.Stdout, os.Stderr, DetailedOutput, testLog)
 			if code != 0 {
 				exitCode = code
 				break
 			}
 			continue
 		}
-
 		command := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 		command.Dir = cwd
 		command.Stdout = outWriter
 		command.Stderr = errWriter
 		command.Stdin = os.Stdin
 
+		cmdStart := time.Now()
 		if err := command.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to start %q: %v\n", strings.Join(cmdArgs, " "), err)
 			exitCode = 1
@@ -195,9 +203,23 @@ func runAction(_ *cobra.Command, args []string) error {
 				exitCode = 1
 			}
 			signal.Stop(sigChan)
+			
+			// Always record the failure span before breaking
+			cmdDuration := time.Since(cmdStart)
+			telemetry.RecordEvent("devx_run", cmdDuration,
+				telemetry.Attr("devx.command", strings.Join(cmdArgs, " ")),
+				telemetry.Attr("devx.exit_code", exitCode),
+			)
 			break
 		}
 		signal.Stop(sigChan)
+
+		// Record successful command run telemetry
+		cmdDuration := time.Since(cmdStart)
+		telemetry.RecordEvent("devx_run", cmdDuration,
+			telemetry.Attr("devx.command", strings.Join(cmdArgs, " ")),
+			telemetry.Attr("devx.exit_code", exitCode),
+		)
 	}
 
 	duration := time.Since(start)

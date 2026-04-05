@@ -70,7 +70,19 @@ When shipping features on the `devx` CLI, the task is **not done** until the off
 - **Validation:** Before running the `/push` workflow to cut a release, PR, or commit, you must pause and explicitly review the `docs/guide/` directory to ensure all new commands, flags, and `devx.yaml` schema fields are documented.
 - **Example configs:** Schema changes MUST be reflected with thorough examples in `devx.yaml.example`.
 
-## 🚀 9. Ship Code with `devx agent ship` (MANDATORY)
+## 🛠️ 9. CI and Task Execution (`devx action`)
+
+Do NOT manually run native build or test commands (like `npm run build`, `go test`, `cargo test`, `pytest`, etc.) yourself.
+
+Any time you need to execute unit tests, integration tests, or verify compilation, use `devx`'s custom action runner by invoking predefined sequences defined in the project's `devx.yaml`:
+
+- `devx action ci`: Executes the standard CI pipeline for this project.
+- `devx action test`: Executes the standalone test suite (if defined).
+- `devx action <action-name> --detailed`: Use this if a step fails and you need the full verbose terminal output (instead of the concise TUI summary) to debug the failure log.
+
+These devx wrappers natively emit rich telemetry for Grafana observability and enforce deterministic test environments. This rule is absolute: **Dogfood the local CLI.**
+
+## 🚀 10. Ship Code with `devx agent ship` (MANDATORY)
 
 You are **FORBIDDEN** from using raw `git push` in this repository. A pre-push git hook will block you if you try. Instead, you MUST use `devx agent ship` to commit, push, and verify CI:
 
