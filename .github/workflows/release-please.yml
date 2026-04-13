@@ -19,6 +19,7 @@ jobs:
         uses: googleapis/release-please-action@v4
         with:
           release-type: go
+          token: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}
 
   goreleaser:
     runs-on: ubuntu-latest
@@ -41,4 +42,4 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}

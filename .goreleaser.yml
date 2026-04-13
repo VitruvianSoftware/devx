@@ -61,3 +61,14 @@ release:
     curl -sL https://github.com/VitruvianSoftware/devx/releases/download/v{{.Version}}/devx_linux_amd64.tar.gz | tar xz
     sudo mv devx /usr/local/bin/
     ```
+
+brews:
+  - repository:
+      owner: VitruvianSoftware
+      name: homebrew-tap
+    directory: Formula
+    homepage: "https://github.com/VitruvianSoftware/devx"
+    description: "Supercharged local dev environment — Podman + Cloudflare Tunnels + Tailscale in one CLI"
+    license: "MIT"
+    test: |
+      system "#{bin}/devx", "version"
