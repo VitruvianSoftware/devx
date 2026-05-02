@@ -4,6 +4,60 @@ To build `devx` into a ubiquitous, "single pane of glass" orchestration tool, we
 
 This document maps the developer journey from **Day 1 (Onboarding)** to **Day N (Shipping & Maintenance)**, identifying core frustrations at each phase, the trending tools aiming to solve them, and how `devx` can adapt to become the ultimate integration layer without reinventing the wheel.
 
+## 🗺️ The `devx` Control Plane Architecture
+
+The following diagram illustrates how `devx` positions itself not as a replacement for all specialized tools, but as the unified orchestration layer connecting them across the entire developer lifecycle.
+
+```mermaid
+graph TD
+    classDef devx fill:#4b32c3,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef phase fill:#2d3748,stroke:#cbd5e0,color:#fff,stroke-width:1px,stroke-dasharray: 5 5;
+    classDef external fill:#edf2f7,stroke:#a0aec0,color:#2d3748,stroke-width:1px;
+
+    DevX[devx Control Plane]:::devx
+
+    subgraph Day1 [Phase 1: Environment]
+        direction TB
+        Nix[Devbox / Nix]:::external
+        VMs[OrbStack / DevPod]:::external
+    end
+
+    subgraph Day1_5 [Phase 2: Orchestration]
+        direction TB
+        Runners[Just / Task]:::external
+        Secrets[Doppler]:::external
+        Compose[Docker Compose]:::external
+    end
+
+    subgraph Day2 [Phase 3: Inner Loop]
+        direction TB
+        Telepresence[Mirrord / Telepresence]:::external
+        Ngrok[Cloudflared / Ngrok]:::external
+    end
+
+    subgraph DayN [Phase 4: Shipping]
+        direction TB
+        GHCLI[GitHub CLI / Act]:::external
+        Hooks[Husky]:::external
+    end
+
+    DevX -->|devx init| Day1
+    DevX -->|devx up & action| Day1_5
+    DevX -->|devx bridge & tunnel| Day2
+    DevX -->|devx agent ship| DayN
+    
+    class Day1,Day1_5,Day2,DayN phase;
+```
+
+## 📊 Tooling Comparison Matrix
+
+| Phase | Core Developer Frustration | Point Solutions in Ecosystem | The `devx` Unification Strategy |
+| :--- | :--- | :--- | :--- |
+| **Day 1: Environment** | Version mismatches, "It works on my machine", complex guides | Devbox, Devenv, DevPod, OrbStack | **`devx init`** - Orchestrates Nix & VMs transparently |
+| **Day 1.5: Orchestrate** | Microservice sprawl, messy Makefiles, Slack `.env` sharing | Just, Task, Doppler, Docker Compose | **`devx up / action`** - DAG parallel execution & task wrapping |
+| **Day 2: Inner-Loop** | Testing K8s APIs locally, webhook testing, long CI loops | Mirrord, Telepresence, Ngrok, Cloudflared | **`devx bridge / tunnel`** - Native lightweight secure tunnels |
+| **Day N: Shipping** | CI/CD flakes, broken main branches, context switching | GitHub CLI (`gh`), Act, Husky | **`devx agent ship`** - Pre-flight gating & blocking CI polling |
+
 ---
 
 ## Phase 1: Day 1 — Environment Bootstrapping
