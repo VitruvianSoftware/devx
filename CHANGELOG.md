@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0](https://github.com/VitruvianSoftware/devx/compare/v0.32.1...v0.33.0) (2026-05-02)
+
+
+### Features
+
+* merge homelab tool into devx as a subcommand ([#130](https://github.com/VitruvianSoftware/devx/issues/130)) ([93f3524](https://github.com/VitruvianSoftware/devx/commit/93f35244c0e802fdcbe7bcad213e8ff984ab7ef3))
+
 ## [0.32.1](https://github.com/VitruvianSoftware/devx/compare/v0.32.0...v0.32.1) (2026-04-13)
 
 
