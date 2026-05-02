@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/doctor"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
+	"github.com/VitruvianSoftware/devx/internal/provider"
 )
 
 // DumpReport represents the full topological and contextual state of the devx environment.
@@ -51,7 +51,7 @@ type RedactedConfig struct {
 }
 
 // GenerateDump orchestrates the collection of state for all sub-systems.
-func GenerateDump(cfg *config.Config, vmProviderName string, vmState string, tsStatus string) (*DumpReport, error) {
+func GenerateDump(cfg *config.Config, prov *provider.Provider, vmState string, tsStatus string) (*DumpReport, error) {
 	report := &DumpReport{}
 
 	// System Health (Doctor Audit)
@@ -61,7 +61,7 @@ func GenerateDump(cfg *config.Config, vmProviderName string, vmState string, tsS
 	// VM
 	report.VM = VMStatus{
 		Name:      cfg.DevHostname,
-		Provider:  vmProviderName,
+		Provider:  prov.VM.Name(),
 		State:     vmState,
 		Tailscale: tsStatus,
 	}
@@ -78,14 +78,10 @@ func GenerateDump(cfg *config.Config, vmProviderName string, vmState string, tsS
 		}
 	}
 
-	// Topology Containers (using docker/podman ps to find all devx- db/ and custom)
+	// Topology Containers (using provider Runtime)
 	// For simplicity in the dump, we list all containers.
-	runtime := "podman"
-	if vmProviderName == "orbstack" || vmProviderName == "docker" {
-		runtime = "docker"
-	}
 
-	out, err := exec.Command(runtime, "ps", "-a", "--filter", "name=devx-", "--format", "{{.Names}}|{{.Image}}|{{.State}}").CombinedOutput()
+	out, err := prov.Runtime.Exec("ps", "-a", "--filter", "name=devx-", "--format", "{{.Names}}|{{.Image}}|{{.State}}")
 	if err == nil {
 		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 		for _, line := range lines {
@@ -101,7 +97,7 @@ func GenerateDump(cfg *config.Config, vmProviderName string, vmState string, tsS
 				}
 				// If not running, grab recent logs
 				if strings.ToLower(parts[2]) != "running" && strings.ToLower(parts[2]) != "up" {
-					logOut, _ := exec.Command(runtime, "logs", "--tail", "25", cd.Name).CombinedOutput()
+					logOut, _ := prov.Runtime.Exec("logs", "--tail", "25", cd.Name)
 					cd.Logs = string(logOut)
 				}
 				report.Topology.DevxManagedContainers = append(report.Topology.DevxManagedContainers, cd)

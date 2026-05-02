@@ -58,11 +58,11 @@ systemd:
 
         [Service]
         EnvironmentFile=/etc/dev-secrets.env
-        ExecStartPre=-/usr/bin/podman rm -f tailscaled
-        ExecStart=/usr/bin/podman run --name tailscaled --network=host --privileged \
+        ExecStartPre=-/usr/bin/env ${RUNTIME} rm -f tailscaled
+        ExecStart=/usr/bin/env ${RUNTIME} run --name tailscaled --network=host --privileged \
           -v /var/lib/tailscale:/var/lib/tailscale -v /dev/net/tun:/dev/net/tun \
           docker.io/tailscale/tailscale:latest tailscaled --state=/var/lib/tailscale/tailscaled.state
-        ExecStop=/usr/bin/podman stop tailscaled
+        ExecStop=/usr/bin/env ${RUNTIME} stop tailscaled
         Restart=always
 
         [Install]
@@ -79,12 +79,12 @@ systemd:
 
         [Service]
         EnvironmentFile=/etc/dev-secrets.env
-        ExecStartPre=-/usr/bin/podman rm -f cloudflared
-        # Runs on host network so it can route to any port exposed by other podman containers
-        ExecStart=/usr/bin/podman run --name cloudflared --network=host \
+        ExecStartPre=-/usr/bin/env ${RUNTIME} rm -f cloudflared
+        # Runs on host network so it can route to any port exposed by other containers
+        ExecStart=/usr/bin/env ${RUNTIME} run --name cloudflared --network=host \
           -v /etc/cloudflared:/etc/cloudflared \
           docker.io/cloudflare/cloudflared:latest tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
-        ExecStop=/usr/bin/podman stop cloudflared
+        ExecStop=/usr/bin/env ${RUNTIME} stop cloudflared
         Restart=always
 
         [Install]

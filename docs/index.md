@@ -5,7 +5,7 @@ layout: home
 hero:
   name: "devx"
   text: "Advanced Agentic Coding Environment Orchestrator"
-  tagline: "Unifying Podman VMs, Ephemeral Databases, Cloudflare Tunnels, and AI Agents."
+  tagline: "Unifying Container VMs, Ephemeral Databases, Cloudflare Tunnels, and AI Agents."
   image:
     light: /hero-light.png
     dark: /hero-dark.png
@@ -20,7 +20,7 @@ hero:
 
 features:
   - title: Ephemeral Virtual Machines
-    details: Instantaneously spawns isolated, high-performance Podman Linux VMs, bypassing complex hypervisor configurations.
+    details: Instantaneously spawns isolated, high-performance Linux VMs via your chosen provider (Lima, Colima, Docker, OrbStack, or Podman), bypassing complex hypervisor configurations.
   - title: Single-Command Database Spawning
     details: Need a Postgres, MySQL, or Redis instance? `devx db spawn postgres` provisions and maps it instantly, bypassing heavy Kubernetes layers.
   - title: Native Ngrok-Style Tunneling

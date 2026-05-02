@@ -12,7 +12,7 @@ import (
 // Build substitutes variables into the Butane template, compiles it via
 // butane, writes the Ignition JSON to a temp file, and returns its path.
 // The caller is responsible for removing the temp file when done.
-func Build(templatePath, tunnelToken, tunnelID, hostname, cfDomain string) (string, error) {
+func Build(templatePath, tunnelToken, tunnelID, hostname, cfDomain, runtime string) (string, error) {
 	templateData, err := os.ReadFile(templatePath)
 	if err != nil {
 		return "", fmt.Errorf("reading Butane template %s: %w", templatePath, err)
@@ -28,6 +28,7 @@ func Build(templatePath, tunnelToken, tunnelID, hostname, cfDomain string) (stri
 		"DEV_HOSTNAME":    hostname,
 		"CF_DOMAIN":       cfDomain,
 		"SSH_PUB_KEY":     sshPubKey,
+		"RUNTIME":         runtime,
 	}
 	populated := os.Expand(string(templateData), func(key string) string {
 		if v, ok := vars[key]; ok {
@@ -72,7 +73,7 @@ func Build(templatePath, tunnelToken, tunnelID, hostname, cfDomain string) (stri
 // Validate checks that the template compiles cleanly with dummy values.
 // Useful for CI.
 func Validate(templatePath string) error {
-	path, err := Build(templatePath, "dummy-token", "dummy-id", "test-machine", "test.domain")
+	path, err := Build(templatePath, "dummy-token", "dummy-id", "test-machine", "test.domain", "podman")
 	if err != nil {
 		return err
 	}

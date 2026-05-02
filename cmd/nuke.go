@@ -42,8 +42,13 @@ func runNuke(_ *cobra.Command, _ []string) error {
 
 	fmt.Printf("%s\n\n", tui.StyleTitle.Render("devx nuke — scanning project..."))
 
+	prov, err := getFullProvider()
+	if err != nil {
+		return err
+	}
+
 	// Collect the manifest — nothing is deleted yet
-	manifest, err := nuke.Collect(cwd, nukeRuntime)
+	manifest, err := nuke.Collect(cwd, prov.Runtime)
 	if err != nil {
 		return fmt.Errorf("scan failed: %w", err)
 	}

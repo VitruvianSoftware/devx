@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/VitruvianSoftware/devx/internal/provider"
 )
 
 // Item represents a single resource that will be deleted by devx nuke.
@@ -25,12 +27,12 @@ type Item struct {
 type Manifest struct {
 	Items     []Item
 	TotalSize int64
-	Runtime   string // "podman" or "docker"
+	Runtime   provider.ContainerRuntime
 }
 
 // Collect scans the given project directory and the devx VM for everything
 // that would be removed by nuke. It never deletes anything — only reads.
-func Collect(projectDir, runtime string) (*Manifest, error) {
+func Collect(projectDir string, runtime provider.ContainerRuntime) (*Manifest, error) {
 	m := &Manifest{Runtime: runtime}
 
 	// 1. Language-specific caches and build artefacts
@@ -142,12 +144,12 @@ func (m *Manifest) collectLocalFS(root string) {
 }
 
 // collectDevxContainers lists all devx-managed containers and volumes.
-func (m *Manifest) collectDevxContainers(runtime string) {
+func (m *Manifest) collectDevxContainers(runtime provider.ContainerRuntime) {
 	// Containers
-	out, err := exec.Command(runtime, "ps", "-a",
+	out, err := runtime.Exec("ps", "-a",
 		"--filter", "label=managed-by=devx",
 		"--format", "{{.Names}}\t{{.Status}}",
-	).Output()
+	)
 	if err == nil {
 		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 			parts := strings.SplitN(line, "\t", 2)
@@ -164,10 +166,10 @@ func (m *Manifest) collectDevxContainers(runtime string) {
 	}
 
 	// Volumes
-	out, err = exec.Command(runtime, "volume", "ls",
+	out, err = runtime.Exec("volume", "ls",
 		"--filter", "label=managed-by=devx",
 		"--format", "{{.Name}}",
-	).Output()
+	)
 	if err == nil {
 		for _, name := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 			name = strings.TrimSpace(name)
@@ -251,10 +253,10 @@ func (m *Manifest) Execute(progress func(item Item, err error)) {
 		case "dir", "file":
 			err = os.RemoveAll(item.Path)
 		case "container":
-			_ = exec.Command(m.Runtime, "stop", item.Label).Run()
-			err = exec.Command(m.Runtime, "rm", "-f", item.Label).Run()
+			_, _ = m.Runtime.Exec("stop", item.Label)
+			_, err = m.Runtime.Exec("rm", "-f", item.Label)
 		case "volume":
-			err = exec.Command(m.Runtime, "volume", "rm", "-f", item.Label).Run()
+			_, err = m.Runtime.Exec("volume", "rm", "-f", item.Label)
 		case "sync":
 			err = exec.Command("mutagen", "sync", "terminate", item.Label).Run()
 		}

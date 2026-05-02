@@ -102,7 +102,7 @@ When you run `devx db pull postgres`, `devx` will:
 | Flag | Default | Description |
 |---|---|---|
 | `-j, --jobs` | CPU cores | Parallel workers for `format: custom` (overrides `devx.yaml`) |
-| `--runtime` | `podman` | Container runtime |
+| `--runtime` | `auto-detected` | Container runtime (`podman`, `docker`, `nerdctl`) |
 
 ::: warning SQL mode: drop commands
 Ensure your SQL dump includes `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` or `DROP TABLE IF EXISTS` before each table. `devx` streams the dump sequentially and does not automatically drop the database first.

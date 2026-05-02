@@ -17,7 +17,7 @@ force-stopped before restoration to prevent port collisions.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		vm, err := getVMProvider()
+		prov, err := getFullProvider()
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ force-stopped before restoration to prevent port collisions.`,
 			}
 		}
 
-		if err := state.RestoreCheckpoint(vm.Name(), name); err != nil {
+		if err := state.RestoreCheckpoint(prov.VM.Name(), name, prov.Runtime); err != nil {
 			return fmt.Errorf("restore failed: %w", err)
 		}
 

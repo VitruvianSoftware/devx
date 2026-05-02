@@ -56,7 +56,7 @@ func TestMissingList_ReturnsMissing(t *testing.T) {
 // TestCheck_Real verifies Check() runs and returns the right number of results.
 // It doesn't assert specific tool presence since CI may not have all tools.
 func TestCheck_ReturnsThreeResults(t *testing.T) {
-	results := prereqs.Check()
+	results := prereqs.Check("podman")
 	if len(results) != 3 {
 		t.Errorf("Check() returned %d results, want 3", len(results))
 	}

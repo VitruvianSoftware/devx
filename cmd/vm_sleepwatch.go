@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/provider"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/spf13/cobra"
 )
@@ -19,9 +18,9 @@ var sleepTimeout int
 var vmDaemonCmd = &cobra.Command{
 	Use:   "sleep-watch",
 	Short: "Run a background daemon to auto-sleep idle VMs",
-	Long:  `Runs continuously, pausing the local VM backend (e.g. Podman) when no containers are actively running to save battery and RAM.`,
+	Long:  `Runs continuously, pausing the local VM backend when no containers are actively running to save battery and RAM.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		prov, err := provider.Get("podman")
+		prov, err := getVMProvider()
 		if err != nil {
 			return err
 		}
@@ -38,7 +37,11 @@ var vmDaemonCmd = &cobra.Command{
 			cfg.DevHostname = "devx"
 		}
 
-		fmt.Printf("🐾 devx sleep-watch active. Polling every %d seconds...\n", sleepTimeout)
+		// Determine the container list command based on the provider.
+		// Podman and Docker use their native CLI; Lima/Colima use nerdctl via SSH.
+		psCommand := containerPSCommand(prov.Name(), cfg.DevHostname)
+
+		fmt.Printf("🐾 devx sleep-watch active (provider: %s). Polling every %d seconds...\n", prov.Name(), sleepTimeout)
 
 		idleTicks := 0
 
@@ -49,12 +52,11 @@ var vmDaemonCmd = &cobra.Command{
 				continue // already asleep
 			}
 
-			// We need to count containers. If podman ps is empty, we increment idle ticks.
+			// Count running containers using the provider-appropriate command
 			var out bytes.Buffer
-			psCmd := exec.Command("podman", "ps", "-q")
+			psCmd := exec.Command(psCommand[0], psCommand[1:]...)
 			psCmd.Stdout = &out
 
-			// If error, maybe podman machine is booting or failing, just skip this tick
 			if err := psCmd.Run(); err != nil {
 				continue
 			}
@@ -79,7 +81,24 @@ var vmDaemonCmd = &cobra.Command{
 	},
 }
 
+// containerPSCommand returns the CLI command to list running container IDs
+// for the given provider.
+func containerPSCommand(providerName, devHostname string) []string {
+	switch providerName {
+	case "docker":
+		return []string{"docker", "ps", "-q"}
+	case "lima":
+		return []string{"limactl", "shell", devHostname, "nerdctl", "ps", "-q"}
+	case "colima":
+		return []string{"colima", "ssh", "--", "nerdctl", "ps", "-q"}
+	default:
+		// podman is the default
+		return []string{"podman", "ps", "-q"}
+	}
+}
+
 func init() {
 	vmDaemonCmd.Flags().IntVarP(&sleepTimeout, "interval", "i", 60, "Interval in seconds to poll container states")
 	vmCmd.AddCommand(vmDaemonCmd)
 }
+

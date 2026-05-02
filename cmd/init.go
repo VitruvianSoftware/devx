@@ -12,6 +12,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/ignition"
 	"github.com/VitruvianSoftware/devx/internal/prereqs"
+	"github.com/VitruvianSoftware/devx/internal/provider"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/tailscale"
 	"github.com/VitruvianSoftware/devx/internal/tui"
@@ -28,10 +29,12 @@ var initCmd = &cobra.Command{
 
 func runInit(cmd *cobra.Command, _ []string) error {
 	// ── Resolve the virtualization provider ──────────────────────────────────
-	vm, err := getVMProvider()
+	prov, err := getFullProvider()
 	if err != nil {
 		return err
 	}
+	vm := prov.VM
+	rt := prov.Runtime
 
 	// ── Load secrets (prompt via huh if .env is missing/incomplete) ──────────
 	s, err := secrets.Load(envFile)
@@ -76,10 +79,22 @@ func runInit(cmd *cobra.Command, _ []string) error {
 
 	fns := []func() (string, error){
 		func() (string, error) {
-			results := prereqs.Check()
+			// Find the binary for the chosen provider
+			var vmBinary string
+			for _, d := range provider.Detect() {
+				if d.Name == vm.Name() {
+					vmBinary = d.Binary
+					break
+				}
+			}
+			if vmBinary == "" {
+				vmBinary = vm.Name() // fallback
+			}
+
+			results := prereqs.Check(vmBinary)
 			if !prereqs.AllPassed(results) {
 				missing := prereqs.MissingList(results)
-				return "", fmt.Errorf("missing tools: %v\nInstall: brew install podman cloudflared butane", missing)
+				return "", fmt.Errorf("missing tools: %v\nInstall: brew install %s cloudflared butane", missing, vm.Name())
 			}
 			return prereqs.Summary(results), nil
 		},
@@ -114,7 +129,7 @@ func runInit(cmd *cobra.Command, _ []string) error {
 			return cfg.CFDomain + " → tunnel", nil
 		},
 		func() (string, error) {
-			path, err := ignition.Build(butaneTemplatePath, state.token, state.tunnelID, cfg.DevHostname, cfg.CFDomain)
+			path, err := ignition.Build(butaneTemplatePath, state.token, state.tunnelID, cfg.DevHostname, cfg.CFDomain, rt.Name())
 			if err != nil {
 				return "", err
 			}
@@ -155,13 +170,13 @@ func runInit(cmd *cobra.Command, _ []string) error {
 			return "ignition config pushed via SSH", nil
 		},
 		func() (string, error) {
-			if err := tailscale.WaitForDaemonWithSSH(cfg.DevHostname, 3*time.Minute, sshFn); err != nil {
+			if err := tailscale.WaitForDaemonWithSSH(cfg.DevHostname, rt.Name(), 3*time.Minute, sshFn); err != nil {
 				return "", err
 			}
 			return "tailscaled container running", nil
 		},
 		func() (string, error) {
-			authURL, err := tailscale.UpWithSSH(cfg.DevHostname, cfg.DevHostname, sshFn)
+			authURL, err := tailscale.UpWithSSH(cfg.DevHostname, rt.Name(), cfg.DevHostname, sshFn)
 			if err != nil {
 				return "", err
 			}
@@ -201,7 +216,7 @@ func runInit(cmd *cobra.Command, _ []string) error {
 	fmt.Printf("  Public endpoint:  https://%s → :8080\n", cfg.CFDomain)
 	fmt.Printf("  VM hostname:      %s\n", cfg.DevHostname)
 	fmt.Printf("  Tailnet:          connected\n\n")
-	fmt.Printf("  Quick start:      devx exec podman run -d -p 8080:80 docker.io/nginx\n")
+	fmt.Printf("  Quick start:      devx exec %s run -d -p 8080:80 docker.io/nginx\n", vm.Name())
 	fmt.Printf("  Then visit:       https://%s\n\n", cfg.CFDomain)
 	fmt.Printf("  Troubleshoot:\n")
 	fmt.Printf("    devx vm ssh            — SSH into VM\n")

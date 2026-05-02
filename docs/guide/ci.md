@@ -29,7 +29,7 @@ devx ci run ci.yml --json
 2. **Resolves** `needs:` job dependencies into a DAG, executing independent jobs in parallel (just like GitHub).
 3. **Expands** `strategy.matrix` into concrete jobs (e.g., a 2×2 matrix produces 4 parallel containers).
 4. **Creates** an isolated container per job, bind-mounting your project at `/workspace`.
-5. **Executes** each `run:` block sequentially inside that container via `podman exec`.
+5. **Executes** each `run:` block sequentially inside that container via your provider's `exec` (e.g. `docker exec`, `nerdctl exec`, `podman exec`).
 6. **Substitutes** <code v-pre>${{ env.VAR }}</code>, <code v-pre>${{ secrets.VAR }}</code>, and <code v-pre>${{ matrix.VAR }}</code> expressions.
 
 ## What `devx ci run` Does NOT Do
@@ -69,7 +69,7 @@ This is a deliberate design decision. Emulating `uses:` faithfully is why `nekto
 ```
 --job          Run only specific job(s) by name (comma-separated)
 --image        Override the container image (default: auto-detect from devcontainer.json)
---runtime      Container runtime: podman or docker (default: podman)
+--runtime      Container runtime: podman, docker, or nerdctl (default: auto-detected)
 --json         Structured JSON output
 --dry-run      Show execution plan without creating containers
 -y             Non-interactive mode (auto-select first workflow)

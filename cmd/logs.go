@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/VitruvianSoftware/devx/internal/logs"
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,7 +17,12 @@ var logsCmd = &cobra.Command{
 	Long: `Discovers all running containers in the devx VM AND native host processes launched via 'devx run'.
 Multiplexes their stdout/stderr into a single unified stream, color-codes them by service name, 
 and allows advanced interactive filtering/searching across the entire local stack.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		prov, err := getFullProvider()
+		if err != nil {
+			return err
+		}
+
 		// Idea 38: Initialize secret redactor from current environment
 		redactor := logs.NewSecretRedactor()
 
@@ -27,7 +31,7 @@ and allows advanced interactive filtering/searching across the entire local stac
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			st := logs.NewStreamer()
+			st := logs.NewStreamer(prov.Runtime)
 			st.Redactor = redactor
 			st.Start(ctx)
 
@@ -35,14 +39,14 @@ and allows advanced interactive filtering/searching across the entire local stac
 				b, _ := json.Marshal(msg)
 				fmt.Println(string(b))
 			}
-			return
+			return nil
 		}
 
-		p := tea.NewProgram(logs.InitialModelWithRedactor(redactor), tea.WithAltScreen(), tea.WithMouseCellMotion())
+		p := tea.NewProgram(logs.InitialModelWithRedactor(redactor, prov.Runtime), tea.WithAltScreen(), tea.WithMouseCellMotion())
 		if _, err := p.Run(); err != nil {
-			fmt.Printf("Error running log multiplexer: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("error running log multiplexer: %w", err)
 		}
+		return nil
 	},
 }
 

@@ -21,7 +21,7 @@ Note: Requires --provider=podman mapping. Docker Mac does not natively support C
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		vm, err := getVMProvider()
+		prov, err := getFullProvider()
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ Note: Requires --provider=podman mapping. Docker Mac does not natively support C
 			}
 		}
 
-		if err := state.CreateCheckpoint(vm.Name(), name); err != nil {
+		if err := state.CreateCheckpoint(prov.VM.Name(), name, prov.Runtime); err != nil {
 			return fmt.Errorf("checkpoint failed: %w", err)
 		}
 

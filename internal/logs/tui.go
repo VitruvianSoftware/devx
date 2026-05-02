@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/VitruvianSoftware/devx/internal/provider"
+
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -47,9 +49,9 @@ type Model struct {
 	height   int
 }
 
-func InitialModel() Model {
+func InitialModel(rt provider.ContainerRuntime) Model {
 	ctx, cancel := context.WithCancel(context.Background())
-	st := NewStreamer()
+	st := NewStreamer(rt)
 	st.Start(ctx)
 
 	return Model{
@@ -62,9 +64,9 @@ func InitialModel() Model {
 
 // InitialModelWithRedactor creates the TUI model with secret redaction enabled.
 // All log lines will be scrubbed for known secret values before display.
-func InitialModelWithRedactor(r *SecretRedactor) Model {
+func InitialModelWithRedactor(r *SecretRedactor, rt provider.ContainerRuntime) Model {
 	ctx, cancel := context.WithCancel(context.Background())
-	st := NewStreamer()
+	st := NewStreamer(rt)
 	st.Redactor = r
 	st.Start(ctx)
 

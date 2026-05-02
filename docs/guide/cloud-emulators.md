@@ -42,7 +42,7 @@ When you use `devx shell` to launch your dev container, it automatically discove
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--port` | emulator default | Host port to bind |
-| `--runtime` | `podman` | Container runtime (`podman` or `docker`) |
+| `--runtime` | `auto-detected` | Container runtime (`podman`, `docker`, `nerdctl`) |
 
 ## List Running Emulators
 

@@ -66,9 +66,10 @@ func allTools() []toolDef {
 			Name:        "Podman",
 			Binary:      "podman",
 			FeatureArea: "Core VM",
-			Required:    true,
+			Required:    false,
 			VersionFlag: "--version",
 			InstallBrew: "podman",
+			Note:        "VM backend (--provider=podman)",
 		},
 		{
 			Name:        "Cloudflared",
@@ -98,20 +99,47 @@ func allTools() []toolDef {
 		{
 			Name:        "Docker",
 			Binary:      "docker",
-			FeatureArea: "Core VM (alt)",
+			FeatureArea: "Core VM",
 			Required:    false,
 			VersionFlag: "--version",
 			InstallBrew: "docker",
-			Note:        "alternative to Podman (--provider=docker)",
+			Note:        "VM backend (--provider=docker)",
 		},
 		{
 			Name:        "OrbStack",
 			Binary:      "orb",
-			FeatureArea: "Core VM (alt)",
+			FeatureArea: "Core VM",
 			Required:    false,
 			VersionFlag: "version",
 			InstallBrew: "orbstack",
-			Note:        "alternative to Podman (--provider=orbstack)",
+			Note:        "VM backend (--provider=orbstack)",
+		},
+		{
+			Name:        "Lima",
+			Binary:      "limactl",
+			FeatureArea: "Core VM",
+			Required:    false,
+			VersionFlag: "--version",
+			InstallBrew: "lima",
+			Note:        "VM backend (--provider=lima)",
+		},
+		{
+			Name:        "Colima",
+			Binary:      "colima",
+			FeatureArea: "Core VM",
+			Required:    false,
+			VersionFlag: "version",
+			InstallBrew: "colima",
+			Note:        "VM backend (--provider=colima)",
+		},
+		{
+			Name:        "nerdctl",
+			Binary:      "nerdctl",
+			FeatureArea: "Container Runtime",
+			Required:    false,
+			VersionFlag: "--version",
+			InstallBrew: "nerdctl",
+			Note:        "container CLI for Lima/Colima VMs",
 		},
 		{
 			Name:        "1Password CLI",
@@ -328,6 +356,15 @@ func parseVersion(binary, raw string) string {
 		}
 	case "orb":
 		return line
+	case "limactl":
+		// "limactl version 1.0.2"
+		return strings.TrimPrefix(line, "limactl version ")
+	case "colima":
+		// "colima version 0.8.1"
+		return strings.TrimPrefix(line, "colima version ")
+	case "nerdctl":
+		// "nerdctl version 2.0.3"
+		return strings.TrimPrefix(line, "nerdctl version ")
 	case "op":
 		return strings.TrimSpace(line)
 	case "bw":
@@ -478,7 +515,7 @@ func checkCommandSuccess(name, requiredBy, binary string, args []string, howToFi
 
 // checkTailscale checks for Tailscale authentication.
 // Tailscale uses interactive browser auth via `tailscale up`, not an env var.
-// We check if the VM is already provisioned (Tailscale is baked into Ignition).
+// We check if a devx VM already exists (Tailscale is baked into Ignition).
 func checkTailscale() CredentialStatus {
 	cs := CredentialStatus{
 		Name:       "Tailscale auth",
@@ -486,15 +523,36 @@ func checkTailscale() CredentialStatus {
 		HowToFix:   "Handled interactively during: devx vm init",
 	}
 
-	// Check if a devx VM already exists (Tailscale is configured inside it)
-	out, err := exec.Command("podman", "machine", "list", "--format", "{{.Name}}").Output()
-	if err == nil {
-		names := strings.TrimSpace(string(out))
-		if names != "" {
-			cs.Configured = true
-			cs.Detail = "configured via VM (interactive browser auth)"
-			return cs
+	// Check for VMs from any supported provider
+	vmFound := false
+
+	// Check Podman machines
+	if out, err := exec.Command("podman", "machine", "list", "--format", "{{.Name}}").Output(); err == nil {
+		if strings.TrimSpace(string(out)) != "" {
+			vmFound = true
 		}
+	}
+
+	// Check Lima instances
+	if !vmFound {
+		if out, err := exec.Command("limactl", "list", "--format", "{{.Name}}").Output(); err == nil {
+			if strings.TrimSpace(string(out)) != "" {
+				vmFound = true
+			}
+		}
+	}
+
+	// Check Colima profiles
+	if !vmFound {
+		if err := exec.Command("colima", "status").Run(); err == nil {
+			vmFound = true
+		}
+	}
+
+	if vmFound {
+		cs.Configured = true
+		cs.Detail = "configured via VM (interactive browser auth)"
+		return cs
 	}
 
 	cs.Detail = "will authenticate during vm init (browser flow)"

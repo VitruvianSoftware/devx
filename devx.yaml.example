@@ -31,9 +31,16 @@ name: demo-app
 domain: mycompany.dev
 
 # --- Idea 5: Virtualization Provider Abstraction ---
-# Choose which container runtime devx should use. By default, devx will auto-detect
+# Choose which VM backend devx should use. By default, devx will auto-detect
 # what is installed on your system (podman, lima, colima, orbstack, docker) and ask
-# you which to use. You can pin a specific provider here.
+# you which to use. You can pin a specific provider here as a project-level default.
+#
+# Resolution order (first wins):
+#   1. --provider CLI flag
+#   2. ~/.devx/config.yaml (machine-local, not committed to git)
+#   3. This field (project-level default)
+#   4. Auto-detect installed backends
+#
 # Supported: auto, podman, lima, colima, orbstack, docker
 provider: auto
 

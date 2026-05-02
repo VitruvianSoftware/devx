@@ -1,6 +1,6 @@
 # Container VMs
 
-The `devx vm` commands manage the lifecycle of your local development VM — a Fedora CoreOS instance running inside Podman Machine.
+The `devx vm` commands manage the lifecycle of your local development VM — a lightweight Linux instance running inside your chosen provider (Lima, Colima, Docker, OrbStack, or Podman).
 
 ## Commands
 
@@ -15,7 +15,7 @@ devx vm init
 This is the only command most developers need to run. It:
 
 1. Compiles a Butane config into Ignition format
-2. Creates a Podman Machine with the Ignition file
+2. Creates a VM using your selected provider with the Ignition file
 3. Starts the VM and waits for systemd services to boot
 4. Verifies Cloudflare Tunnel and Tailscale connectivity
 
@@ -23,7 +23,7 @@ This is the only command most developers need to run. It:
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--provider` | `podman` | Backend: `podman`, `docker`, or `orbstack` |
+| `--provider` | `auto-detect` | Backend: `lima`, `colima`, `podman`, `docker`, or `orbstack` |
 | `--dry-run` | — | Preview the Ignition config without creating the VM |
 
 ### `devx vm status`

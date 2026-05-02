@@ -22,7 +22,7 @@ Checks all 9 tools that devx depends on, grouped by required vs optional:
 
 | Tool | Binary | Feature | Required? |
 |------|--------|---------|-----------|
-| Podman | `podman` | Core VM | Yes |
+| Any VM backend | `lima`, `colima`, `podman`, etc. | Core VM | Yes |
 | Cloudflared | `cloudflared` | Tunnels | Yes |
 | Butane | `butane` | VM Init | Yes |
 | GitHub CLI | `gh` | Sites | Yes |

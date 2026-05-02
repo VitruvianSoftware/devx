@@ -12,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var snapshotRuntime string
-
 var snapshotCmd = &cobra.Command{
 	Use:   "snapshot",
 	Short: "Manage point-in-time snapshots of local database volumes",
@@ -38,7 +36,12 @@ var snapshotCreateCmd = &cobra.Command{
 			return fmt.Errorf("unknown engine %q — supported: %s", engine, strings.Join(database.SupportedEngines(), ", "))
 		}
 
-		meta, err := database.CreateSnapshot(snapshotRuntime, engine, name)
+		prov, err := getFullProvider()
+		if err != nil {
+			return err
+		}
+
+		meta, err := database.CreateSnapshot(prov.Runtime, engine, name)
 		if err != nil {
 			return err
 		}
@@ -89,7 +92,12 @@ var snapshotRestoreCmd = &cobra.Command{
 			return nil
 		}
 
-		return database.RestoreSnapshot(snapshotRuntime, engine, name)
+		prov, err := getFullProvider()
+		if err != nil {
+			return err
+		}
+
+		return database.RestoreSnapshot(prov.Runtime, engine, name)
 	},
 }
 
@@ -153,9 +161,6 @@ var snapshotRmCmd = &cobra.Command{
 }
 
 func init() {
-	snapshotCmd.PersistentFlags().StringVar(&snapshotRuntime, "runtime", "podman",
-		"Container runtime to use (podman, docker)")
-
 	snapshotCmd.AddCommand(snapshotCreateCmd)
 	snapshotCmd.AddCommand(snapshotRestoreCmd)
 	snapshotCmd.AddCommand(snapshotListCmd)

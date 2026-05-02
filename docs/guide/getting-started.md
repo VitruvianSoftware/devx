@@ -18,15 +18,27 @@ If you prefer to install manually:
 
 | Tool | Install | Purpose | Required? |
 |------|---------|---------| --------- |
-| [Podman](https://podman.io) | `brew install podman` | VM and container runtime | Yes |
+| [Podman](https://podman.io) | `brew install podman` | VM and container runtime | Optional |
+| [Lima](https://lima-vm.io/) | `brew install lima` | VM backend | Optional |
+| [Colima](https://github.com/abiosoft/colima) | `brew install colima` | VM backend | Optional |
+| [nerdctl](https://github.com/containerd/nerdctl) | `brew install nerdctl` | Container CLI for Lima/Colima VMs | Optional |
 | [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `brew install cloudflare/cloudflare/cloudflared` | Cloudflare tunnel daemon | Yes |
 | [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler | Yes |
 | [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`) | Yes |
-| [docker](https://docker.com) | `brew install docker` | Alternative VM backend | Optional |
-| [orbstack](https://orbstack.dev) | `brew install orbstack` | Alternative VM backend | Optional |
+| [docker](https://docker.com) | `brew install docker` | VM backend | Optional |
+| [orbstack](https://orbstack.dev) | `brew install orbstack` | VM backend | Optional |
 | [1Password CLI](https://1password.com/downloads/command-line) | `brew install 1password-cli` | Vault secret sync | Optional |
 | [Bitwarden CLI](https://bitwarden.com/help/cli/) | `brew install bitwarden-cli` | Vault secret sync | Optional |
 | [gcloud](https://cloud.google.com/sdk) | `brew install google-cloud-sdk` | GCP Secret Manager | Optional |
+
+### Choosing a VM Backend
+
+`devx` is VM-agnostic. It auto-detects installed backends (`podman`, `lima`, `colima`, `docker`, `orbstack`).
+
+If multiple are found, you will be prompted to choose. You can override this behavior in three ways:
+1. **Machine-local config (Recommended):** Set your preference in `~/.devx/config.yaml`.
+2. **Project-local config:** Set `provider: lima` in your `devx.yaml`.
+3. **CLI Flag:** Pass `--provider=colima` to any VM-dependent command.
 
 ### From Homebrew (recommended for macOS/Linux)
 
@@ -72,7 +84,7 @@ This audits all prerequisites — tools, credentials, and authentication session
 devx vm init
 ```
 
-This creates a Fedora CoreOS VM via Podman Machine with Cloudflare Tunnel and Tailscale pre-configured. The process takes about 2-3 minutes on the first run.
+This creates a Fedora CoreOS VM via your chosen provider with Cloudflare Tunnel and Tailscale pre-configured. The process takes about 2-3 minutes on the first run.
 
 ### 2. Verify everything is running
 
@@ -86,7 +98,7 @@ You should see all three components — VM, Cloudflare Tunnel, and Tailscale —
 
 ```bash
 # Start a web server inside the VM
-devx exec podman run -d -p 8080:80 docker.io/nginx
+devx exec <provider-runtime> run -d -p 8080:80 docker.io/nginx
 
 # Expose it to the internet
 devx tunnel expose 8080 --name demo

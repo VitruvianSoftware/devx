@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/VitruvianSoftware/devx/internal/provider"
 )
 
 // SnapshotMeta holds metadata about a database snapshot.
@@ -39,8 +42,8 @@ func metaPath(engine, name string) string {
 }
 
 // CreateSnapshot exports the named volume for the given engine into a tar archive.
-// It uses the 'runtime' binary (podman or docker).
-func CreateSnapshot(runtime, engine, snapshotName string) (*SnapshotMeta, error) {
+// It uses the container runtime (podman, docker, nerdctl).
+func CreateSnapshot(rt provider.ContainerRuntime, engine, snapshotName string) (*SnapshotMeta, error) {
 	volumeName := fmt.Sprintf("devx-data-%s", engine)
 
 	if err := os.MkdirAll(filepath.Join(SnapshotDir(), engine), 0755); err != nil {
@@ -59,11 +62,11 @@ func CreateSnapshot(runtime, engine, snapshotName string) (*SnapshotMeta, error)
 	// podman volume export <volume> --output <path>
 	// docker doesn't have 'volume export', so we use a helper container for docker
 	var cmd *exec.Cmd
-	if runtime == "podman" {
-		cmd = exec.Command("podman", "volume", "export", volumeName, "--output", tarPath)
+	if rt.Name() == "podman" {
+		cmd = rt.CommandContext(context.Background(), "volume", "export", volumeName, "--output", tarPath)
 	} else {
-		// For docker: spin up a lightweight helper container that tars the volume contents
-		cmd = exec.Command("docker", "run", "--rm",
+		// For docker/nerdctl: spin up a lightweight helper container that tars the volume contents
+		cmd = rt.CommandContext(context.Background(), "run", "--rm",
 			"-v", volumeName+":/data:ro",
 			"-v", filepath.Dir(tarPath)+":/out",
 			"alpine", "tar", "-czf", "/out/"+filepath.Base(tarPath), "-C", "/data", ".")
@@ -101,9 +104,7 @@ func CreateSnapshot(runtime, engine, snapshotName string) (*SnapshotMeta, error)
 	return meta, nil
 }
 
-// RestoreSnapshot stops the running container, replaces the volume with the
-// snapshot contents, and restarts the container.
-func RestoreSnapshot(runtime, engine, snapshotName string) error {
+func RestoreSnapshot(rt provider.ContainerRuntime, engine, snapshotName string) error {
 	volumeName := fmt.Sprintf("devx-data-%s", engine)
 	containerName := fmt.Sprintf("devx-db-%s", engine)
 	tarPath := snapshotPath(engine, snapshotName)
@@ -116,27 +117,27 @@ func RestoreSnapshot(runtime, engine, snapshotName string) error {
 
 	// Step 1: Stop the running database container (non-fatal if not running)
 	fmt.Println("  → Stopping container...")
-	_ = exec.Command(runtime, "stop", containerName).Run()
+	_, _ = rt.Exec("stop", containerName)
 
 	// Step 2: Remove the existing volume so we can restore cleanly
 	fmt.Println("  → Removing existing volume data...")
-	if err := exec.Command(runtime, "volume", "rm", "-f", volumeName).Run(); err != nil {
+	if _, err := rt.Exec("volume", "rm", "-f", volumeName); err != nil {
 		return fmt.Errorf("could not remove existing volume: %w", err)
 	}
 
 	// Step 3: Re-create the volume
-	if err := exec.Command(runtime, "volume", "create", volumeName).Run(); err != nil {
+	if _, err := rt.Exec("volume", "create", volumeName); err != nil {
 		return fmt.Errorf("could not recreate volume: %w", err)
 	}
 
 	// Step 4: Import the snapshot
 	fmt.Printf("  → Importing %s...\n", tarPath)
 	var importCmd *exec.Cmd
-	if runtime == "podman" {
-		importCmd = exec.Command("podman", "volume", "import", volumeName, tarPath)
+	if rt.Name() == "podman" {
+		importCmd = rt.CommandContext(context.Background(), "volume", "import", volumeName, tarPath)
 	} else {
-		// Docker: use helper container to expand tar into the volume
-		importCmd = exec.Command("docker", "run", "--rm",
+		// Docker/nerdctl: use helper container to expand tar into the volume
+		importCmd = rt.CommandContext(context.Background(), "run", "--rm",
 			"-v", volumeName+":/data",
 			"-v", filepath.Dir(tarPath)+":/src:ro",
 			"alpine", "tar", "-xzf", "/src/"+filepath.Base(tarPath), "-C", "/data")
@@ -150,7 +151,7 @@ func RestoreSnapshot(runtime, engine, snapshotName string) error {
 
 	// Step 5: Restart the container
 	fmt.Printf("  → Restarting container %s...\n", containerName)
-	_ = exec.Command(runtime, "start", containerName).Run()
+	_, _ = rt.Exec("start", containerName)
 
 	fmt.Printf("\n✅ Snapshot %q restored into %s\n", snapshotName, volumeName)
 	return nil

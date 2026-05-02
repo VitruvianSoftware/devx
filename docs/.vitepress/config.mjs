@@ -31,6 +31,7 @@ export default defineConfig({
         text: 'Core Concepts',
         items: [
           { text: 'Container VMs', link: '/guide/virtual-machine' },
+          { text: 'VM Providers', link: '/guide/providers' },
           { text: 'Databases (Ephemeral)', link: '/guide/databases' },
           { text: 'Cloudflare Tunnels', link: '/guide/tunnels' },
           { text: 'Native Apps & Logs', link: '/guide/execution' },

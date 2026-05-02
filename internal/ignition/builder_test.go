@@ -44,7 +44,7 @@ func TestBuild_SubstitutesVariables(t *testing.T) {
 
 	tmplPath := makeTemplate(t, minimalTemplate)
 
-	ignPath, err := ignition.Build(tmplPath, "test-token-123", "dummy-id", "my-test-machine", "test.dev")
+	ignPath, err := ignition.Build(tmplPath, "test-token-123", "dummy-id", "my-test-machine", "test.dev", "podman")
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestBuild_SubstitutesVariables(t *testing.T) {
 }
 
 func TestBuild_MissingTemplate(t *testing.T) {
-	_, err := ignition.Build("/nonexistent/path/template.bu", "token", "id", "host", "dev")
+	_, err := ignition.Build("/nonexistent/path/template.bu", "token", "id", "host", "dev", "podman")
 	if err == nil {
 		t.Error("expected error for missing template, got nil")
 	}
@@ -77,7 +77,7 @@ func TestBuild_WritesToTempFile(t *testing.T) {
 	}
 
 	tmplPath := makeTemplate(t, minimalTemplate)
-	ignPath, err := ignition.Build(tmplPath, "tok", "id", "host", "dev")
+	ignPath, err := ignition.Build(tmplPath, "tok", "id", "host", "dev", "podman")
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}

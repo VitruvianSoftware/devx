@@ -76,7 +76,7 @@ services:
 
 1. During `devx up`, services with `predictive_build: true` spawn a background file-watcher.
 2. The watcher monitors dependency manifests (`go.mod`, `package.json`, `Cargo.toml`, `requirements.txt`).
-3. When a change is detected (with a 500ms debounce), it silently triggers `podman build` in the background.
+3. When a change is detected (with a 500ms debounce), it silently triggers your runtime's build command (`podman build`, `docker build`, etc.) in the background.
 4. The next time you restart the container, all heavy dependency layers are already cached.
 
 ### When to Enable It
