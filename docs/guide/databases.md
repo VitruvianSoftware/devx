@@ -177,7 +177,7 @@ devx db snapshot list postgres
 devx db snapshot rm postgres before-migration
 ```
 
-Snapshots respect `--json` output for AI agents, and destructive restorations ask for confirmation unless bypassed with `-y`.
+Snapshots respect **`--json`** output for AI agents, and destructive restorations ask for confirmation unless bypassed with `-y`.
 
 ## Declarative Mode
 

@@ -4,9 +4,7 @@ Running a company's full-stack infrastructure locally often means juggling multi
 separate repositories. Each team maintains their own `devx.yaml` — but there's no way
 to compose them into a single unified environment.
 
-**Idea 44: Unified Multirepo Orchestration** solves this. A parent `devx.yaml` can
-reference and compose sibling repository configurations via the `include` directive,
-creating a local master-node orchestrator that starts everything in the correct dependency order.
+**Unified Multirepo Orchestration** solves this. A parent `devx.yaml` can "include" the configurations of other projects, merging their databases, services, tunnels, and bridge configurations into a single, massive dependency DAG, creating a local master-node orchestrator that starts everything in the correct dependency order.
 
 ## Quick Start
 

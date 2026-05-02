@@ -10,7 +10,7 @@ Each skill targets a specific concern — keeping CLI tooling rules separate fro
 
 ## Quick Start
 
-Run the interactive installer:
+The primary onboarding command for the `devx` + AI agent pattern is the interactive installer:
 
 ```bash
 devx agent init
@@ -104,18 +104,7 @@ This command executes four phases sequentially:
 | **PR & Merge** | Creates a GitHub PR and squash-merges it |
 | **CI Poll** | **Blocks the terminal** until the CI pipeline completes on main |
 
-The command returns deterministic exit codes:
-
-| Exit Code | Meaning |
-|---|---|
-| `0` | Success — CI is green |
-| `50` | Pre-flight failure (tests/lint/build) |
-| `51` | Git push failed |
-| `52` | PR creation or merge failed |
-| `53` | CI pipeline failed |
-| `54` | CI pipeline timed out |
-| `55` | Documentation check failed |
-| `56` | Nothing to ship |
+The command returns deterministic exit codes (documented in the [Exit Codes & Telemetry](#exit-codes-telemetry) section below).
 
 ### Machine-Readable Output
 
@@ -140,3 +129,20 @@ This installs a `.git/hooks/pre-push` hook that **blocks all direct `git push` c
 ```
 
 The hook is automatically detected by `devx doctor`, which will warn if it's missing.
+
+## Exit Codes & Telemetry
+
+Both `devx agent ship` and other core commands return deterministic exit codes designed for programmatic error handling by AI agents. 
+
+| Exit Code | Meaning |
+|---|---|
+| `0` | Success — CI is green |
+| `50` | Pre-flight failure (tests/lint/build) |
+| `51` | Git push failed |
+| `52` | PR creation or merge failed |
+| `53` | CI pipeline failed |
+| `54` | CI pipeline timed out |
+| `55` | Documentation check failed |
+| `56` | Nothing to ship |
+
+To view detailed pipeline metrics for these executions, see the [devx trace](./trace.md) documentation on the Grafana Build Metrics dashboard.
