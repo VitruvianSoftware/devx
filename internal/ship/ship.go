@@ -354,13 +354,13 @@ func CreatePR(dir, title, body, baseBranch string) (string, error) {
 	return strings.TrimSpace(out), nil
 }
 
-// EnableAutoMerge enables GitHub auto-merge on the given PR.
-func EnableAutoMerge(dir, prURL string) error {
+// MergePR merges the given PR using admin privileges.
+func MergePR(dir, prURL string) error {
 	if err := runCmd(dir, []string{
 		"gh", "pr", "merge", prURL,
-		"--auto", "--squash", "-d",
+		"--squash", "--admin", "-d",
 	}, false); err != nil {
-		return fmt.Errorf("gh pr merge --auto: %w", err)
+		return fmt.Errorf("gh pr merge: %w", err)
 	}
 	return nil
 }

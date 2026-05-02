@@ -157,24 +157,14 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	// ── Phase 3: Create PR & Enable Auto-Merge ──────────────────────────
+	// ── Phase 3: Create PR ──────────────────────────────────────────────
 	if !outputJSON {
-		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create PR & Enable Auto-Merge")
+		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create PR")
 	}
 
 	prURL, err := ship.CreatePR(cwd, shipCommitMsg, shipCommitMsg, shipBaseBranch)
 	result.PRURL = prURL
 	if err != nil {
-		result.ExitCode = ship.ExitPRFail
-		result.Phase = "pr"
-		result.Message = err.Error()
-		if !outputJSON {
-			fmt.Printf("    %s  %s\n\n", shipStyleFail.Render("✗ FAIL"), err.Error())
-		}
-		return exitWithResult(result)
-	}
-
-	if err := ship.EnableAutoMerge(cwd, prURL); err != nil {
 		result.ExitCode = ship.ExitPRFail
 		result.Phase = "pr"
 		result.Message = err.Error()
@@ -240,6 +230,21 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		return exitWithResult(result)
 	}
 
+	// ── Phase 5: Merge PR ───────────────────────────────────────────────
+	if !outputJSON {
+		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 5:"), "Merge PR")
+	}
+
+	if err := ship.MergePR(cwd, prURL); err != nil {
+		result.ExitCode = ship.ExitPRFail
+		result.Phase = "merge"
+		result.Message = err.Error()
+		if !outputJSON {
+			fmt.Printf("    %s  %s\n\n", shipStyleFail.Render("✗ FAIL"), err.Error())
+		}
+		return exitWithResult(result)
+	}
+
 	// ── Success ─────────────────────────────────────────────────────────
 	result.Success = true
 	result.Phase = "complete"
@@ -252,7 +257,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 			shipStyleMuted.Render(runID),
 		)
 		fmt.Println()
-		fmt.Println(tui.StyleSuccessBox.Render("✅ Ship complete! Code is merged, CI is green."))
+		fmt.Println(tui.StyleSuccessBox.Render("✅ Ship complete! CI is green and code is merged."))
 		fmt.Println()
 	}
 
