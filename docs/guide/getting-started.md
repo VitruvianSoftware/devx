@@ -28,15 +28,13 @@ If you prefer to install manually:
 | [Bitwarden CLI](https://bitwarden.com/help/cli/) | `brew install bitwarden-cli` | Vault secret sync | Optional |
 | [gcloud](https://cloud.google.com/sdk) | `brew install google-cloud-sdk` | GCP Secret Manager | Optional |
 
-## Installation
-
-### From Homebrew (macOS/Linux)
+### From Homebrew (recommended for macOS/Linux)
 
 ```bash
 brew install vitruviansoftware/tap/devx
 ```
 
-### From GitHub Releases (recommended)
+### From GitHub Releases
 
 ```bash
 # macOS (Apple Silicon)

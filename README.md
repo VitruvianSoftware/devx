@@ -57,15 +57,13 @@ You get a fully-configured Fedora CoreOS VM with:
 - 🚀 **ngrok-like port exposure** — `devx tunnel expose 3000` gives you a public URL in seconds
 - 🏗️ **Host-level isolation** — Pre-tuned `inotify` limits, rootful containers, dedicated kernel
 
-## Installation
-
-### From Homebrew (macOS/Linux)
+### From Homebrew (recommended for macOS/Linux)
 
 ```bash
 brew install vitruviansoftware/tap/devx
 ```
 
-### From Releases (recommended)
+### From Releases
 
 Download the latest binary from [GitHub Releases](https://github.com/VitruvianSoftware/devx/releases/latest):
 
