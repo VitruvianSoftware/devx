@@ -24,21 +24,30 @@ While tools like **Docker Compose** excel at booting containers and **Skaffold**
 
 We go far beyond basic container networking by natively integrating the premium capabilities developers usually pay for or duct-tape together into a single, unified CLI:
 
+### Local Infrastructure
+* 🔑 **Vault-Native Config Sync:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to automatically inject secrets natively directly into process environments.
+* 🌱 **Automated Database Seeding:** Dynamically injects connection strings & legacy fragments (`devx db seed`) from running containers directly into your native Node.js/Go seed scripts.
+* 🛠️ **Frictionless Resilience:** Built-in automatic Port-Shifting transparently overrides `EADDRINUSE` conflicts, and native `devx` crash-tailing instantly pinpoints startup failures precisely inline.
+* 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
+
+### Networking & Edge
 * 🌐 **Instant Public Ingress:** Stop paying for ngrok. We securely wire your local containers to the internet instantly via Cloudflare Tunnels (`*.ipv1337.dev`), right out of the box.
 * 🔒 **Zero-Trust Corporate Access:** Stop fighting with heavy VPN clients. The `devx` VM natively joins your Tailscale mesh silently, giving your local apps direct access to staging and production databases.
-* 🧪 **Ephemeral E2E Testing:** Unlike Compose which corrupts your local databases during UI tests, `devx test ui` dynamically clones isolated, randomized copies of your database topology to run Cypress/Playwright tests safely.
-* 🔑 **Vault-Native Config Sync:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to automatically inject secrets natively directly into process environments.
-* 🤖 **AI-Native from Day 1:** Fully compliant with AI Agents (Cursor, Claude Code, Gemina) via deterministic `--json` outputs, `--dry-run` safety mechanisms, and native Agent Skill discovery.
+* 🔗 **Hybrid Bridge to Kubernetes:** Declaratively bridge remote K8s services into `devx up` with `runtime: bridge`. Outbound port-forwarding (`bridge_target`) and inbound traffic interception (`bridge_intercept`) participate in the DAG with correct dependency ordering, unified lifecycle, and bridge-native health checks.
+
+### Orchestration & State
 * 🚦 **Intelligent Service Orchestration:** Seamless DAG-based `depends_on` startup sequences rivaling Docker Compose and Skaffold, completely eliminating local "Connection Refused" loops.
-* ⏪ **Time-Travel Debugging:** Snapshot and restore complete macro-topology states (RAM, volumes, networks) using CRIU, plus redact-safe diagnostic dumps for frictionless support (`devx state`).
-* 🔬 **Local CI Emulation:** Debug your GitHub Actions locally with `devx ci run` — matrix expansion, job DAGs, and parallel execution without the "fix ci" commit loop.
-* 🛠️ **Frictionless Resilience:** Built-in automatic Port-Shifting transparently overrides `EADDRINUSE` conflicts, and native `devx` crash-tailing instantly pinpoints startup failures precisely inline.
-* 🌱 **Automated Database Seeding:** Dynamically injects connection strings & legacy fragments (`devx db seed`) from running containers directly into your native Node.js/Go seed scripts.
 * ⚡ **Zero-Rebuild Hot Reloading:** Bypass slow VirtioFS volume mounts with intelligent Mutagen-powered file syncing (`devx sync up`) that propagates changes in milliseconds.
 * 🌐 **Multirepo Orchestration:** Compose multiple sibling `devx.yaml` files from neighbouring repositories via `include:` directives into a single unified local cluster — with fail-fast conflict detection and automatic working-directory injection per project.
-* 🔗 **Hybrid Bridge to Kubernetes:** Declaratively bridge remote K8s services into `devx up` with `runtime: bridge`. Outbound port-forwarding (`bridge_target`) and inbound traffic interception (`bridge_intercept`) participate in the DAG with correct dependency ordering, unified lifecycle, and bridge-native health checks.
+
+### Testing & Telemetry
+* 🧪 **Ephemeral E2E Testing:** Unlike Compose which corrupts your local databases during UI tests, `devx test ui` dynamically clones isolated, randomized copies of your database topology to run Cypress/Playwright tests safely.
+* ⏪ **Time-Travel Debugging:** Snapshot and restore complete macro-topology states (RAM, volumes, networks) using CRIU, plus redact-safe diagnostic dumps for frictionless support (`devx state`).
 * 📊 **Predictive Pre-Building:** Local telemetry tracks build durations and proactively nudges you when builds degrade. Opt-in background pre-building watches dependency manifests and silently primes container caches so restarts are instant.
-* 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
+
+### Pipelines & CI/CD
+* 🔬 **Local CI Emulation:** Debug your GitHub Actions locally with `devx ci run` — matrix expansion, job DAGs, and parallel execution without the "fix ci" commit loop.
+* 🤖 **AI-Native from Day 1:** Fully compliant with AI Agents (Cursor, Claude Code, Gemina) via deterministic `--json` outputs, `--dry-run` safety mechanisms, and native Agent Skill discovery.
 
 `devx` provisions a customized **Fedora CoreOS** VM via your chosen backend (Lima, Colima, Docker, OrbStack, or Podman) and seamlessly drives this entire supercharged ecosystem.
 
