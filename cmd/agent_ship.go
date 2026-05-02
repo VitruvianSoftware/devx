@@ -157,12 +157,12 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	// ── Phase 3: Create & Merge PR ──────────────────────────────────────
+	// ── Phase 3: Create PR ──────────────────────────────────────────────
 	if !outputJSON {
-		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create & Merge PR")
+		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create PR")
 	}
 
-	prURL, err := ship.CreateAndMergePR(cwd, shipCommitMsg, shipCommitMsg, shipBaseBranch)
+	prURL, err := ship.CreatePR(cwd, shipCommitMsg, shipCommitMsg, shipBaseBranch)
 	result.PRURL = prURL
 	if err != nil {
 		result.ExitCode = ship.ExitPRFail
@@ -193,7 +193,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	runID, conclusion, failureLogs, pollErr := ship.PollCI(cwd, shipBaseBranch, shipCITimeout)
+	runID, conclusion, failureLogs, pollErr := ship.WatchPRChecks(cwd, prURL, branch, shipCITimeout)
 	result.CIRunID = runID
 	result.CIStatus = conclusion
 	result.FailureLogs = failureLogs
@@ -230,6 +230,21 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		return exitWithResult(result)
 	}
 
+	// ── Phase 5: Merge PR ───────────────────────────────────────────────
+	if !outputJSON {
+		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 5:"), "Merge PR")
+	}
+
+	if err := ship.MergePR(cwd, prURL); err != nil {
+		result.ExitCode = ship.ExitPRFail
+		result.Phase = "merge"
+		result.Message = err.Error()
+		if !outputJSON {
+			fmt.Printf("    %s  %s\n\n", shipStyleFail.Render("✗ FAIL"), err.Error())
+		}
+		return exitWithResult(result)
+	}
+
 	// ── Success ─────────────────────────────────────────────────────────
 	result.Success = true
 	result.Phase = "complete"
@@ -242,7 +257,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 			shipStyleMuted.Render(runID),
 		)
 		fmt.Println()
-		fmt.Println(tui.StyleSuccessBox.Render("✅ Ship complete! Code is merged, CI is green."))
+		fmt.Println(tui.StyleSuccessBox.Render("✅ Ship complete! CI is green and code is merged."))
 		fmt.Println()
 	}
 

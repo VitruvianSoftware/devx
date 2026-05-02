@@ -5,6 +5,7 @@
 package ship
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -338,10 +339,9 @@ func GitPush(dir, commitMsg, branch string) error {
 	return nil
 }
 
-// CreateAndMergePR creates a GitHub PR and merges it.
+// CreatePR creates a GitHub PR.
 // Returns the PR URL.
-func CreateAndMergePR(dir, title, body, baseBranch string) (string, error) {
-	// Create PR
+func CreatePR(dir, title, body, baseBranch string) (string, error) {
 	out, err := runCmdOutput(dir, []string{
 		"gh", "pr", "create",
 		"--title", title,
@@ -351,72 +351,85 @@ func CreateAndMergePR(dir, title, body, baseBranch string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("gh pr create: %w", err)
 	}
-	prURL := strings.TrimSpace(out)
+	return strings.TrimSpace(out), nil
+}
 
-	// Merge PR
+// MergePR merges the given PR using admin privileges.
+func MergePR(dir, prURL string) error {
 	if err := runCmd(dir, []string{
 		"gh", "pr", "merge", prURL,
 		"--squash", "--admin", "-d",
 	}, false); err != nil {
-		return prURL, fmt.Errorf("gh pr merge: %w", err)
+		return fmt.Errorf("gh pr merge: %w", err)
 	}
-
-	return prURL, nil
+	return nil
 }
 
-// PollCI waits for the latest CI run on the given branch to complete.
+// WatchPRChecks waits for the PR checks to complete using gh pr checks --watch.
 // It blocks until the pipeline finishes or the timeout expires.
 // Returns the run conclusion and any failure logs.
-func PollCI(dir, branch string, timeout time.Duration) (runID, conclusion string, failureLogs []string, err error) {
-	deadline := time.Now().Add(timeout)
+func WatchPRChecks(dir, prURL, branch string, timeout time.Duration) (runID, conclusion string, failureLogs []string, err error) {
+	// Wait a few seconds for GitHub to register the push and start checks
+	time.Sleep(5 * time.Second)
 
-	// Wait a few seconds for GitHub to register the push
-	time.Sleep(10 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
-	for time.Now().Before(deadline) {
-		// Get the latest run ID
-		out, cmdErr := runCmdOutput(dir, []string{
-			"gh", "run", "list",
-			"--branch", branch,
-			"-L", "1",
-			"--json", "databaseId,status,conclusion",
-		})
-		if cmdErr != nil {
-			time.Sleep(5 * time.Second)
-			continue
-		}
+	cmd := exec.CommandContext(ctx, "gh", "pr", "checks", prURL, "--watch", "--fail-fast")
+	cmd.Dir = dir
+	
+	// We don't want stdout to pollute our deterministic output, so we run silently
+	err = cmd.Run()
 
-		var runs []struct {
-			DatabaseID int64  `json:"databaseId"`
-			Status     string `json:"status"`
-			Conclusion string `json:"conclusion"`
-		}
-		if jsonErr := json.Unmarshal([]byte(out), &runs); jsonErr != nil || len(runs) == 0 {
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		run := runs[0]
-		runID = fmt.Sprintf("%d", run.DatabaseID)
-
-		if run.Status == "completed" {
-			conclusion = run.Conclusion
-			if conclusion != "success" {
-				// Fetch failure logs
-				logOut, logErr := runCmdOutput(dir, []string{
-					"gh", "run", "view", runID, "--log-failed",
-				})
-				if logErr == nil {
-					failureLogs = condenseFailureLogs(logOut)
-				}
-			}
-			return runID, conclusion, failureLogs, nil
-		}
-
-		time.Sleep(10 * time.Second)
+	// If err is nil, checks passed successfully
+	if err == nil {
+		return "", "success", nil, nil
 	}
 
-	return runID, "timeout", nil, fmt.Errorf("CI pipeline did not complete within %s", timeout)
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", "timeout", nil, fmt.Errorf("CI pipeline did not complete within %s", timeout)
+	}
+
+	// Since it failed, we want to grab the exact run ID and failure logs from the CI workflow
+	out, listErr := runCmdOutput(dir, []string{
+		"gh", "run", "list",
+		"--branch", branch,
+		"--event", "pull_request",
+		"-L", "10",
+		"--json", "databaseId,status,conclusion,workflowName",
+	})
+	
+	if listErr == nil {
+		var runs []struct {
+			DatabaseID   int64  `json:"databaseId"`
+			Status       string `json:"status"`
+			Conclusion   string `json:"conclusion"`
+			WorkflowName string `json:"workflowName"`
+		}
+		if jsonErr := json.Unmarshal([]byte(out), &runs); jsonErr == nil {
+			for _, run := range runs {
+				if run.Conclusion == "failure" && run.WorkflowName == "CI" {
+					runID = fmt.Sprintf("%d", run.DatabaseID)
+					conclusion = run.Conclusion
+					
+					// Fetch failure logs
+					logOut, logErr := runCmdOutput(dir, []string{
+						"gh", "run", "view", runID, "--log-failed",
+					})
+					if logErr == nil {
+						failureLogs = condenseFailureLogs(logOut)
+					}
+					break
+				}
+			}
+		}
+	}
+
+	if conclusion == "" {
+		conclusion = "failure"
+	}
+
+	return runID, conclusion, failureLogs, nil
 }
 
 // condenseFailureLogs strips verbose CI noise (setup steps, cache hits, etc.)
