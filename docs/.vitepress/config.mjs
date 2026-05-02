@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: "devx",
   description: "Advanced Agentic Coding Environment Orchestrator",
   server: { port: 5173 },
@@ -67,4 +68,4 @@ export default defineConfig({
       copyright: 'Copyright © 2026-present VitruvianSoftware'
     }
   }
-})
+}))
