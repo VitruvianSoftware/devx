@@ -1,3 +1,23 @@
+// Copyright (c) 2026 VitruvianSoftware
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 //go:build mage
 
 package main
@@ -100,9 +120,33 @@ func Snapshot() error {
 	return sh.Run("goreleaser", "release", "--snapshot", "--clean")
 }
 
-// CI runs the full validation gate: vet → test → build.
+// License applies MIT license headers to all go files.
+func License() error {
+	if _, err := exec.LookPath("addlicense"); err != nil {
+		fmt.Println("Installing addlicense ...")
+		if err := sh.Run("go", "install", "github.com/google/addlicense@latest"); err != nil {
+			return err
+		}
+	}
+	fmt.Println("» Applying license headers ...")
+	return sh.Run("addlicense", "-c", "VitruvianSoftware", "-l", "mit", "-ignore", "docs/**", "-ignore", "internal/scaffold/templates/**", ".")
+}
+
+// LicenseCheck verifies that all go files have license headers.
+func LicenseCheck() error {
+	if _, err := exec.LookPath("addlicense"); err != nil {
+		fmt.Println("Installing addlicense ...")
+		if err := sh.Run("go", "install", "github.com/google/addlicense@latest"); err != nil {
+			return err
+		}
+	}
+	fmt.Println("» Checking license headers ...")
+	return sh.Run("addlicense", "-check", "-c", "VitruvianSoftware", "-l", "mit", "-ignore", "docs/**", "-ignore", "internal/scaffold/templates/**", ".")
+}
+
+// CI runs the full validation gate: license → vet → test → build.
 func CI() error {
-	mg.SerialDeps(Lint, Test, Build)
+	mg.SerialDeps(LicenseCheck, Lint, Test, Build)
 	fmt.Println("» CI gate passed.")
 	return nil
 }

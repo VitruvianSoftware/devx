@@ -1,3 +1,23 @@
+// Copyright (c) 2026 VitruvianSoftware
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package cmd
 
 import (
@@ -22,12 +42,16 @@ var DetailedOutput bool
 
 var rootCmd = &cobra.Command{
 	Use:   "devx",
-	Short: "Supercharged local dev environment (Podman + Cloudflare + Tailscale)",
-	Long: `devx provisions a Fedora CoreOS Podman VM pre-configured with:
-  • Cloudflare Tunnel — instant public HTTPS endpoint on *.ipv1337.dev
-  • Tailscale — zero-trust access to the corporate Tailnet
+	Short: "Supercharged local dev environment",
+	Long: `devx is the unified orchestration layer for your modern developer lifecycle.
+It replaces a fragmented toolchain with a single, declarative CLI powered by devx.yaml:
 
-Run 'devx vm init' to set up your environment for the first time.`,
+  • Local Infrastructure: Podman VMs, ephemeral databases, GCP emulators, and k3s.
+  • Networking & Edge: Instant Cloudflare Tunnels, Tailscale, and hybrid Kubernetes bridging.
+  • Orchestration & State: Multi-repo management, intelligent file syncing, and unified TUI logs.
+  • Testing & CI/CD: Local GitHub Actions emulation, API mocking, and AI agent workflows.
+
+Run 'devx vm init' to bootstrap your machine, or 'devx up' to start services.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -89,6 +113,15 @@ func init() {
 		"Print what destructive actions would do without executing them")
 	rootCmd.PersistentFlags().BoolVar(&DetailedOutput, "detailed", false,
 		"Enable detailed Go test output (shows individual passing tests instead of just package summaries)")
+
+	rootCmd.AddGroup(
+		&cobra.Group{ID: "infra", Title: "Local Infrastructure:"},
+		&cobra.Group{ID: "network", Title: "Networking & Edge:"},
+		&cobra.Group{ID: "orchestration", Title: "Orchestration & State:"},
+		&cobra.Group{ID: "telemetry", Title: "Testing & Telemetry:"},
+		&cobra.Group{ID: "ci", Title: "Pipelines & CI/CD:"},
+	)
+	tunnelCmd.AddGroup(&cobra.Group{ID: "orchestration", Title: "Orchestration & State:"})
 
 	rootCmd.AddCommand(vmCmd)
 	rootCmd.AddCommand(tunnelCmd)
