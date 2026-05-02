@@ -30,6 +30,12 @@ If you prefer to install manually:
 
 ## Installation
 
+### From Homebrew (macOS/Linux)
+
+```bash
+brew install vitruviansoftware/tap/devx
+```
+
 ### From GitHub Releases (recommended)
 
 ```bash

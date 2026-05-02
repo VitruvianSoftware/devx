@@ -59,6 +59,12 @@ You get a fully-configured Fedora CoreOS VM with:
 
 ## Installation
 
+### From Homebrew (macOS/Linux)
+
+```bash
+brew install vitruviansoftware/tap/devx
+```
+
 ### From Releases (recommended)
 
 Download the latest binary from [GitHub Releases](https://github.com/VitruvianSoftware/devx/releases/latest):
