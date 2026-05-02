@@ -30,6 +30,13 @@ name: demo-app
 # Ensure you are logged into a Cloudflare account that has permissions over this zone.
 domain: mycompany.dev
 
+# --- Idea 5: Virtualization Provider Abstraction ---
+# Choose which container runtime devx should use. By default, devx will auto-detect
+# what is installed on your system (podman, lima, colima, orbstack, docker) and ask
+# you which to use. You can pin a specific provider here.
+# Supported: auto, podman, lima, colima, orbstack, docker
+provider: auto
+
 # Define remote and local secret vaults to securely inject environment variables 
 # directly into your `devx shell` without writing plaintext .env files to disk.
 env:

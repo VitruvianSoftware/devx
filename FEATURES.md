@@ -23,9 +23,9 @@ This document serves as an organized historical record of all major capabilities
 
 ## Developer Productivity & Extensibility
 
-### 5. Backend Pluggability (OrbStack / Docker Support) (DONE)
-* **The Problem:** Hardcoding Fedora CoreOS + Podman Machine is highly opinionated. Some devs might already have Docker Desktop or OrbStack running and don't want to run two VMs.
-* **The Solution:** Abstract the `internal/podman` package into a `VirtualizationProvider` interface. Allow developers to map `devx` networking (Cloudflare + Tailscale) directly on top of their existing hypervisor (`--provider=orbstack`).
+### 5. Virtualization Provider Abstraction (Lima / Colima / OrbStack / Docker / Podman) (DONE)
+* **The Problem:** Hardcoding Fedora CoreOS + Podman Machine is highly opinionated. Some devs might already have Docker Desktop, OrbStack, Lima, or Colima running and don't want to run duplicate VMs.
+* **The Solution:** Abstracted the `internal/podman` package into a universal `VirtualizationProvider` interface. `devx` now auto-detects existing hypervisors. If multiple exist, `devx doctor` or `devx vm init` interactively prompts the user to select their preferred backend. If none exist, it asks which they prefer to install. Developers can pin their choice in `devx.yaml` via the `provider:` field. This allows mapping `devx` features directly on top of their existing hypervisor without friction.
 
 ### 6. Built-in Dev Containers (`devcontainer.json`) Integration (DONE)
 * **The Problem:** The VM gives you an OS, but you still need node, go, rust, etc. for your specific project.
