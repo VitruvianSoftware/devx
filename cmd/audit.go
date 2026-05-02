@@ -219,7 +219,7 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 			return false, nil
 		}
 
-		fmt.Printf("  %s Starting %s VM...\n", auditStyleMuted.Render("→"), strings.Title(vmName))
+		fmt.Printf("  %s Starting %s VM...\n", auditStyleMuted.Render("→"), capitalizeProvider(vmName))
 		
 		devName := os.Getenv("USER")
 		if devName == "" {
