@@ -19,7 +19,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/homelab/k3s"
 	"github.com/VitruvianSoftware/devx/internal/homelab/lima"
 	"github.com/VitruvianSoftware/devx/internal/homelab/prereqs"
-	"github.com/VitruvianSoftware/devx/internal/homelab/remote"
+	"github.com/VitruvianSoftware/devx/internal/homelab/util"
 )
 
 // InitOptions configures the Init operation.
@@ -61,7 +61,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 		idx := i + 1
 		total := len(cfg.Nodes)
 		g.Go(func() error {
-			runner := newRunner(node)
+			runner := util.NewRunner(node)
 			mgr := lima.NewManager(runner, node)
 
 			if err := mgr.Provision(gctx); err != nil {
@@ -101,8 +101,8 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	// Phase 3: Initialize the first control plane node.
 	fmt.Println("\n🔧 Phase 3: Bootstrapping control plane (CP-1)...")
 	initNode := cfg.InitNode()
-	initRunner := newRunner(initNode)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
 	if err := initK3s.InitCluster(ctx, ipMap[initNode.Host], initNode.Pool, cfg.Cluster.K3sVersion, serverIPs); err != nil {
 		return fmt.Errorf("[%s] initializing K3s: %w\n\nRecovery: re-run 'homelab init' to retry", initNode.Host, err)
@@ -125,8 +125,8 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	if len(servers) > 1 {
 		fmt.Println("\n🔗 Phase 4: Joining control plane nodes...")
 		for _, node := range servers[1:] {
-			runner := newRunner(node)
-			k3sMgr := k3s.NewManager(runner)
+			runner := util.NewRunner(node)
+			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
 			if err := k3sMgr.JoinServer(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{ipMap[node.Host]}); err != nil {
 				return fmt.Errorf("[%s] joining as server: %w\n\nRecovery: re-run 'homelab init' to retry", node.Host, err)
@@ -144,8 +144,8 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	if len(agents) > 0 {
 		fmt.Println("\n🔗 Phase 5: Joining worker nodes...")
 		for _, node := range agents {
-			runner := newRunner(node)
-			k3sMgr := k3s.NewManager(runner)
+			runner := util.NewRunner(node)
+			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
 			if err := k3sMgr.JoinAgent(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion); err != nil {
 				return fmt.Errorf("[%s] joining as agent: %w\n\nRecovery: re-run 'homelab init' to retry", node.Host, err)
@@ -184,8 +184,8 @@ func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 
 	// Find the first healthy server node to query current cluster state and retrieve the token.
 	for _, n := range cfg.ServerNodes() {
-		runner := newRunner(n)
-		k3sMgr := k3s.NewManager(runner)
+		runner := util.NewRunner(n)
+		k3sMgr := k3s.NewManagerWithVM(runner, n.GetVMName())
 
 		installed, _ := k3sMgr.IsInstalled(ctx)
 		if !installed {
@@ -218,8 +218,8 @@ func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	serverURL := fmt.Sprintf("https://%s:6443", initIP)
 
 	for _, node := range cfg.Nodes {
-		runner := newRunner(node)
-		k3sMgr := k3s.NewManager(runner)
+		runner := util.NewRunner(node)
+		k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 		limaMgr := lima.NewManager(runner, node)
 
 		installed, _ := k3sMgr.IsInstalled(ctx)
@@ -284,8 +284,8 @@ func Remove(ctx context.Context, cfg *config.Config, hostName string, dryRun boo
 
 	// Use the init node to drain and delete from the cluster.
 	initNode := cfg.InitNode()
-	initRunner := newRunner(initNode)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
 	// Drain the node.
 	if err := initK3s.DrainNode(ctx, hostName); err != nil {
@@ -298,8 +298,8 @@ func Remove(ctx context.Context, cfg *config.Config, hostName string, dryRun boo
 	}
 
 	// Uninstall K3s on the target.
-	targetRunner := newRunner(*target)
-	targetK3s := k3s.NewManager(targetRunner)
+	targetRunner := util.NewRunner(*target)
+	targetK3s := k3s.NewManagerWithVM(targetRunner, target.GetVMName())
 	if err := targetK3s.Uninstall(ctx, target.Role); err != nil {
 		return fmt.Errorf("[%s] uninstalling K3s: %w", target.Host, err)
 	}
@@ -335,8 +335,8 @@ func Destroy(ctx context.Context, cfg *config.Config, force, dryRun bool) error 
 	allNodes := append(cfg.AgentNodes(), reverseNodes(cfg.ServerNodes())...)
 
 	for _, node := range allNodes {
-		runner := newRunner(node)
-		k3sMgr := k3s.NewManager(runner)
+		runner := util.NewRunner(node)
+		k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 		limaMgr := lima.NewManager(runner, node)
 
 		// Uninstall K3s.
@@ -372,9 +372,9 @@ func Status(ctx context.Context, cfg *config.Config) error {
 	fmt.Println()
 
 	for _, node := range cfg.Nodes {
-		runner := newRunner(node)
+		runner := util.NewRunner(node)
 		limaMgr := lima.NewManager(runner, node)
-		k3sMgr := k3s.NewManager(runner)
+		k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
 		vmStatus, _ := limaMgr.Status(ctx)
 		k3sInstalled, _ := k3sMgr.IsInstalled(ctx)
@@ -391,8 +391,8 @@ func Status(ctx context.Context, cfg *config.Config) error {
 	// If any server node is reachable, show kubectl output.
 	fmt.Println()
 	initNode := cfg.InitNode()
-	initRunner := newRunner(initNode)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 	out, err := initK3s.GetNodeStatus(ctx)
 	if err == nil {
 		fmt.Println(out)
@@ -405,20 +405,12 @@ func Status(ctx context.Context, cfg *config.Config) error {
 
 // --- helpers ---
 
-// newRunner creates a remote.Runner from a NodeConfig, using optional SSH settings.
-func newRunner(node config.NodeConfig) *remote.Runner {
-	if node.SSHUser != "" || node.SSHPort != "" || node.SSHKeyPath != "" {
-		return remote.NewRunnerWithOpts(node.Host, node.SSHUser, node.SSHPort, node.SSHKeyPath)
-	}
-	return remote.NewRunner(node.Host)
-}
-
 // validateNetwork performs a cross-VM ping matrix to ensure all nodes can communicate.
 func validateNetwork(ctx context.Context, cfg *config.Config, ipMap map[string]string) error {
 	var failures []string
 
 	for _, from := range cfg.Nodes {
-		runner := newRunner(from)
+		runner := util.NewRunner(from)
 		for _, to := range cfg.Nodes {
 			if from.Host == to.Host {
 				continue

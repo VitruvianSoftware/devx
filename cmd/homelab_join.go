@@ -11,10 +11,7 @@ import (
 )
 
 func newHomelabJoinCmd(configFile *string) *cobra.Command {
-	var (
-		dryRun  bool
-		timeout time.Duration
-	)
+	var timeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "join",
@@ -27,11 +24,11 @@ It detects which nodes are missing and provisions only those.`,
 				return fmt.Errorf("loading config: %w", err)
 			}
 			ctx := contextWithSignal(cmd.Context(), timeout)
-			return cluster.Join(ctx, cfg, dryRun)
+			return cluster.Join(ctx, cfg, DryRun)
 		},
 	}
 
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print what would happen without making changes")
+
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "maximum time for the entire operation")
 
 	return cmd

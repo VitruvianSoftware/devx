@@ -10,6 +10,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/homelab/config"
 	"github.com/VitruvianSoftware/devx/internal/homelab/k3s"
 	"github.com/VitruvianSoftware/devx/internal/homelab/lima"
+	"github.com/VitruvianSoftware/devx/internal/homelab/util"
 )
 
 // Apply iterates over all nodes in the cluster, gracefully rolling updates
@@ -19,8 +20,8 @@ func Apply(ctx context.Context, cfg *config.Config, dryRun bool) error {
 
 	// We need the initNode to communicate with the control plane (for drain/uncordon).
 	initNode := cfg.InitNode()
-	initRunner := newRunner(initNode)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
 	// Wait for the cluster to be reachable first.
 	if err := initK3s.WaitForReady(ctx, 30*time.Second); err != nil {
@@ -28,7 +29,7 @@ func Apply(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	}
 
 	for _, node := range cfg.Nodes {
-		runner := newRunner(node)
+		runner := util.NewRunner(node)
 		limaMgr := lima.NewManager(runner, node)
 
 		status, err := limaMgr.Status(ctx)

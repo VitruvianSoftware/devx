@@ -35,5 +35,4 @@ func init() {
 		newHomelabStatusCmd(&homelabConfigFile),
 	)
 
-	// Will add this to rootCmd in root.go
 }

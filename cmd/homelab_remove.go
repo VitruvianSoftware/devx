@@ -11,10 +11,7 @@ import (
 )
 
 func newHomelabRemoveCmd(configFile *string) *cobra.Command {
-	var (
-		dryRun  bool
-		timeout time.Duration
-	)
+	var timeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "remove <node-host>",
@@ -28,11 +25,11 @@ destroys the Lima VM on the target host.`,
 				return fmt.Errorf("loading config: %w", err)
 			}
 			ctx := contextWithSignal(c.Context(), timeout)
-			return cluster.Remove(ctx, cfg, args[0], dryRun)
+			return cluster.Remove(ctx, cfg, args[0], DryRun)
 		},
 	}
 
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print what would happen without making changes")
+
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "maximum time for the entire operation")
 
 	return cmd

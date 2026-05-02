@@ -4,7 +4,6 @@ package lima
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/homelab/config"
 	"github.com/VitruvianSoftware/devx/internal/homelab/remote"
+	"github.com/VitruvianSoftware/devx/internal/homelab/util"
 )
 
 // VMStatus represents the state of a Lima VM.
@@ -124,7 +124,7 @@ func (m *Manager) Provision(ctx context.Context) error {
 		// shell quoting issues with multiline content.
 		limaConfig := m.GenerateConfig(socketPath)
 		configPath := fmt.Sprintf("~/%s.yaml", m.vmName)
-		encoded := base64Encode(limaConfig)
+		encoded := util.Base64Encode(limaConfig)
 		_, err = m.runner.Run(ctx, fmt.Sprintf("echo %s | base64 -d > %s", encoded, configPath))
 		if err != nil {
 			return fmt.Errorf("writing lima config: %w", err)
@@ -214,7 +214,3 @@ func (m *Manager) detectSocketPath(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("[%s] could not find socket_vmnet socket — ensure socket_vmnet is installed and running", m.runner.Host)
 }
 
-// base64Encode encodes a string to base64 for safe transfer over SSH.
-func base64Encode(s string) string {
-	return base64.StdEncoding.EncodeToString([]byte(s))
-}

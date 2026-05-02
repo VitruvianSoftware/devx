@@ -2,6 +2,7 @@ package k3s
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"os"
@@ -98,14 +99,15 @@ func (m *Manager) DownloadSnapshot(ctx context.Context, remotePath, localPath st
 		return fmt.Errorf("reading snapshot: %w", err)
 	}
 
-	// Decode and write locally. Using base64 to safely transfer binary data over SSH.
-	if err := os.WriteFile(localPath+".b64", []byte(content), 0o600); err != nil {
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(content))
+	if err != nil {
+		return fmt.Errorf("decoding snapshot: %w", err)
+	}
+
+	if err := os.WriteFile(localPath, decoded, 0o600); err != nil {
 		return fmt.Errorf("writing snapshot: %w", err)
 	}
 
-	// Decode the base64 file.
-	// In a production tool, we'd use Go's encoding/base64 directly,
-	// but for the CLI tool, shelling out is simpler.
 	return nil
 }
 
@@ -118,10 +120,10 @@ func (m *Manager) UploadSnapshot(ctx context.Context, localPath, remotePath stri
 		return fmt.Errorf("reading local snapshot: %w", err)
 	}
 
-	// Write to remote via stdin. For large files, scp would be better,
-	// but for etcd snapshots (typically <100MB) this works.
+	encoded := base64.StdEncoding.EncodeToString(content)
+
 	_, err = m.runner.LimaShellSudo(ctx, m.vmName,
-		fmt.Sprintf("cat > %s << 'SNAPSHOTEOF'\n%s\nSNAPSHOTEOF", remotePath, string(content)))
+		fmt.Sprintf("echo %s | base64 -d > %s", encoded, remotePath))
 	return err
 }
 

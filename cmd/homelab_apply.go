@@ -11,7 +11,7 @@ import (
 )
 
 func newHomelabApplyCmd(configFile *string) *cobra.Command {
-	var dryRun bool
+
 
 	cmd := &cobra.Command{
 		Use:   "apply",
@@ -31,10 +31,10 @@ It rolls out backend alterations like CPU and Memory changes node-by-node by:
 			// Apply operations can take a while so we give it no strict overarching timeout
 			// by default, or just use context.Background()
 			ctx := context.Background()
-			return cluster.Apply(ctx, cfg, dryRun)
+			return cluster.Apply(ctx, cfg, DryRun)
 		},
 	}
 
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print what would happen without making changes")
+
 	return cmd
 }

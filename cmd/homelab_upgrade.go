@@ -11,10 +11,7 @@ import (
 )
 
 func newHomelabUpgradeCmd(configFile *string) *cobra.Command {
-	var (
-		dryRun  bool
-		timeout time.Duration
-	)
+	var timeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "upgrade",
@@ -29,11 +26,11 @@ uncordoned after, with a health check between each node.`,
 				return fmt.Errorf("loading config: %w", err)
 			}
 			ctx := contextWithSignal(c.Context(), timeout)
-			return cluster.Upgrade(ctx, cfg, dryRun)
+			return cluster.Upgrade(ctx, cfg, DryRun)
 		},
 	}
 
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print what would happen without making changes")
+
 	cmd.Flags().DurationVar(&timeout, "timeout", 45*time.Minute, "maximum time for the entire operation")
 
 	return cmd

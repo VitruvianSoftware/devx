@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/VitruvianSoftware/devx/internal/homelab/config"
-	"github.com/VitruvianSoftware/devx/internal/homelab/lima"
 	"github.com/VitruvianSoftware/devx/internal/homelab/k3s"
+	"github.com/VitruvianSoftware/devx/internal/homelab/lima"
 	"github.com/VitruvianSoftware/devx/internal/homelab/remote"
+	"github.com/VitruvianSoftware/devx/internal/homelab/util"
 )
 
 // CheckResult represents the outcome of a single diagnostic check.
@@ -29,7 +30,7 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	var failed int
 
 	for _, node := range cfg.Nodes {
-		runner := remote.NewRunner(node.Host)
+		runner := util.NewRunner(node)
 
 		// Check 1: SSH connectivity.
 		results = append(results, checkSSH(ctx, runner, node.Host))
@@ -50,30 +51,35 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		// Check 6: Bridged IP.
 		results = append(results, checkBridgedIP(ctx, limaMgr, node.Host))
 
-		// Check 7: K3s installation.
-		k3sMgr := k3s.NewManager(runner)
+		k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 		results = append(results, checkK3s(ctx, k3sMgr, node.Host))
 	}
 
 	// Check 8: Cross-VM connectivity (if multiple VMs are running).
 	ips := collectBridgedIPs(ctx, cfg)
 	if len(ips) > 1 {
-		for host, ip := range ips {
-			for otherHost, otherIP := range ips {
-				if host == otherHost {
+		for _, node := range cfg.Nodes {
+			host := node.Host
+			_, ok := ips[host]
+			if !ok {
+				continue
+			}
+			for _, otherNode := range cfg.Nodes {
+				otherHost := otherNode.Host
+				otherIP, otherOk := ips[otherHost]
+				if host == otherHost || !otherOk {
 					continue
 				}
-				runner := remote.NewRunner(host)
-				limaMgr := lima.NewManager(runner, config.NodeConfig{Host: host})
-				results = append(results, checkPing(ctx, limaMgr, host, otherHost, otherIP, ip))
+				runner := util.NewRunner(node)
+				results = append(results, checkPing(ctx, runner, node.GetVMName(), host, otherHost, otherIP))
 			}
 		}
 	}
 
 	// Check 9: Cluster health (from init node).
 	initNode := cfg.InitNode()
-	initRunner := remote.NewRunner(initNode.Host)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 	results = append(results, checkClusterHealth(ctx, initK3s, initNode.Host))
 
 	// Print results.
@@ -161,9 +167,8 @@ func checkK3s(ctx context.Context, mgr *k3s.Manager, host string) CheckResult {
 	return CheckResult{Name: "K3s", Host: host, Passed: true, Message: "installed"}
 }
 
-func checkPing(ctx context.Context, mgr *lima.Manager, fromHost, toHost, toIP, fromIP string) CheckResult {
-	runner := remote.NewRunner(fromHost)
-	_, err := runner.LimaShell(ctx, "k8s-node", fmt.Sprintf("ping -c 1 -W 3 %s", toIP))
+func checkPing(ctx context.Context, runner *remote.Runner, vmName, fromHost, toHost, toIP string) CheckResult {
+	_, err := runner.LimaShell(ctx, vmName, fmt.Sprintf("ping -c 1 -W 3 %s", toIP))
 	name := fmt.Sprintf("Ping %s", toHost)
 	if err != nil {
 		return CheckResult{Name: name, Host: fromHost, Passed: false, Message: fmt.Sprintf("cannot reach %s (%s)", toHost, toIP)}
@@ -185,7 +190,7 @@ func checkClusterHealth(ctx context.Context, mgr *k3s.Manager, host string) Chec
 func collectBridgedIPs(ctx context.Context, cfg *config.Config) map[string]string {
 	ips := make(map[string]string)
 	for _, node := range cfg.Nodes {
-		runner := remote.NewRunner(node.Host)
+		runner := util.NewRunner(node)
 		mgr := lima.NewManager(runner, node)
 		ip, err := mgr.GetBridgedIP(ctx)
 		if err == nil {

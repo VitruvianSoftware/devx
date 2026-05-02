@@ -11,6 +11,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/homelab/config"
 	"github.com/VitruvianSoftware/devx/internal/homelab/k3s"
 	"github.com/VitruvianSoftware/devx/internal/homelab/lima"
+	"github.com/VitruvianSoftware/devx/internal/homelab/util"
 )
 
 // Upgrade performs a rolling upgrade of K3s across all nodes.
@@ -25,8 +26,8 @@ func Upgrade(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	fmt.Printf("🔄 Rolling upgrade to K3s %s\n", targetVersion)
 
 	initNode := cfg.InitNode()
-	initRunner := newRunner(initNode)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
 	// Phase 1: Upgrade agent nodes first.
 	agents := cfg.AgentNodes()
@@ -71,8 +72,8 @@ func Upgrade(ctx context.Context, cfg *config.Config, dryRun bool) error {
 }
 
 func upgradeNode(ctx context.Context, cfg *config.Config, initK3s *k3s.Manager, node config.NodeConfig, version, role string, dryRun bool) error {
-	runner := newRunner(node)
-	k3sMgr := k3s.NewManager(runner)
+	runner := util.NewRunner(node)
+	k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
 	// Check current version.
 	currentVersion, err := k3sMgr.GetVersion(ctx)
@@ -113,7 +114,7 @@ func upgradeNode(ctx context.Context, cfg *config.Config, initK3s *k3s.Manager, 
 		if node.Host == cfg.InitNode().Host {
 			var serverIPs []string
 			for _, s := range cfg.ServerNodes() {
-				sRunner := newRunner(s)
+				sRunner := util.NewRunner(s)
 				sLima := lima.NewManager(sRunner, s)
 				ip, _ := sLima.GetBridgedIP(ctx)
 				if ip != "" {
@@ -166,8 +167,8 @@ func upgradeNode(ctx context.Context, cfg *config.Config, initK3s *k3s.Manager, 
 // Backup creates an etcd snapshot on the init node and downloads it locally.
 func Backup(ctx context.Context, cfg *config.Config, outputDir string) error {
 	initNode := cfg.InitNode()
-	initRunner := newRunner(initNode)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
 	slog.Info("creating etcd snapshot", "host", initNode.Host)
 	fmt.Printf("📸 Creating etcd snapshot on %s...\n", initNode.Host)
@@ -192,8 +193,8 @@ func Backup(ctx context.Context, cfg *config.Config, outputDir string) error {
 // Restore restores etcd from a snapshot file.
 func Restore(ctx context.Context, cfg *config.Config, snapshotPath string) error {
 	initNode := cfg.InitNode()
-	initRunner := newRunner(initNode)
-	initK3s := k3s.NewManager(initRunner)
+	initRunner := util.NewRunner(initNode)
+	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
 	slog.Info("restoring from snapshot", "host", initNode.Host, "snapshot", snapshotPath)
 	fmt.Printf("🔄 Restoring etcd from %s on %s...\n", snapshotPath, initNode.Host)
@@ -232,7 +233,7 @@ func Restore(ctx context.Context, cfg *config.Config, snapshotPath string) error
 
 func getInitIP(ctx context.Context, cfg *config.Config) string {
 	initNode := cfg.InitNode()
-	runner := newRunner(initNode)
+	runner := util.NewRunner(initNode)
 	mgr := lima.NewManager(runner, initNode)
 	ip, _ := mgr.GetBridgedIP(ctx)
 	return ip

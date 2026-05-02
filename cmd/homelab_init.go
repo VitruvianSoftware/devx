@@ -16,7 +16,6 @@ import (
 
 func newHomelabInitCmd(configFile *string) *cobra.Command {
 	var (
-		dryRun      bool
 		autoInstall bool
 		timeout     time.Duration
 	)
@@ -35,13 +34,13 @@ This command is idempotent: it will skip any steps that have already been comple
 			}
 			ctx := contextWithSignal(cmd.Context(), timeout)
 			return cluster.Init(ctx, cfg, cluster.InitOptions{
-				DryRun:      dryRun,
+				DryRun:      DryRun,
 				AutoInstall: autoInstall,
 			})
 		},
 	}
 
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "print what would happen without making changes")
+
 	cmd.Flags().BoolVar(&autoInstall, "auto-install", false, "automatically install missing prerequisites")
 	cmd.Flags().DurationVar(&timeout, "timeout", 30*time.Minute, "maximum time for the entire operation")
 

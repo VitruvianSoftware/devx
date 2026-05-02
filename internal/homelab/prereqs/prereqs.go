@@ -3,13 +3,13 @@ package prereqs
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/VitruvianSoftware/devx/internal/homelab/config"
 	"github.com/VitruvianSoftware/devx/internal/homelab/remote"
+	"github.com/VitruvianSoftware/devx/internal/homelab/util"
 )
 
 // brewCmd returns the full path to brew, auto-detecting ARM64 vs Intel.
@@ -25,7 +25,7 @@ type CheckResult struct {
 // EnsureAll verifies and optionally installs prerequisites on a single host.
 // If autoInstall is true, missing tools will be installed automatically.
 func EnsureAll(ctx context.Context, node config.NodeConfig, autoInstall bool) error {
-	runner := newRunner(node)
+	runner := util.NewRunner(node)
 	host := node.Host
 
 	slog.Info("checking prerequisites", "host", host, "auto_install", autoInstall)
@@ -251,7 +251,7 @@ func ensureSocketVmnetRunning(ctx context.Context, runner *remote.Runner, host, 
 </dict>
 </plist>`, socketBin, activeIface, socketPath, logDir, logDir)
 
-	encoded := base64Encode(plist)
+	encoded := util.Base64Encode(plist)
 	_, err = runner.RunShell(ctx, fmt.Sprintf("sudo mkdir -p %s && echo %s | base64 -d | sudo tee /Library/LaunchDaemons/homebrew.mxcl.socket_vmnet.plist > /dev/null", logDir, encoded))
 	if err != nil {
 		return fmt.Errorf("[%s] failed to write socket_vmnet plist: %w", host, err)
@@ -281,15 +281,4 @@ func ensureSocketVmnetRunning(ctx context.Context, runner *remote.Runner, host, 
 func ensureLimaBridgedNetwork(_ context.Context, _ *remote.Runner, _ string, _ string) error {
 	// No longer needed — bridged mode is configured at the socket_vmnet service level.
 	return nil
-}
-
-func base64Encode(s string) string {
-	return base64.StdEncoding.EncodeToString([]byte(s))
-}
-
-func newRunner(node config.NodeConfig) *remote.Runner {
-	if node.SSHUser != "" || node.SSHPort != "" || node.SSHKeyPath != "" {
-		return remote.NewRunnerWithOpts(node.Host, node.SSHUser, node.SSHPort, node.SSHKeyPath)
-	}
-	return remote.NewRunner(node.Host)
 }
