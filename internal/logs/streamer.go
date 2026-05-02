@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/VitruvianSoftware/devx/internal/provider"
 )
 
 type LogLine struct {
@@ -22,14 +24,16 @@ type Streamer struct {
 	Lines    chan LogLine
 	Errors   chan error
 	Redactor *SecretRedactor
+	Runtime  provider.ContainerRuntime
 	services map[string]context.CancelFunc
 	mu       sync.Mutex
 }
 
-func NewStreamer() *Streamer {
+func NewStreamer(rt provider.ContainerRuntime) *Streamer {
 	return &Streamer{
 		Lines:    make(chan LogLine, 1000),
 		Errors:   make(chan error, 10),
+		Runtime:  rt,
 		services: make(map[string]context.CancelFunc),
 	}
 }
@@ -48,7 +52,7 @@ func (s *Streamer) watchContainers(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			out, err := exec.Command("podman", "ps", "--format", "{{.Names}}").Output()
+			out, err := s.Runtime.Exec("ps", "--format", "{{.Names}}")
 			if err != nil {
 				continue
 			}
@@ -73,7 +77,7 @@ func (s *Streamer) watchContainers(ctx context.Context) {
 }
 
 func (s *Streamer) tailContainer(ctx context.Context, name string) {
-	cmd := exec.CommandContext(ctx, "podman", "logs", "--tail", "50", "-f", name)
+	cmd := s.Runtime.CommandContext(ctx, "logs", "--tail", "50", "-f", name)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

@@ -83,7 +83,7 @@ Only directories that **actually exist** are shown — if your project doesn't u
 |------|-------------|
 | `--dry-run` | Show the manifest without deleting anything |
 | `-y, --non-interactive` | Skip the confirmation prompt (for CI) |
-| `--runtime` | Container runtime to use (`podman` or `docker`) |
+| `--runtime` | Container runtime to use (defaults to active provider runtime e.g. `nerdctl`, `docker`, `podman`) |
 
 ## After Nuking
 

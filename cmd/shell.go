@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -17,20 +16,18 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/telemetry"
 )
 
-var shellProviderFlag string
-
 var shellCmd = &cobra.Command{
 	Use:   "shell",
 	Short: "Launch an isolated dev shell from devcontainer.json",
 	Long: `Reads the devcontainer.json from your project, pulls the container image,
 mounts your workspace, applies environment variables, and drops you into
-an interactive shell with all your project's tooling pre-configured.`,
+an interactive shell with all your project's tooling pre-configured.
+
+The container runtime is determined by the active --provider setting.`,
 	RunE: runShell,
 }
 
 func init() {
-	shellCmd.Flags().StringVar(&shellProviderFlag, "runtime", "podman",
-		"Container runtime to use (podman, docker)")
 	rootCmd.AddCommand(shellCmd)
 }
 
@@ -44,6 +41,15 @@ func runShell(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// Resolve the full provider (VM + Runtime) so we use the correct
+	// container CLI for the active backend.
+	prov, err := getFullProvider()
+	if err != nil {
+		return fmt.Errorf("resolving provider: %w", err)
+	}
+	rt := prov.Runtime
+	runtime := rt.Name()
+
 	cfg, cfgPath, err := devcontainer.Load(cwd)
 	if err != nil {
 		return fmt.Errorf("devcontainer: %w", err)
@@ -53,11 +59,6 @@ func runShell(_ *cobra.Command, _ []string) error {
 
 	if cfg.Image == "" {
 		return fmt.Errorf("devcontainer.json must specify an 'image' field")
-	}
-
-	runtime := shellProviderFlag
-	if runtime != "docker" && runtime != "podman" {
-		return fmt.Errorf("unsupported runtime %q — use 'podman' or 'docker'", runtime)
 	}
 
 	// Build the container run arguments
@@ -302,12 +303,10 @@ func runShell(_ *cobra.Command, _ []string) error {
 	}
 	fmt.Println()
 
-	cmd := exec.Command(runtime, args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err = cmd.Run()
+	// Use the provider's ContainerRuntime to run the container.
+	// This correctly delegates to podman, docker, or nerdctl (via limactl shell)
+	// depending on the active backend.
+	err = rt.RunInteractive(args...)
 	if err != nil && strings.Contains(err.Error(), "signal: interrupt") {
 		return nil
 	}

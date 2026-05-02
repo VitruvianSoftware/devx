@@ -22,10 +22,12 @@ Generates output in Markdown to stdout by default, or structured JSON.`,
 }
 
 func runStateDump(_ *cobra.Command, _ []string) error {
-	vm, err := getVMProvider()
+	prov, err := getFullProvider()
 	if err != nil {
 		return err
 	}
+	vm := prov.VM
+	rt := prov.Runtime
 
 	devName := os.Getenv("USER")
 	if devName == "" {
@@ -43,10 +45,10 @@ func runStateDump(_ *cobra.Command, _ []string) error {
 		sshFn := func(machine, command string) (string, error) {
 			return vm.SSH(machine, command)
 		}
-		tsStatus = tailscale.StatusWithSSH(cfg.DevHostname, sshFn)
+		tsStatus = tailscale.StatusWithSSH(cfg.DevHostname, rt.Name(), sshFn)
 	}
 
-	report, err := state.GenerateDump(cfg, vm.Name(), vmState, tsStatus)
+	report, err := state.GenerateDump(cfg, prov, vmState, tsStatus)
 	if err != nil {
 		return fmt.Errorf("failed to generate state dump: %w", err)
 	}

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/VitruvianSoftware/devx/internal/provider"
 )
 
 // CheckpointsDir returns the directory where state checkpoints are stored.
@@ -23,7 +25,7 @@ func checkpointPath(name string) string {
 }
 
 // CreateCheckpoint snapshots all running devx-managed containers using podman's CRIU integration.
-func CreateCheckpoint(providerName, name string) error {
+func CreateCheckpoint(providerName, name string, rt provider.ContainerRuntime) error {
 	if providerName != "podman" {
 		return fmt.Errorf("state checkpoints (CRIU) are only supported on the native podman provider. Current provider: %s", providerName)
 	}
@@ -46,7 +48,7 @@ func CreateCheckpoint(providerName, name string) error {
 	}()
 
 	// 1. Discover all devx-managed containers that are running
-	containers, err := getRunningDevxContainers()
+	containers, err := getRunningDevxContainers(rt)
 	if err != nil {
 		checkpointErr = err
 		return err
@@ -95,7 +97,7 @@ func CreateCheckpoint(providerName, name string) error {
 // RestoreCheckpoint restores all containers associated with the named checkpoint.
 // Restores are performed sequentially to avoid port-binding races when CRIU
 // re-binds the original network sockets.
-func RestoreCheckpoint(providerName, name string) error {
+func RestoreCheckpoint(providerName, name string, rt provider.ContainerRuntime) error {
 	if providerName != "podman" {
 		return fmt.Errorf("state restores (CRIU) are only supported on the native podman provider. Current provider: %s", providerName)
 	}
@@ -112,7 +114,7 @@ func RestoreCheckpoint(providerName, name string) error {
 
 	// Because restoring re-binds ports, we must make sure the containers aren't already running.
 	// For devx containers, we kill them if they are running.
-	_ = teardownRunningDevxContainers()
+	_ = teardownRunningDevxContainers(rt)
 
 	fmt.Printf("🔄 Restoring %d containers from checkpoint %q...\n", len(archives), name)
 
@@ -134,10 +136,11 @@ func RestoreCheckpoint(providerName, name string) error {
 }
 
 // getRunningDevxContainers parses 'podman ps' and returns IDs of devx- prefix containers.
-func getRunningDevxContainers() ([]string, error) {
-	out, err := exec.Command("podman", "ps", "--format", "{{.Names}}").CombinedOutput()
+func getRunningDevxContainers(rt provider.ContainerRuntime) ([]string, error) {
+	cmdArgs := []string{"ps", "--filter", "label=devx-managed=true", "--format", "{{.Names}}"}
+	out, err := rt.Exec(cmdArgs...)
 	if err != nil {
-		return nil, fmt.Errorf("podman ps failed: %w", err)
+		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
 
 	var results []string
@@ -151,13 +154,14 @@ func getRunningDevxContainers() ([]string, error) {
 }
 
 // teardownRunningDevxContainers force stops current devx- containers to prevent port collisions on restore
-func teardownRunningDevxContainers() error {
-	containers, _ := getRunningDevxContainers()
-	if len(containers) > 0 {
-		args := append([]string{"rm", "-f"}, containers...)
-		_ = exec.Command("podman", args...).Run()
+func teardownRunningDevxContainers(rt provider.ContainerRuntime) error {
+	containers, err := getRunningDevxContainers(rt)
+	if err != nil || len(containers) == 0 {
+		return nil
 	}
-	return nil
+	args := append([]string{"rm", "-f"}, containers...)
+	_, err = rt.Exec(args...)
+	return err
 }
 
 // CheckpointInfo holds metadata about a stored checkpoint.

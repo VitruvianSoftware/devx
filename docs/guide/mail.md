@@ -129,7 +129,7 @@ assert(items[0].Content.Headers.Subject[0] === "Welcome to MyApp!");
 |------|---------|-------------|
 | `--smtp-port` | `1025` | Host port for the SMTP server |
 | `--ui-port` | `8025` | Host port for the web UI |
-| `--runtime` | `podman` | Container runtime (`podman` or `docker`) |
+| `--runtime` | `auto-detected` | Container runtime (`podman`, `docker`, `nerdctl`) |
 
 ## Lifecycle
 

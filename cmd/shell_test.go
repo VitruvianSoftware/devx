@@ -53,7 +53,7 @@ SECRET_API_KEY=supersecret
 	_ = os.Chdir(testDir)
 	defer func() { _ = os.Chdir(originalWd) }()
 
-	shellProviderFlag = "podman"
+	vmProviderFlag = "podman"
 
 	// Execute shell command
 	err = shellCmd.RunE(shellCmd, []string{})

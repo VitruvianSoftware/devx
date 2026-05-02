@@ -8,9 +8,9 @@
 flowchart TB
     subgraph devlaptop["Developer's Mac"]
         direction TB
-        Code["VS Code / Terminal"] -->|podman run| UserContainers
+        Code["VS Code / Terminal"] -->|docker run / nerdctl run| UserContainers
 
-        subgraph podmanvm["Podman Machine · Fedora CoreOS"]
+        subgraph vm["Virtual Machine (Lima/Colima/Podman/etc)"]
             subgraph daemons["Systemd Controlled"]
                 TS["Tailscale Daemon"]
                 CF["Cloudflared Tunnel"]
@@ -46,9 +46,9 @@ flowchart TB
 
 ## Components
 
-### Podman Machine (VM Layer)
+### Virtual Machine Layer
 
-The foundation is a **Fedora CoreOS** VM managed by Podman Machine. CoreOS is chosen because:
+The foundation is a VM managed by your chosen provider (Lima, Colima, Docker, OrbStack, or Podman). By default, we use **Fedora CoreOS** because:
 
 - **Immutable OS** — The root filesystem is read-only, preventing drift
 - **Ignition provisioning** — Configuration is applied atomically at first boot
@@ -56,6 +56,7 @@ The foundation is a **Fedora CoreOS** VM managed by Podman Machine. CoreOS is ch
 - **Container-optimized** — Minimal footprint, purpose-built for running containers
 
 `devx vm init` compiles a [Butane](https://coreos.github.io/butane/) config into Ignition format and injects it during VM creation.
+*(Note: Some providers like Docker Desktop and OrbStack handle their own lightweight Linux kernel and do not run Fedora CoreOS).*
 
 ### Cloudflare Tunnel (Public Access)
 

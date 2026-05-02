@@ -230,8 +230,8 @@ func computeFeatureReadiness(r doctor.Report) []featureReadiness {
 	return []featureReadiness{
 		{
 			command: "devx vm init",
-			ready:   tools["podman"] && tools["butane"] && tools["cloudflared"],
-			missing: missingList(tools, "podman", "butane", "cloudflared"),
+			ready:   (tools["podman"] || tools["limactl"] || tools["colima"] || tools["docker"]) && tools["butane"] && tools["cloudflared"],
+			missing: joinMissing(vmBackendMissing(tools), missingList(tools, "butane", "cloudflared")),
 		},
 		{
 			command: "devx tunnel expose",
@@ -245,8 +245,8 @@ func computeFeatureReadiness(r doctor.Report) []featureReadiness {
 		},
 		{
 			command: "devx db spawn",
-			ready:   tools["podman"] || tools["docker"],
-			missing: "podman or docker",
+			ready:   tools["podman"] || tools["docker"] || tools["limactl"] || tools["colima"],
+			missing: "podman, docker, lima, or colima",
 		},
 		{
 			command: "devx config pull",
@@ -299,6 +299,15 @@ func joinMissing(parts ...string) string {
 		}
 	}
 	return strings.Join(nonEmpty, ", ")
+}
+
+// vmBackendMissing returns a descriptive string if no VM backend is installed,
+// or an empty string if at least one is present.
+func vmBackendMissing(tools map[string]bool) string {
+	if tools["podman"] || tools["limactl"] || tools["colima"] || tools["docker"] {
+		return ""
+	}
+	return "podman, lima, colima, or docker (at least one required)"
 }
 
 func friendlyOS(os string) string {

@@ -27,10 +27,29 @@ var sshCmd = &cobra.Command{
 		}
 
 		// For podman, use native 'podman machine ssh'.
+		// For lima/colima, drop into their respective VM shells.
 		// For docker/orbstack, drop into the VM shell.
 		if vm.Name() == "podman" {
 			sshArgs := append([]string{"machine", "ssh", cfg.DevHostname}, args...)
 			pCmd := exec.Command("podman", sshArgs...)
+			pCmd.Stdin = os.Stdin
+			pCmd.Stdout = os.Stdout
+			pCmd.Stderr = os.Stderr
+			return pCmd.Run()
+		}
+
+		if vm.Name() == "lima" {
+			sshArgs := append([]string{"shell", cfg.DevHostname}, args...)
+			pCmd := exec.Command("limactl", sshArgs...)
+			pCmd.Stdin = os.Stdin
+			pCmd.Stdout = os.Stdout
+			pCmd.Stderr = os.Stderr
+			return pCmd.Run()
+		}
+
+		if vm.Name() == "colima" {
+			sshArgs := append([]string{"ssh", "--"}, args...)
+			pCmd := exec.Command("colima", sshArgs...)
 			pCmd.Stdin = os.Stdin
 			pCmd.Stdout = os.Stdout
 			pCmd.Stderr = os.Stderr

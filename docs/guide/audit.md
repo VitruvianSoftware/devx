@@ -17,7 +17,7 @@ devx audit
   ...
   ✓ PASS  (340ms)
 
-  ▸ Trivy  —  container (podman)
+  ▸ Trivy  —  container
   2024-01-15T10:14:03Z INFO Vulnerability scanning is enabled
   ...
   ✗ FAIL  (4.2s — issues found)
@@ -84,7 +84,7 @@ Languages supported:
 Is trivy/gitleaks in $PATH?
   YES → Run natively (fastest, ~100ms overhead)
   NO  → Pull image once, run in ephemeral read-only container
-          └── prefers podman, falls back to docker
+          └── dynamically falls back based on configured provider
 ```
 
 The container mount is **read-only** (`-v $(pwd):/scan:ro`) and network-isolated (`--network none`) — the scanner cannot write to your project or make outbound calls.
@@ -126,7 +126,7 @@ make setup:  ## Run once after cloning
 |---|---|
 | `--secrets` | Run secrets scan only |
 | `--vulns` | Run vulnerability scan only |
-| `--runtime` | Force container runtime (`podman` or `docker`) |
+| `--runtime` | Container runtime to use (defaults to active provider runtime e.g. `nerdctl`, `docker`, or `podman`) |
 | `--json` | Output results as JSON (for CI parsers) |
 
 ## Exit Codes

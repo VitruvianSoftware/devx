@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -12,6 +11,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/audit"
+	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
 
@@ -189,17 +190,23 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 
 	// ── VM not running: offer to start it and retry ────────────────────────
 	if runErr == audit.ErrVMNotRunning {
-		fmt.Printf("  %s  Podman VM is not running.\n", auditStyleFail.Render("!"))
+		prov, pErr := getVMProvider()
+		if pErr != nil {
+			return false, pErr
+		}
+		vmName := prov.Name()
+
+		fmt.Printf("  %s  %s VM is not running.\n", auditStyleFail.Render("!"), strings.Title(vmName))
 		if NonInteractive {
-			return false, fmt.Errorf("podman VM is sleeping — run 'podman machine start' first")
+			return false, fmt.Errorf("%s VM is sleeping — please start it first", vmName)
 		}
 
 		var startVM bool
 		form := huh.NewForm(
 			huh.NewGroup(
 				huh.NewConfirm().
-					Title("Start Podman VM?").
-					Description("devx audit needs the Podman VM to run the scanner container. Start it now?").
+					Title(fmt.Sprintf("Start %s VM?", strings.Title(vmName))).
+					Description(fmt.Sprintf("devx audit needs the %s VM to run the scanner container. Start it now?", strings.Title(vmName))).
 					Affirmative("Yes, start it").
 					Negative("Skip this scan").
 					Value(&startVM),
@@ -212,12 +219,22 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 			return false, nil
 		}
 
-		fmt.Printf("  %s Starting Podman VM...\n", auditStyleMuted.Render("→"))
-		startCmd := exec.Command("podman", "machine", "start")
-		startCmd.Stdout = os.Stdout
-		startCmd.Stderr = os.Stderr
-		if err := startCmd.Run(); err != nil {
-			return false, fmt.Errorf("failed to start Podman VM: %w", err)
+		fmt.Printf("  %s Starting %s VM...\n", auditStyleMuted.Render("→"), strings.Title(vmName))
+		
+		devName := os.Getenv("USER")
+		if devName == "" {
+			devName = "developer"
+		}
+		cfg := config.New(devName, "", "", "")
+		if s, err := secrets.Load(envFile); err == nil && s.DevHostname != "" {
+			cfg.DevHostname = s.DevHostname
+		}
+		if cfg.DevHostname == "" {
+			cfg.DevHostname = "devx"
+		}
+
+		if err := prov.Start(cfg.DevHostname); err != nil {
+			return false, fmt.Errorf("failed to start %s VM: %w", vmName, err)
 		}
 		fmt.Println()
 

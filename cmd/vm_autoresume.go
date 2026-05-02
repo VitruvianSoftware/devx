@@ -24,8 +24,10 @@ func ensureVMRunning() error {
 		return err
 	}
 
-	// Orbital/Docker Desktop manages sleep state natively.
-	if prov.Name() != "podman" {
+	// Docker Desktop and OrbStack manage their VM sleep state natively
+	// via macOS. All other providers (podman, lima, colima) need explicit
+	// wake-up via Start().
+	if prov.Name() == "docker" {
 		return nil
 	}
 

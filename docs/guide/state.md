@@ -22,7 +22,7 @@ devx state dump --json
 ```
 
 ### What is included in the dump?
-1. **System Health & Prerequisite Tooling:** Leverages the internal `devx doctor` audit engine to capture the host system, architecture, and whether tools like `podman`, `cloudflared`, and required global vault credentials exist.
+1. **System Health & Prerequisite Tooling:** Leverages the internal `devx doctor` audit engine to capture the host system, architecture, and whether tools like VM backends, `cloudflared`, and required global vault credentials exist.
 2. **VM Topology & Status:** Analyzes the active VM, its orchestrating `devx.yaml` topology map, and its Tailscale status.
 3. **Redacted Configuration:** Natively reads `.env` variables and the active `devx.yaml` file, intelligently redacting any discovered values to `<REDACTED>`. This makes it 100% safe to copy-paste the output into GitHub Issues or public Slack channels.
 4. **Context-Aware Crash Logs:** The engine detects any `devx-` managed containers that are actively in a broken `stopped` or `exited` state and aggressively pulls the last 25 lines of their termination logs inline.

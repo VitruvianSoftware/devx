@@ -40,7 +40,7 @@ We go far beyond basic container networking by natively integrating the premium 
 * 📊 **Predictive Pre-Building:** Local telemetry tracks build durations and proactively nudges you when builds degrade. Opt-in background pre-building watches dependency manifests and silently primes container caches so restarts are instant.
 * 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
 
-`devx` provisions a customized **Fedora CoreOS** VM via Podman Machine or Docker and seamlessly drives this entire supercharged ecosystem.
+`devx` provisions a customized **Fedora CoreOS** VM via your chosen backend (Lima, Colima, Docker, OrbStack, or Podman) and seamlessly drives this entire supercharged ecosystem.
 
 ---
 
@@ -50,7 +50,7 @@ We go far beyond basic container networking by natively integrating the premium 
 devx vm init    # One command. Done.
 ```
 
-You get a fully-configured Fedora CoreOS VM with:
+You get a fully-configured Fedora CoreOS VM via your chosen provider with:
 
 - 🌐 **Instant public HTTPS** — Your machine gets `your-name.ipv1337.dev` automatically
 - 🔒 **Zero-trust corporate access** — The VM joins your Tailnet transparently
@@ -101,7 +101,7 @@ Or install them manually:
 
 | Tool | Install | Purpose |
 |------|---------|---------|
-| [Podman](https://podman.io) | `brew install podman` | VM and container runtime |
+| [Podman](https://podman.io) / [Lima](https://lima-vm.io/) / [Colima](https://github.com/abiosoft/colima) / [Docker](https://docker.com) | | Any VM backend of your choice |
 | [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `brew install cloudflare/cloudflare/cloudflared` | Cloudflare tunnel daemon |
 | [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler |
 | [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`) |

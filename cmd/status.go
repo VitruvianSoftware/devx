@@ -26,6 +26,11 @@ func runStatus(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	prov, err := getFullProvider()
+	if err != nil {
+		return err
+	}
+	rt := prov.Runtime
 
 	devName := os.Getenv("USER")
 	if devName == "" {
@@ -76,7 +81,7 @@ func runStatus(_ *cobra.Command, _ []string) error {
 		sshFn := func(machine, command string) (string, error) {
 			return vm.SSH(machine, command)
 		}
-		tsStatus = tailscale.StatusWithSSH(cfg.DevHostname, sshFn)
+		tsStatus = tailscale.StatusWithSSH(cfg.DevHostname, rt.Name(), sshFn)
 		tsStyle = tui.StyleDetailDone
 	}
 	if !outputJSON {

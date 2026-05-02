@@ -25,7 +25,12 @@ This document serves as an organized historical record of all major capabilities
 
 ### 5. Virtualization Provider Abstraction (Lima / Colima / OrbStack / Docker / Podman) (DONE)
 * **The Problem:** Hardcoding Fedora CoreOS + Podman Machine is highly opinionated. Some devs might already have Docker Desktop, OrbStack, Lima, or Colima running and don't want to run duplicate VMs.
-* **The Solution:** Abstracted the `internal/podman` package into a universal `VirtualizationProvider` interface. `devx` now auto-detects existing hypervisors. If multiple exist, `devx doctor` or `devx vm init` interactively prompts the user to select their preferred backend. If none exist, it asks which they prefer to install. Developers can pin their choice in `devx.yaml` via the `provider:` field. This allows mapping `devx` features directly on top of their existing hypervisor without friction.
+* **The Solution:** Implemented a two-layer architecture:
+  * **VM Layer (`VMProvider`):** Manages VM lifecycle (create, start, stop, SSH) for Podman Machine, Docker Desktop, OrbStack, Lima, and Colima.
+  * **Runtime Layer (`ContainerRuntime`):** Handles container execution via the appropriate CLI (`podman`, `docker`, `nerdctl`). Lima/Colima containers are proxied through `limactl shell` or `colima ssh`.
+* **Auto-detection:** `devx` scans `$PATH` for installed backends. If multiple are found, an interactive picker lets the developer choose and optionally save their preference to `~/.devx/config.yaml`.
+* **Three-tier config cascade:** `--provider` flag → `~/.devx/config.yaml` (machine-local) → `devx.yaml` (project-level) → auto-detect.
+* **Feature degradation:** `devx state checkpoint` (CRIU) is only supported on Podman. Lima/Colima gracefully error with an actionable message instead of silently failing.
 
 ### 6. Built-in Dev Containers (`devcontainer.json`) Integration (DONE)
 * **The Problem:** The VM gives you an OS, but you still need node, go, rust, etc. for your specific project.

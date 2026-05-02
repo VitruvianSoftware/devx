@@ -15,8 +15,8 @@ type Result struct {
 }
 
 // Check verifies all required tools are present on PATH.
-func Check() []Result {
-	tools := []string{"podman", "cloudflared", "butane"}
+func Check(vmBinary string) []Result {
+	tools := []string{vmBinary, "cloudflared", "butane"}
 	results := make([]Result, len(tools))
 	for i, tool := range tools {
 		out, err := exec.Command(tool, "--version").Output()
