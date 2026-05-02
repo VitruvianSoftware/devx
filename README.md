@@ -44,18 +44,7 @@ We go far beyond basic container networking by natively integrating the premium 
 
 ---
 
-## The Solution
-
-```bash
-devx vm init    # One command. Done.
-```
-
-You get a fully-configured Fedora CoreOS VM via your chosen provider with:
-
-- 🌐 **Instant public HTTPS** — Your machine gets `your-name.ipv1337.dev` automatically
-- 🔒 **Zero-trust corporate access** — The VM joins your Tailnet transparently
-- 🚀 **ngrok-like port exposure** — `devx tunnel expose 3000` gives you a public URL in seconds
-- 🏗️ **Host-level isolation** — Pre-tuned `inotify` limits, rootful containers, dedicated kernel
+## Installation
 
 ### From Homebrew (recommended for macOS/Linux)
 
@@ -87,7 +76,9 @@ sudo mv devx /usr/local/bin/
 go install github.com/VitruvianSoftware/devx@latest
 ```
 
-### Prerequisites
+## Quick Start
+
+### Step 0: Check Prerequisites
 
 Run the built-in health check to audit and install prerequisites automatically:
 
@@ -97,7 +88,8 @@ devx doctor install    # install missing tools
 devx doctor auth       # authenticate required services
 ```
 
-Or install them manually:
+<details>
+<summary>Manual Installation Prerequisites</summary>
 
 | Tool | Install | Purpose |
 |------|---------|---------|
@@ -106,12 +98,20 @@ Or install them manually:
 | [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler |
 | [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`) |
 
-## Quick Start
+</details>
 
-Before running any infrastructure, you should always check your host environment:
+### Step 1: The Magic (TL;DR)
+
 ```bash
-devx doctor
+devx vm init    # One command. Done.
 ```
+
+You get a fully-configured Fedora CoreOS VM via your chosen provider with:
+
+- 🌐 **Instant public HTTPS** — Your machine gets `your-name.ipv1337.dev` automatically
+- 🔒 **Zero-trust corporate access** — The VM joins your Tailnet transparently
+- 🚀 **ngrok-like port exposure** — `devx tunnel expose 3000` gives you a public URL in seconds
+- 🏗️ **Host-level isolation** — Pre-tuned `inotify` limits, rootful containers, dedicated kernel
 
 ### Path A: The Golden Path (Starting a Project)
 
