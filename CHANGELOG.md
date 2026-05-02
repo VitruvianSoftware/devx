@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.1](https://github.com/VitruvianSoftware/devx/compare/v0.32.0...v0.32.1) (2026-04-13)
+
+
+### Bug Fixes
+
+* trigger release for homebrew configuration ([8583590](https://github.com/VitruvianSoftware/devx/commit/8583590ebf3a092e436b00d2b32a688778deac46))
+
 ## [0.32.0](https://github.com/VitruvianSoftware/devx/compare/v0.31.0...v0.32.0) (2026-04-05)
 
 
