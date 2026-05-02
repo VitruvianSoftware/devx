@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/ship"
@@ -15,65 +12,49 @@ import (
 )
 
 var (
-	shipCommitMsg     string
-	shipBaseBranch    string
-	shipCITimeout     time.Duration
-	shipSkipPreflight bool
-	shipInstallHook   bool
-	shipVerbose       bool
+	reviewCommitMsg     string
+	reviewBaseBranch    string
+	reviewCITimeout     time.Duration
+	reviewSkipPreflight bool
+	reviewVerbose       bool
 )
 
-var agentShipCmd = &cobra.Command{
-	Use:   "ship",
-	Short: "Commit, push, and verify CI in a single blocking operation",
-	Long: `The deterministic agent pipeline guardrail. Wraps the entire
-commit → push → PR → CI verification lifecycle into one command that
-blocks until the CI pipeline completes on the target branch.
+var agentReviewCmd = &cobra.Command{
+	Use:   "review",
+	Short: "Commit, push, and create a PR for human review",
+	Long: `The deterministic agent pipeline guardrail for human review workflows.
+Wraps the entire commit → push → PR → CI verification lifecycle into one
+command that blocks until the CI pipeline completes on the target branch.
 
-  devx agent ship -m "feat: add new feature"
+Unlike 'ship', this command does NOT auto-merge the PR. It leaves it open
+for human review.
+
+  devx agent review -m "feat: add new feature"
 
 This command:
   1. Runs local pre-flight checks (test, lint, build) for the detected stack
   2. Commits and pushes the changes (bypassing the pre-push hook internally)
-  3. Creates a PR and merges it
+  3. Creates a PR
   4. Polls the CI pipeline and BLOCKS until it completes
   5. Reports the final result with deterministic exit codes
 
 Exit codes:
-  0   — Success: all checks passed, CI is green
+  0   — Success: all checks passed, CI is green, PR is open
   50  — Pre-flight failure (tests, lint, or build failed locally)
   51  — Git push failed
-  52  — PR creation or merge failed
+  52  — PR creation failed
   53  — CI pipeline failed (failure logs included in output)
   54  — CI pipeline timed out
-  55  — Documentation check failed
-  56  — Nothing to ship (no changes detected)
-
-Humans can also use this command if they want the same CI-blocking workflow.
+  56  — Nothing to review (no changes detected)
 
 Machine-readable output:
-  devx agent ship -m "fix: resolve bug" --json`,
-	RunE: runAgentShip,
+  devx agent review -m "fix: resolve bug" --json`,
+	RunE: runAgentReview,
 }
 
-// ── Styles ──────────────────────────────────────────────────────────────────
-
-var (
-	shipStylePhase    = lipgloss.NewStyle().Foreground(lipgloss.Color("#79C0FF")).Bold(true)
-	shipStylePass     = lipgloss.NewStyle().Foreground(lipgloss.Color("#3FB950")).Bold(true)
-	shipStyleFail     = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF7B72")).Bold(true)
-	shipStyleMuted    = lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E"))
-	shipStyleBlocking = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3B341")).Bold(true)
-)
-
-func runAgentShip(_ *cobra.Command, _ []string) error {
-	// Handle --install-hook mode
-	if shipInstallHook {
-		return installShipHook()
-	}
-
-	if shipCommitMsg == "" {
-		return fmt.Errorf("commit message is required: devx agent ship -m \"your message\"")
+func runAgentReview(_ *cobra.Command, _ []string) error {
+	if reviewCommitMsg == "" {
+		return fmt.Errorf("commit message is required: devx agent review -m \"your message\"")
 	}
 
 	cwd, _ := os.Getwd()
@@ -83,28 +64,27 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 	if !ship.HasStagedChanges(cwd) {
 		result.ExitCode = ship.ExitNothingToShip
 		result.Phase = "check"
-		result.Message = "nothing to ship — no uncommitted changes detected"
+		result.Message = "nothing to review — no uncommitted changes detected"
 		return exitWithResult(result)
 	}
 
 	branch := ship.CurrentBranch(cwd)
-	if shipBaseBranch == "" {
-		shipBaseBranch = "main"
+	if reviewBaseBranch == "" {
+		reviewBaseBranch = "main"
 	}
 
 	if !outputJSON {
 		fmt.Println()
-		fmt.Println(tui.StyleTitle.Render("🚀 devx agent ship"))
+		fmt.Println(tui.StyleTitle.Render("🔍 devx agent review"))
 		fmt.Println()
 	}
 
 	// ── Phase 1: Pre-flight checks ──────────────────────────────────────
-	if !shipSkipPreflight {
+	if !reviewSkipPreflight {
 		if !outputJSON {
 			fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 1:"), "Pre-flight checks")
 		}
 
-		// Load explicit pipeline from devx.yaml if present
 		var pipeline *ship.PipelineConfig
 		if cfg, err := resolveConfig("devx.yaml", ""); err == nil && cfg.Pipeline != nil {
 			pipeline = convertPipeline(cfg.Pipeline)
@@ -113,7 +93,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 			}
 		}
 
-		pfResult, err := ship.RunPreFlight(cwd, shipVerbose, pipeline)
+		pfResult, err := ship.RunPreFlight(cwd, reviewVerbose, pipeline)
 		result.PreFlight = pfResult
 
 		if err != nil {
@@ -140,7 +120,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 2:"), "Commit & Push")
 	}
 
-	if err := ship.GitPush(cwd, shipCommitMsg, branch); err != nil {
+	if err := ship.GitPush(cwd, reviewCommitMsg, branch); err != nil {
 		result.ExitCode = ship.ExitPushFail
 		result.Phase = "push"
 		result.Message = err.Error()
@@ -157,24 +137,14 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	// ── Phase 3: Create PR & Enable Auto-Merge ──────────────────────────
+	// ── Phase 3: Create PR for Review ───────────────────────────────────
 	if !outputJSON {
-		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create PR & Enable Auto-Merge")
+		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create PR for Review")
 	}
 
-	prURL, err := ship.CreatePR(cwd, shipCommitMsg, shipCommitMsg, shipBaseBranch)
+	prURL, err := ship.CreatePR(cwd, reviewCommitMsg, reviewCommitMsg, reviewBaseBranch)
 	result.PRURL = prURL
 	if err != nil {
-		result.ExitCode = ship.ExitPRFail
-		result.Phase = "pr"
-		result.Message = err.Error()
-		if !outputJSON {
-			fmt.Printf("    %s  %s\n\n", shipStyleFail.Render("✗ FAIL"), err.Error())
-		}
-		return exitWithResult(result)
-	}
-
-	if err := ship.EnableAutoMerge(cwd, prURL); err != nil {
 		result.ExitCode = ship.ExitPRFail
 		result.Phase = "pr"
 		result.Message = err.Error()
@@ -203,7 +173,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		)
 	}
 
-	runID, conclusion, failureLogs, pollErr := ship.WatchPRChecks(cwd, prURL, branch, shipCITimeout)
+	runID, conclusion, failureLogs, pollErr := ship.WatchPRChecks(cwd, prURL, branch, reviewCITimeout)
 	result.CIRunID = runID
 	result.CIStatus = conclusion
 	result.FailureLogs = failureLogs
@@ -243,7 +213,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 	// ── Success ─────────────────────────────────────────────────────────
 	result.Success = true
 	result.Phase = "complete"
-	result.Message = "shipped successfully — CI is green"
+	result.Message = "review PR created successfully — CI is green"
 
 	if !outputJSON {
 		fmt.Printf("    %s  CI pipeline %s (run %s)\n",
@@ -252,83 +222,24 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 			shipStyleMuted.Render(runID),
 		)
 		fmt.Println()
-		fmt.Println(tui.StyleSuccessBox.Render("✅ Ship complete! Code is merged, CI is green."))
+		fmt.Println(tui.StyleSuccessBox.Render("✅ Review PR is ready! CI is green. Waiting for human review."))
 		fmt.Println()
 	}
 
 	return exitWithResult(result)
 }
 
-func exitWithResult(r *ship.Result) error {
-	if outputJSON {
-		enc, _ := json.MarshalIndent(r, "", "  ")
-		fmt.Println(string(enc))
-	}
-
-	if r.ExitCode != ship.ExitOK {
-		os.Exit(r.ExitCode)
-	}
-	return nil
-}
-
-func installShipHook() error {
-	cwd, _ := os.Getwd()
-
-	if err := ship.InstallPrePushHook(cwd); err != nil {
-		if strings.Contains(err.Error(), "non-devx") {
-			fmt.Printf("  %s  %s\n", shipStyleFail.Render("✗"), err.Error())
-			return nil
-		}
-		return err
-	}
-
-	fmt.Printf("  %s  Installed devx pre-push hook at .git/hooks/pre-push\n", tui.IconDone)
-	fmt.Printf("  %s\n", shipStyleMuted.Render("Direct 'git push' is now blocked. AI agents must use 'devx agent ship'."))
-	fmt.Printf("  %s\n", shipStyleMuted.Render("Humans can bypass with: git push --no-verify"))
-	return nil
-}
-
 func init() {
-	agentShipCmd.Flags().StringVarP(&shipCommitMsg, "message", "m", "",
+	agentReviewCmd.Flags().StringVarP(&reviewCommitMsg, "message", "m", "",
 		"Commit message (required)")
-	agentShipCmd.Flags().StringVar(&shipBaseBranch, "base", "main",
+	agentReviewCmd.Flags().StringVar(&reviewBaseBranch, "base", "main",
 		"Base branch for the PR (default: main)")
-	agentShipCmd.Flags().DurationVar(&shipCITimeout, "ci-timeout", 10*time.Minute,
+	agentReviewCmd.Flags().DurationVar(&reviewCITimeout, "ci-timeout", 10*time.Minute,
 		"Maximum time to wait for CI pipeline completion")
-	agentShipCmd.Flags().BoolVar(&shipSkipPreflight, "skip-preflight", false,
+	agentReviewCmd.Flags().BoolVar(&reviewSkipPreflight, "skip-preflight", false,
 		"Skip local pre-flight checks (not recommended)")
-	agentShipCmd.Flags().BoolVar(&shipInstallHook, "install-hook", false,
-		"Install the pre-push git hook and exit")
-	agentShipCmd.Flags().BoolVarP(&shipVerbose, "verbose", "v", false,
+	agentReviewCmd.Flags().BoolVarP(&reviewVerbose, "verbose", "v", false,
 		"Show full output from pre-flight commands")
 
-	agentCmd.AddCommand(agentShipCmd)
-}
-
-// convertPipeline bridges the devx.yaml config model to the ship package's PipelineConfig.
-func convertPipeline(p *DevxConfigPipeline) *ship.PipelineConfig {
-	if p == nil {
-		return nil
-	}
-	return &ship.PipelineConfig{
-		Test:   convertStage(p.Test),
-		Lint:   convertStage(p.Lint),
-		Build:  convertStage(p.Build),
-		Verify: convertStage(p.Verify),
-	}
-}
-
-func convertStage(s *DevxConfigPipelineStage) *ship.PipelineStage {
-	if s == nil {
-		return nil
-	}
-	cmds := s.Cmds()
-	if len(cmds) == 0 && len(s.Before) == 0 && len(s.After) == 0 {
-		return nil
-	}
-	return &ship.PipelineStage{
-		Cmds:   cmds,
-		Before: s.Before,
-		After:  s.After,
-	}
+	agentCmd.AddCommand(agentReviewCmd)
 }
