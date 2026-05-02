@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0](https://github.com/VitruvianSoftware/devx/compare/v0.33.0...v0.34.0) (2026-05-02)
+
+
+### Features
+
+* decouple CLI from Podman, support multi-provider virtualization (Lima, Colima, Docker, OrbStack) ([#132](https://github.com/VitruvianSoftware/devx/issues/132)) ([ba1103c](https://github.com/VitruvianSoftware/devx/commit/ba1103cf381f0c0af5d72aacc23fb9ca2d384a11))
+
+
+### Bug Fixes
+
+* replace remaining deprecated strings.Title in cmd/audit.go ([#135](https://github.com/VitruvianSoftware/devx/issues/135)) ([e68f1bb](https://github.com/VitruvianSoftware/devx/commit/e68f1bb04f0f2963b3f01af9e76f99129ec9d5fb))
+* resolve CI failures by skipping missing provider binary tests and addressing string Title deprecation lint error ([#134](https://github.com/VitruvianSoftware/devx/issues/134)) ([b7a2494](https://github.com/VitruvianSoftware/devx/commit/b7a249489f2b8f560821ad96c4c20979fe5451b4))
+
 ## [0.33.0](https://github.com/VitruvianSoftware/devx/compare/v0.32.1...v0.33.0) (2026-05-02)
 
 
