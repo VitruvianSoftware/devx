@@ -7,7 +7,7 @@ Connect your local development environment to remote Kubernetes services for rea
 `devx bridge` establishes secure tunnels from your local machine to remote Kubernetes services via `kubectl port-forward`. This enables you to run your local service while it communicates with real staging infrastructure — no application code changes required.
 
 ::: tip Client-Driven Architecture
-Bridge follows devx's **Client-Driven Architecture** principle. In Phase 1 (Idea 46.1), all operations are purely client-side using `kubectl port-forward`. No cluster-side agents or controllers are deployed. Future phases (46.2+) will use ephemeral, auto-cleaning agent pods for traffic interception.
+Bridge follows devx's **Client-Driven Architecture** principle. In Phase 1, all operations are purely client-side using `kubectl port-forward`. No cluster-side agents or controllers are deployed. Future phases will use ephemeral, auto-cleaning agent pods for traffic interception.
 :::
 
 ## Prerequisites
@@ -152,7 +152,7 @@ devx bridge connect --profile production-debug
 
 ## Error Handling
 
-Bridge uses deterministic exit codes for programmatic error handling:
+Bridge uses deterministic `devxerr` exit codes for programmatic error handling:
 
 | Exit Code | Constant | Meaning |
 |-----------|----------|---------|
@@ -176,7 +176,7 @@ Bridge uses deterministic exit codes for programmatic error handling:
 - **Port collision:** If your requested local port is in use, bridge auto-shifts to a free port (consistent with `devx db spawn` behavior).
 - **Graceful shutdown:** Press `Ctrl+C` to tear down all bridges cleanly.
 
-## Traffic Interception (Idea 46.2)
+## Traffic Interception
 
 Route real cluster traffic to your local machine for live debugging. An ephemeral agent pod is deployed to the cluster and the target Service's selector is temporarily swapped to redirect traffic through a Yamux multiplexed tunnel to your local application.
 
@@ -188,6 +188,23 @@ Route real cluster traffic to your local machine for live debugging. An ephemera
 4. When a cluster client sends a request, the agent opens a new Yamux stream back to the CLI, which proxies it to `localhost`
 5. On shutdown (Ctrl+C), the original selector is restored and the agent is removed
 6. If `devx` crashes, the agent detects the tunnel drop and **automatically restores the selector** (self-healing)
+
+```mermaid
+sequenceDiagram
+    participant C as Cluster Client
+    participant S as Target Service
+    participant A as Agent Pod
+    participant Y as Yamux Tunnel (port-forward)
+    participant D as devx CLI
+    participant L as Local App (localhost)
+
+    Note over S, A: devx swaps Service selector
+    C->>S: Request
+    S->>A: Routes to Agent Pod
+    A->>Y: Multiplexes over tunnel
+    Y->>D: Forwards to CLI
+    D->>L: Proxies to local server
+```
 
 ### Quick Start
 
@@ -214,12 +231,12 @@ bridge:
   namespace: default
   agent_image: ""  # optional: override default ghcr.io/VitruvianSoftware/devx-bridge-agent
 
-  # Outbound connectivity (Idea 46.1)
+  # Outbound connectivity
   targets:
     - service: redis
       port: 6379
 
-  # Inbound traffic interception (Idea 46.2)
+  # Inbound traffic interception
   intercepts:
     - service: payments-api
       port: 8080
@@ -234,9 +251,12 @@ Intercept inbound traffic from a remote Kubernetes service.
 ```bash
 devx bridge intercept <service> [flags]
 
+::: warning `mode: mirror` not supported
+Currently, only `--steal` (or `mode: steal`) is supported. `mode: mirror` is planned for a future release.
+:::
+
 Flags:
   --steal            Full traffic redirect (required — explicit acknowledgment)
-  --mirror           Duplicate traffic only (not yet implemented — 46.2b)
   -p, --port         Remote port to intercept (default: first port on Service)
   --local-port       Local port to route traffic to (default: same as --port)
   --agent-image      Override agent image (for air-gapped clusters)
@@ -287,7 +307,7 @@ Generate the complete RBAC manifest with `devx bridge rbac`.
 
 Service mesh environments (Istio, Linkerd) are **not supported** in the current version. If a mesh sidecar is detected, `devx` prints a warning but proceeds. The selector swap may not work correctly with mesh-injected pods because the mesh control plane may override or ignore the selector change.
 
-## Hybrid Topology: `runtime: bridge` in `devx up` (Idea 46.3)
+## Hybrid Topology: `runtime: bridge` in `devx up`
 
 The standalone `devx bridge connect` and `devx bridge intercept` commands remain available for ad-hoc use. But for full lifecycle integration, bridge services can be declared inline in `devx.yaml`'s `services:` array with `runtime: bridge`. This makes them first-class participants in the `devx up` DAG orchestrator — with dependency ordering, health gating, and unified cleanup.
 
@@ -347,7 +367,7 @@ DAG-managed bridge sessions are tagged with `Origin: "dag"` in `~/.devx/bridge.j
 
 After all bridge services are healthy, `devx up` auto-generates `~/.devx/bridge.env` with `BRIDGE_<SERVICE>_URL` variables. These are injected into `devx shell` automatically.
 
-## Future: DNS Proxy (Idea 46.1.5)
+## Future: DNS Proxy
 
 Currently, applications must use `BRIDGE_*_URL` environment variables to reach bridged services. A future enhancement will add an optional `--dns` flag that starts a lightweight DNS proxy, allowing apps to use native k8s DNS names (e.g., `payments-api.default.svc.cluster.local`) without code changes.
 

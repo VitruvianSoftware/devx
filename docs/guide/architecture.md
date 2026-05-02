@@ -89,7 +89,7 @@ devx
 ├── shell       # Devcontainer-based isolated shells
 ├── config      # Credential and configuration management
 ├── exec        # Raw passthrough to infrastructure tools
-├── bridge      # Hybrid edge-to-local K8s routing (Idea 46)
+├── bridge      # Hybrid edge-to-local K8s routing
 └── up          # Declarative provisioning from devx.yaml
 ```
 
@@ -103,11 +103,12 @@ Each subcommand group is self-contained in `cmd/` and communicates with backend 
 
 ## Bridge Layer (Remote Cluster Access)
 
-`devx bridge` extends the local environment to remote Kubernetes clusters following the **Client-Driven Architecture** principle:
+### The Hybrid Bridge
 
-- **Idea 46.1 (Shipped):** Outbound connectivity via `kubectl port-forward` — purely client-side, no cluster modifications
-- **Idea 46.2 (Shipped):** Inbound traffic interception via self-healing agent pods. Deploys an ephemeral agent Job that mirrors the target Service's ports, swaps the selector, and tunnels inbound cluster traffic to the developer's local machine via Yamux multiplexing over `kubectl port-forward`
-- **Idea 46.3 (Shipped):** Full hybrid topology orchestrated by `devx up` — `runtime: bridge` services with connect/intercept modes participate in the DAG with correct dependency ordering, unified lifecycle, and bridge-native health checks
+Bridge implements a "Client-Driven Architecture" allowing developers to merge local code with real staging infrastructure:
+
+- **Phase 1: Connect:** Outbound connectivity via `kubectl port-forward` — purely client-side, no cluster modifications
+- **Phase 2: Intercept:** Inbound traffic interception via self-healing agent pods. Deploys an ephemeral agent Job that mirrors the target Service's ports, swaps the selector, and tunnels inbound cluster traffic to the developer's local machine via Yamux multiplexing over `kubectl port-forward`
+- **Phase 3: Hybrid Topology:** Full hybrid topology orchestrated by `devx up` — `runtime: bridge` services with connect/intercept modes participate in the DAG with correct dependency ordering, unified lifecycle, and bridge-native health checks
 
 Bridge injects `BRIDGE_*_URL` environment variables into `devx shell`, enabling local code to reach remote services without application-level changes.
-

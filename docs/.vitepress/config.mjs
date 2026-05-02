@@ -24,37 +24,57 @@ export default withMermaid(defineConfig({
           { text: 'The DX Landscape', link: '/guide/landscape' },
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'User Journeys', link: '/guide/journeys' },
-          { text: 'Environment Doctor', link: '/guide/doctor' },
           { text: 'Architecture', link: '/guide/architecture' },
-          { text: 'Diagnostics & State', link: '/guide/state' }
+          { text: 'AI Agent Skills', link: '/guide/ai-agents' }
         ]
       },
       {
-        text: 'Core Concepts',
+        text: 'Local Infrastructure',
         items: [
           { text: 'Container VMs', link: '/guide/virtual-machine' },
           { text: 'VM Providers', link: '/guide/providers' },
           { text: 'Databases (Ephemeral)', link: '/guide/databases' },
-          { text: 'Cloudflare Tunnels', link: '/guide/tunnels' },
-          { text: 'Native Apps & Logs', link: '/guide/execution' },
           { text: 'Cloud Emulators (GCS)', link: '/guide/cloud-emulators' },
-          { text: 'The Nuke Button', link: '/guide/nuke' },
-          { text: 'Email Catcher', link: '/guide/mail' },
-          { text: 'Webhook Catcher', link: '/guide/webhook' },
-          { text: 'Security Auditing', link: '/guide/audit' },
-          { text: 'Distributed Tracing', link: '/guide/trace' },
-          { text: 'Ephemeral E2E Testing', link: '/guide/testing' },
-          { text: 'API Mocking', link: '/guide/mocking' },
           { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
           { text: 'Homelab Manager', link: '/guide/homelab' },
-          { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
-          { text: 'Local CI Emulation', link: '/guide/ci' },
-          { text: 'Smart File Syncing', link: '/guide/sync' },
+          { text: 'The Nuke Button', link: '/guide/nuke' }
+        ]
+      },
+      {
+        text: 'Networking & Edge',
+        items: [
+          { text: 'Hybrid Bridge', link: '/guide/bridge' },
+          { text: 'Cloudflare Tunnels', link: '/guide/tunnels' },
+          { text: 'Email Catcher', link: '/guide/mail' },
+          { text: 'Webhook Catcher', link: '/guide/webhook' }
+        ]
+      },
+      {
+        text: 'Orchestration & State',
+        items: [
           { text: 'Multirepo Orchestration', link: '/guide/multirepo' },
-          { text: 'Predictive Pre-Building', link: '/guide/caching' },
+          { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
+          { text: 'Smart File Syncing', link: '/guide/sync' },
+          { text: 'Native Apps & Logs', link: '/guide/execution' },
+          { text: 'Diagnostics & State', link: '/guide/state' }
+        ]
+      },
+      {
+        text: 'Testing & Telemetry',
+        items: [
+          { text: 'API Mocking', link: '/guide/mocking' },
+          { text: 'Ephemeral E2E Testing', link: '/guide/testing' },
+          { text: 'Security Auditing', link: '/guide/audit' },
+          { text: 'Distributed Tracing', link: '/guide/trace' },
+          { text: 'Environment Doctor', link: '/guide/doctor' }
+        ]
+      },
+      {
+        text: 'Pipelines & CI/CD',
+        items: [
           { text: 'Pipeline Stages', link: '/guide/pipeline' },
-          { text: 'AI Agent Skills', link: '/guide/ai-agents' },
-          { text: 'Hybrid Bridge', link: '/guide/bridge' }
+          { text: 'Local CI Emulation', link: '/guide/ci' },
+          { text: 'Predictive Pre-Building', link: '/guide/caching' }
         ]
       }
     ],

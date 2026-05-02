@@ -78,4 +78,4 @@ devx config validate
   2 of 4 keys failed validation
 ```
 
-It parses `.env.example` as the single source of truth, cross-verifies against the remote vaults or your local `.env`, and deterministically reports gaps! It also supports `--json` so AI agents can use it safely.
+It parses `.env.example` as the single source of truth, cross-verifies against the remote vaults or your local `.env`, and deterministically reports gaps! It also supports **`--json`** so AI agents can natively detect missing environment variables.

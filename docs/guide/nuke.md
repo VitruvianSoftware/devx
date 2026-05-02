@@ -62,6 +62,10 @@ Your source code and config files (.env, devx.yaml) are safe.
 | SSH keys | Credentials are untouched |
 | `~/.devx/snapshots` | Database snapshots you created with `devx db snapshot` |
 
+::: note
+`devx nuke` respects the active `--provider` (e.g., `podman` vs `docker`) when executing container teardowns, ensuring it only cleans up containers and volumes managed by devx for that specific runtime.
+:::
+
 ## Languages Supported
 
 `devx nuke` recognises caches and build artefacts for:
