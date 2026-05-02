@@ -55,6 +55,9 @@ func TestResolve_ExplicitPodman(t *testing.T) {
 func TestResolve_ExplicitLima(t *testing.T) {
 	vm, rt, err := Resolve("lima")
 	if err != nil {
+		if searchSubstring(err.Error(), "not found on $PATH") {
+			t.Skipf("Skipping test: %v", err)
+		}
 		t.Fatalf("Resolve(lima) error: %v", err)
 	}
 	if vm.Name() != "lima" {
@@ -71,6 +74,9 @@ func TestResolve_ExplicitLima(t *testing.T) {
 func TestResolve_ExplicitColima(t *testing.T) {
 	vm, rt, err := Resolve("colima")
 	if err != nil {
+		if searchSubstring(err.Error(), "not found on $PATH") {
+			t.Skipf("Skipping test: %v", err)
+		}
 		t.Fatalf("Resolve(colima) error: %v", err)
 	}
 	if vm.Name() != "colima" {

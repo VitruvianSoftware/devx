@@ -1,6 +1,9 @@
 package provider
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestGetPodmanExplicit(t *testing.T) {
 	p, err := Get("podman")
@@ -75,6 +78,9 @@ func TestGetProvider_Explicit(t *testing.T) {
 func TestGetProvider_Lima(t *testing.T) {
 	prov, err := GetProvider("lima")
 	if err != nil {
+		if strings.Contains(err.Error(), "not found on $PATH") {
+			t.Skipf("Skipping test: %v", err)
+		}
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if prov.VM.Name() != "lima" {

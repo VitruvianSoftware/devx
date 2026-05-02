@@ -196,7 +196,7 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 		}
 		vmName := prov.Name()
 
-		fmt.Printf("  %s  %s VM is not running.\n", auditStyleFail.Render("!"), strings.Title(vmName))
+		fmt.Printf("  %s  %s VM is not running.\n", auditStyleFail.Render("!"), capitalizeProvider(vmName))
 		if NonInteractive {
 			return false, fmt.Errorf("%s VM is sleeping — please start it first", vmName)
 		}
@@ -205,8 +205,8 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 		form := huh.NewForm(
 			huh.NewGroup(
 				huh.NewConfirm().
-					Title(fmt.Sprintf("Start %s VM?", strings.Title(vmName))).
-					Description(fmt.Sprintf("devx audit needs the %s VM to run the scanner container. Start it now?", strings.Title(vmName))).
+					Title(fmt.Sprintf("Start %s VM?", capitalizeProvider(vmName))).
+					Description(fmt.Sprintf("devx audit needs the %s VM to run the scanner container. Start it now?", capitalizeProvider(vmName))).
 					Affirmative("Yes, start it").
 					Negative("Skip this scan").
 					Value(&startVM),
@@ -271,4 +271,11 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 	}
 
 	return found, nil
+}
+
+func capitalizeProvider(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
