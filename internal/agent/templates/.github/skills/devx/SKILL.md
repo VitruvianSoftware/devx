@@ -82,10 +82,11 @@ Any time you need to execute unit tests, integration tests, or verify compilatio
 
 These devx wrappers natively emit rich telemetry for Grafana observability and enforce deterministic test environments. This rule is absolute: **Dogfood the local CLI.**
 
-## 🚀 10. Ship Code with `devx agent ship` (MANDATORY)
+## 🚀 10. Ship Code with `devx agent ship` or `review` (MANDATORY)
 
-You are **FORBIDDEN** from using raw `git push` in this repository. A pre-push git hook will block you if you try. Instead, you MUST use `devx agent ship` to commit, push, and verify CI:
+You are **FORBIDDEN** from using raw `git push` in this repository. A pre-push git hook will block you if you try. Instead, you MUST use `devx agent` commands to commit, push, and verify CI.
 
+**For automated merging (Default):**
 ```bash
 devx agent ship -m "feat: your commit message"
 ```
@@ -93,10 +94,17 @@ devx agent ship -m "feat: your commit message"
 This command orchestrates the full lifecycle:
 1. **Pre-flight:** Runs local tests, lint, and build automatically
 2. **Commit & Push:** Stages, commits, pushes (it bypasses the hook internally)
-3. **PR & Merge:** Creates a GitHub PR and squash-merges it
-4. **CI Poll:** Blocks your terminal until the CI pipeline returns green or red
+3. **PR & CI Poll:** Creates a PR and blocks your terminal until the CI pipeline completes
+4. **Merge:** Squash-merges the PR only if CI is green
 
-If the pipeline fails, `devx agent ship` returns Exit Code `53` with condensed failure logs. You MUST fix the issue and re-run `devx agent ship` immediately.
+**For human review (No Auto-Merge):**
+If the human specifically requests you to create a PR for them to review, use:
+```bash
+devx agent review -m "feat: your commit message"
+```
+This does the exact same pre-flight, push, and blocking CI poll as `ship`, but it **leaves the PR open** for human review instead of merging it.
+
+If the pipeline fails, both commands return Exit Code `53` with condensed failure logs. You MUST fix the issue and re-run the command immediately.
 
 For machine-readable output: `devx agent ship -m "message" --json`
 
