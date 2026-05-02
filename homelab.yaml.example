@@ -1,0 +1,37 @@
+cluster:
+  name: james-homelab
+  k3sVersion: "v1.35.3+k3s1"
+  kubeconfig: "~/.kube/homelab.yaml"
+
+nodes:
+  - host: james-macbook-pro
+    role: server
+    pool: laptop-cp-1
+    vm:
+      cpus: 2
+      memory: 4GiB
+      disk: 30GiB
+
+  - host: james-mbp16
+    role: server
+    pool: laptop-cp-2
+    vm:
+      cpus: 8
+      memory: 8GiB
+      disk: 30GiB
+
+  - host: james-mbp32
+    role: server
+    pool: laptop-cp-3
+    vm:
+      cpus: 8
+      memory: 8GiB
+      disk: 50GiB
+
+  - host: james-mbp
+    role: agent
+    pool: laptop-worker-1
+    vm:
+      cpus: 8
+      memory: 8GiB
+      disk: 30GiB
