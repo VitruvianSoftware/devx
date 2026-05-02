@@ -43,6 +43,7 @@ export default defineConfig({
           { text: 'Ephemeral E2E Testing', link: '/guide/testing' },
           { text: 'API Mocking', link: '/guide/mocking' },
           { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
+          { text: 'Homelab Manager', link: '/guide/homelab' },
           { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
           { text: 'Local CI Emulation', link: '/guide/ci' },
           { text: 'Smart File Syncing', link: '/guide/sync' },

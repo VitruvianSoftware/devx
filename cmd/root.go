@@ -95,4 +95,5 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(execCmd)
 	rootCmd.AddCommand(bridgeCmd)
+	rootCmd.AddCommand(homelabCmd)
 }
