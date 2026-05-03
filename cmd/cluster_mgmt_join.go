@@ -20,16 +20,36 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"time"
 
-var k8sCmd = &cobra.Command{
-	Use:   "k8s",
-	GroupID: "k8s",
-	Short: "Zero-config local Kubernetes clusters powered by k3s",
-	Long: `Provision and manage lightning-fast, zero-config local Kubernetes clusters
-running natively within devx via k3s. No Minikube or Kind installation required.`,
-}
+	"github.com/spf13/cobra"
 
-func init() {
-	rootCmd.AddCommand(k8sCmd)
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+)
+
+func newClusterJoinCmd(configFile *string) *cobra.Command {
+	var timeout time.Duration
+
+	cmd := &cobra.Command{
+		Use:   "join",
+		Short: "Add new node(s) to an existing cluster",
+		Long: `Join adds nodes that are defined in the config but not yet part of the cluster.
+It detects which nodes are missing and provisions only those.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(*configFile)
+			if err != nil {
+				return fmt.Errorf("loading config: %w", err)
+			}
+			ctx := contextWithSignal(cmd.Context(), timeout)
+			return cluster.Join(ctx, cfg, DryRun)
+		},
+	}
+
+
+	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "maximum time for the entire operation")
+
+	return cmd
 }

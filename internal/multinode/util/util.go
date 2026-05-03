@@ -18,18 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package cmd
+package util
 
-import "github.com/spf13/cobra"
+import (
+	"encoding/base64"
 
-var k8sCmd = &cobra.Command{
-	Use:   "k8s",
-	GroupID: "k8s",
-	Short: "Zero-config local Kubernetes clusters powered by k3s",
-	Long: `Provision and manage lightning-fast, zero-config local Kubernetes clusters
-running natively within devx via k3s. No Minikube or Kind installation required.`,
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
+)
+
+// Base64Encode encodes a string to base64.
+func Base64Encode(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
 }
 
-func init() {
-	rootCmd.AddCommand(k8sCmd)
+// NewRunner creates a new remote command runner for the given node config.
+func NewRunner(node config.NodeConfig) *remote.Runner {
+	if node.SSHUser != "" || node.SSHPort != "" || node.SSHKeyPath != "" {
+		return remote.NewRunnerWithOpts(node.Host, node.SSHUser, node.SSHPort, node.SSHKeyPath)
+	}
+	return remote.NewRunner(node.Host)
 }

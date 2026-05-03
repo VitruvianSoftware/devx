@@ -24,42 +24,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var bridgeCmd = &cobra.Command{
-	Use:   "bridge",
+var clusterConfigFile string
+
+var clusterMgmtCmd = &cobra.Command{
+	Use:   "cluster",
 	GroupID: "k8s",
-	Short: "Connect your local environment to a remote Kubernetes cluster",
-	Long: `Hybrid edge-to-local routing (Idea 46) — connect your local dev
-environment to remote Kubernetes services via kubectl port-forward,
-and intercept inbound cluster traffic for live local debugging.
+	Short: "Provision and manage multi-node K8s clusters across macOS machines",
+	Long: `cluster is a CLI tool for provisioning and managing Kubernetes clusters
+across multiple macOS machines using Lima VZ and K3s.
 
-Commands:
-  connect      Establish outbound bridge to remote cluster services
-  intercept    Intercept inbound traffic from a remote service (Idea 46.2)
-  status       Show active bridge and intercept sessions
-  disconnect   Tear down all active bridges and intercepts
-  rbac         Print minimum RBAC manifest for intercept
-
-Examples:
-  # Outbound: connect to remote services (Idea 46.1)
-  devx bridge connect
-
-  # Inbound: intercept live traffic (Idea 46.2)
-  devx bridge intercept payments-api --steal
-
-  # Check status of all bridges and intercepts
-  devx bridge status
-
-  # Tear down everything
-  devx bridge disconnect`,
+Define your cluster topology in a YAML config file, then use cluster to
+bootstrap, scale, diagnose, and tear down your cluster.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
 }
 
 func init() {
-	bridgeCmd.AddCommand(bridgeConnectCmd)
-	bridgeCmd.AddCommand(bridgeInterceptCmd)
-	bridgeCmd.AddCommand(bridgeStatusCmd)
-	bridgeCmd.AddCommand(bridgeDisconnectCmd)
-	bridgeCmd.AddCommand(bridgeRBACCmd)
+	clusterMgmtCmd.PersistentFlags().StringVarP(&clusterConfigFile, "config", "c", "cluster.yaml", "path to cluster config file")
+
+	clusterMgmtCmd.AddCommand(
+		newClusterInitCmd(&clusterConfigFile),
+		newClusterApplyCmd(&clusterConfigFile),
+		newClusterJoinCmd(&clusterConfigFile),
+		newClusterRemoveCmd(&clusterConfigFile),
+		newClusterDestroyCmd(&clusterConfigFile),
+		newClusterUpgradeCmd(&clusterConfigFile),
+		newClusterBackupCmd(&clusterConfigFile),
+		newClusterRestoreCmd(&clusterConfigFile),
+		newClusterDoctorCmd(&clusterConfigFile),
+		newClusterStatusCmd(&clusterConfigFile),
+	)
+
 }

@@ -35,15 +35,20 @@ export default withMermaid(defineConfig({
           { text: 'VM Providers', link: '/guide/providers' },
           { text: 'Databases (Ephemeral)', link: '/guide/databases' },
           { text: 'Cloud Emulators (GCS)', link: '/guide/cloud-emulators' },
-          { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
-          { text: 'Homelab Manager', link: '/guide/homelab' },
           { text: 'The Nuke Button', link: '/guide/nuke' }
+        ]
+      },
+      {
+        text: 'Kubernetes & Hybrid',
+        items: [
+          { text: 'Hybrid Bridge', link: '/guide/bridge' },
+          { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
+          { text: 'Multi-Node Clusters', link: '/guide/multinode' }
         ]
       },
       {
         text: 'Networking & Edge',
         items: [
-          { text: 'Hybrid Bridge', link: '/guide/bridge' },
           { text: 'Cloudflare Tunnels', link: '/guide/tunnels' },
           { text: 'Email Catcher', link: '/guide/mail' },
           { text: 'Webhook Catcher', link: '/guide/webhook' }

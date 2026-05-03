@@ -20,16 +20,41 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"context"
+	"fmt"
 
-var k8sCmd = &cobra.Command{
-	Use:   "k8s",
-	GroupID: "k8s",
-	Short: "Zero-config local Kubernetes clusters powered by k3s",
-	Long: `Provision and manage lightning-fast, zero-config local Kubernetes clusters
-running natively within devx via k3s. No Minikube or Kind installation required.`,
-}
+	"github.com/spf13/cobra"
 
-func init() {
-	rootCmd.AddCommand(k8sCmd)
+	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+)
+
+func newClusterApplyCmd(configFile *string) *cobra.Command {
+
+
+	cmd := &cobra.Command{
+		Use:   "apply",
+		Short: "Apply configuration changes iteratively with zero downtime",
+		Long: `Applies changes made in cluster.yaml to a running cluster. 
+It rolls out backend alterations like CPU and Memory changes node-by-node by:
+1. Draining a node
+2. Stopping the VM
+3. Overwriting hardware configurations natively
+4. Restarting the VM
+5. Uncordoning the node`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(*configFile)
+			if err != nil {
+				return fmt.Errorf("loading config: %w", err)
+			}
+			// Apply operations can take a while so we give it no strict overarching timeout
+			// by default, or just use context.Background()
+			ctx := context.Background()
+			return cluster.Apply(ctx, cfg, DryRun)
+		},
+	}
+
+
+	return cmd
 }

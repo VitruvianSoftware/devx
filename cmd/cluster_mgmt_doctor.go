@@ -20,16 +20,35 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
 
-var k8sCmd = &cobra.Command{
-	Use:   "k8s",
-	GroupID: "k8s",
-	Short: "Zero-config local Kubernetes clusters powered by k3s",
-	Long: `Provision and manage lightning-fast, zero-config local Kubernetes clusters
-running natively within devx via k3s. No Minikube or Kind installation required.`,
-}
+	"github.com/spf13/cobra"
 
-func init() {
-	rootCmd.AddCommand(k8sCmd)
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/devx/internal/multinode/doctor"
+)
+
+func newClusterDoctorCmd(configFile *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "doctor",
+		Short: "Run pre-flight checks and health diagnostics",
+		Long: `Doctor verifies that all prerequisites are met on each configured host
+and, if a cluster is running, checks its health. Checks include:
+
+  - SSH connectivity to all hosts
+  - Homebrew installation
+  - Lima installation and version
+  - socket_vmnet installation and service status
+  - VM provisioning state
+  - Network bridging and cross-VM connectivity
+  - K3s health, node readiness, and etcd quorum`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load(*configFile)
+			if err != nil {
+				return fmt.Errorf("loading config: %w", err)
+			}
+			return doctor.Run(cmd.Context(), cfg)
+		},
+	}
 }

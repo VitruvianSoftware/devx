@@ -50,15 +50,17 @@ Configuration Domains:
   • devx.yaml:    Project-level configuration for local application development.
                   Controls databases, tunnels, CI, and service orchestration.
                   (Discovered recursively upward from the current directory)
-  • homelab.yaml: Infrastructure-level config for bare-metal Kubernetes clusters.
-                  Exclusively controls the 'devx homelab' command suite.
+  • cluster.yaml: Infrastructure-level config for multi-node Kubernetes clusters.
+                  Exclusively controls the 'devx cluster' command suite.
                   (Discovered recursively upward from the current directory)
 
 Feature Ecosystem:
-  • Local Infrastructure: Podman VMs, ephemeral databases, GCP emulators, and k3s.
-  • Networking & Edge: Instant Cloudflare Tunnels, Tailscale, and hybrid Kubernetes bridging.
-  • Orchestration & State: Multi-repo management, intelligent file syncing, and unified TUI logs.
-  • Testing & CI/CD: Local GitHub Actions emulation, API mocking, and AI agent workflows.
+  • Local Infrastructure: Podman VMs, ephemeral databases, GCP emulators, and The Nuke button.
+  • Kubernetes & Hybrid: Zero-Config k3s, Multi-Node Clusters, and remote Hybrid Bridge.
+  • Networking & Edge: Instant Cloudflare Tunnels, Email Catchers, and Webhook TUIs.
+  • Orchestration & State: Multi-repo management, Vault secrets syncing, and file syncing.
+  • Testing & Telemetry: Ephemeral E2E, distributed tracing, API mocking, and Doctor checks.
+  • Pipelines & CI/CD: Local GitHub Actions emulation, pipeline stages, and predictive building.
 
 Run 'devx vm init' to bootstrap your machine, or 'devx up' to start services.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -125,6 +127,7 @@ func init() {
 
 	rootCmd.AddGroup(
 		&cobra.Group{ID: "infra", Title: "Local Infrastructure:"},
+		&cobra.Group{ID: "k8s", Title: "Kubernetes & Hybrid:"},
 		&cobra.Group{ID: "network", Title: "Networking & Edge:"},
 		&cobra.Group{ID: "orchestration", Title: "Orchestration & State:"},
 		&cobra.Group{ID: "telemetry", Title: "Testing & Telemetry:"},
@@ -137,5 +140,5 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(execCmd)
 	rootCmd.AddCommand(bridgeCmd)
-	rootCmd.AddCommand(homelabCmd)
+	rootCmd.AddCommand(clusterMgmtCmd)
 }

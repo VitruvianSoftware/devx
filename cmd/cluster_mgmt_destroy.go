@@ -20,16 +20,36 @@
 
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"time"
 
-var k8sCmd = &cobra.Command{
-	Use:   "k8s",
-	GroupID: "k8s",
-	Short: "Zero-config local Kubernetes clusters powered by k3s",
-	Long: `Provision and manage lightning-fast, zero-config local Kubernetes clusters
-running natively within devx via k3s. No Minikube or Kind installation required.`,
-}
+	"github.com/spf13/cobra"
 
-func init() {
-	rootCmd.AddCommand(k8sCmd)
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+)
+
+func newClusterDestroyCmd(configFile *string) *cobra.Command {
+	var timeout time.Duration
+
+	cmd := &cobra.Command{
+		Use:   "destroy",
+		Short: "Tear down the entire cluster",
+		Long: `Destroy uninstalls K3s from all nodes, stops and deletes all Lima VMs,
+and removes the exported kubeconfig. Use -y/--non-interactive to skip confirmation.`,
+		RunE: func(c *cobra.Command, args []string) error {
+			cfg, err := config.Load(*configFile)
+			if err != nil {
+				return fmt.Errorf("loading config: %w", err)
+			}
+			ctx := contextWithSignal(c.Context(), timeout)
+			return cluster.Destroy(ctx, cfg, NonInteractive, DryRun)
+		},
+	}
+
+
+	cmd.Flags().DurationVar(&timeout, "timeout", 15*time.Minute, "maximum time for the entire operation")
+
+	return cmd
 }
