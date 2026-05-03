@@ -48,6 +48,14 @@ To propose a new feature, copy the template below and add it to the appropriate 
 * **The Solution:** Leverage the Local AI Bridge (`devx ai spawn`). The developer runs `devx db synthesize --engine postgres --records 1000`. `devx` parses the schema, passes it to the local LLM, and streams back highly realistic, chaotic synthetic SQL inserts directly into the local container.
 * **Key files:** `cmd/db_synthesize.go`, `internal/database/synthesizer.go`
 
+### 58. Remote Audit via K8s Job (`devx audit --remote`)
+* **Priority:** 🟡 P3
+* **Effort:** Medium
+* **Impact:** Enables security scanning in CI pipelines and air-gapped environments without local container runtimes.
+* **The Problem:** `devx audit` currently requires a local container runtime (podman/docker/nerdctl) to run Trivy and Gitleaks when they're not natively installed. In CI runners or environments where a K8s cluster is available but no local daemon exists, audit cannot execute. Additionally, some teams want centralized vulnerability scanning with shared Trivy DB caches to avoid redundant downloads.
+* **The Solution:** Add a `ModeKubernetes` execution path alongside `ModeNative` and `ModeContainer`. When `--remote` is passed (or when the provider is `cluster`), `devx audit` creates an ephemeral K8s Job using the scanner image, transfers the source tree into the pod via `kubectl cp` or tar-pipe (`tar cf - . | kubectl exec -i <pod> -- tar xf - -C /scan`), streams logs back to the terminal, and cleans up the Job on exit. A shared PVC can optionally cache the Trivy CVE database across runs. **Not recommended for pre-push hooks** due to pod scheduling latency (15-45s) — designed for CI/CD pipelines (`devx agent ship`, GitHub Actions) where the code is already cluster-adjacent.
+* **Key files:** `internal/audit/k8s.go`, `cmd/audit.go`
+
 ---
 
 ## 🔴 Cut or Rethink — Not Recommended
