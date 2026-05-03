@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0](https://github.com/VitruvianSoftware/devx/compare/v0.37.0...v0.38.0) (2026-05-03)
+
+
+### Features
+
+* **state:** implement peer-to-peer state replication (Idea 56) ([#160](https://github.com/VitruvianSoftware/devx/issues/160)) ([01973fb](https://github.com/VitruvianSoftware/devx/commit/01973fb860274eace79a82d8fab6c07b8adb62e3))
+
+
+### Bug Fixes
+
+* **scaffold:** bump pgx v5.6.0 → v5.9.2 in go-api template ([0c36416](https://github.com/VitruvianSoftware/devx/commit/0c364169c4d55a3b3674f187362364403d19a793))
+
 ## [0.37.0](https://github.com/VitruvianSoftware/devx/compare/v0.36.0...v0.37.0) (2026-05-03)
 
 
