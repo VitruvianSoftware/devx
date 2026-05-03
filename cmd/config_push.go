@@ -37,7 +37,11 @@ This is helpful to migrate existing projects into remote vaults
 or to update remote shared values securely.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Idea 44: use resolveConfig so env sources from included projects are merged
-		cfg, err := resolveConfig("devx.yaml", "")
+		yamlPath, err := mustFindDevxConfig()
+		if err != nil {
+			return err
+		}
+		cfg, err := resolveConfig(yamlPath, "")
 		if err != nil {
 			return fmt.Errorf("could not read devx.yaml: %w", err)
 		}

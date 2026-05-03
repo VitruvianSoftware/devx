@@ -116,7 +116,13 @@ func runShell(_ *cobra.Command, _ []string) error {
 	// Dynamic secret injection from devx.yaml (1password, gcp, bitwarden, etc.)
 	userSecrets := make(map[string]string)
 	aiBridgeEnabled := true // Enabled by default
-	if yamlData, err := os.ReadFile("devx.yaml"); err == nil {
+	yamlPath, configErr := findDevxConfig()
+	var yamlData []byte
+	if configErr == nil {
+		yamlData, _ = os.ReadFile(yamlPath)
+	}
+
+	if len(yamlData) > 0 {
 		type devxConfig struct {
 			Env []string `yaml:"env"`
 			AI  struct {

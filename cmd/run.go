@@ -137,8 +137,10 @@ Global flags are parsed before '--':
 
 		// ── Record telemetry ────────────────────────────────────────
 		projName := name
-		if cfg, cfgErr := resolveConfig("devx.yaml", ""); cfgErr == nil && cfg.Name != "" {
-			projName = cfg.Name
+		if yamlPath, cfgErr := findDevxConfig(); cfgErr == nil {
+			if cfg, err := resolveConfig(yamlPath, ""); err == nil && cfg.Name != "" {
+				projName = cfg.Name
+			}
 		}
 
 		telemetry.RecordEvent("devx_run", duration,

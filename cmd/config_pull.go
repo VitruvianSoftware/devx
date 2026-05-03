@@ -35,7 +35,11 @@ The secrets are securely printed or loaded into your local environment runtime
 without being written as plaintext to the Mac's disk.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Idea 44: use resolveConfig so env sources from included projects are merged
-		cfg, err := resolveConfig("devx.yaml", "")
+		yamlPath, err := mustFindDevxConfig()
+		if err != nil {
+			return err
+		}
+		cfg, err := resolveConfig(yamlPath, "")
 		if err != nil {
 			return fmt.Errorf("could not read devx.yaml: %w", err)
 		}

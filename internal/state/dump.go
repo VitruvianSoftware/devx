@@ -126,9 +126,12 @@ func GenerateDump(cfg *config.Config, prov *provider.Provider, vmState string, t
 	}
 
 	// Config
-	buf, err := os.ReadFile("devx.yaml")
+	cwd, _ := os.Getwd()
+	yamlPath, _, err := config.FindProjectConfig(cwd, "devx.yaml")
 	if err == nil {
-		report.Config.YamlContent = redactYamlEnv(string(buf))
+		if buf, err := os.ReadFile(yamlPath); err == nil {
+			report.Config.YamlContent = redactYamlEnv(string(buf))
+		}
 	}
 	envBuf, err := os.ReadFile(".env")
 	if err == nil {

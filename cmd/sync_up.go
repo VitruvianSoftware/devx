@@ -61,7 +61,11 @@ func runSyncUp(_ *cobra.Command, args []string) error {
 	}
 
 	// Idea 44: use the unified config resolver so include blocks are processed
-	cfg, err := resolveConfig("devx.yaml", "")
+	yamlPath, err := mustFindDevxConfig()
+	if err != nil {
+		return err
+	}
+	cfg, err := resolveConfig(yamlPath, "")
 	if err != nil {
 		return fmt.Errorf("could not read devx.yaml: %w", err)
 	}

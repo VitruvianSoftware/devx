@@ -75,8 +75,10 @@ func runMockUp(cmd *cobra.Command, args []string) error {
 
 	// Load devx.yaml
 	var cfg DevxConfig
-	if b, err := os.ReadFile("devx.yaml"); err == nil {
-		_ = yaml.Unmarshal(b, &cfg)
+	if yamlPath, err := findDevxConfig(); err == nil {
+		if b, err := os.ReadFile(yamlPath); err == nil {
+			_ = yaml.Unmarshal(b, &cfg)
+		}
 	}
 
 	// Determine which mocks to boot

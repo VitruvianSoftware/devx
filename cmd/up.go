@@ -58,9 +58,9 @@ var upCmd = &cobra.Command{
 			return err
 		}
 
-		yamlPath := "devx.yaml"
-		if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
-			return fmt.Errorf("could not find devx.yaml in the current directory. Please create one to use 'devx tunnel up'")
+		yamlPath, err := mustFindDevxConfig()
+		if err != nil {
+			return err
 		}
 
 		// Idea 44: resolveConfig handles include blocks and profile merging in one pass

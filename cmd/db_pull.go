@@ -102,11 +102,16 @@ func runDbPull(_ *cobra.Command, args []string) error {
 	}
 
 	// ── 1. Read devx.yaml ────────────────────────────────────────────────────
-	yamlData, err := os.ReadFile("devx.yaml")
+	yamlPath, err := findDevxConfig()
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("could not find devx.yaml in the current directory")
+			return fmt.Errorf("could not find devx.yaml in the current directory or parent directories")
 		}
+		return fmt.Errorf("failed to locate devx.yaml: %w", err)
+	}
+
+	yamlData, err := os.ReadFile(yamlPath)
+	if err != nil {
 		return fmt.Errorf("failed to read devx.yaml: %w", err)
 	}
 

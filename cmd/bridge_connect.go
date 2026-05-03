@@ -239,8 +239,8 @@ func resolveBridgeConfig() ([]bridgeTarget, string, string, error) {
 	defaultNS := bridgeNamespace
 
 	// Read devx.yaml if it exists
-	if _, err := os.Stat("devx.yaml"); err == nil {
-		cfg, err := resolveConfig("devx.yaml", "")
+	if yamlPath, err := findDevxConfig(); err == nil {
+		cfg, err := resolveConfig(yamlPath, "")
 		if err == nil && cfg.Bridge != nil {
 			b := cfg.Bridge
 			if kubeconfig == "" {

@@ -26,6 +26,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/VitruvianSoftware/devx/internal/config"
 )
 
 // ─── Schema Types ─────────────────────────────────────────────────────────────
@@ -246,6 +248,33 @@ type DevxConfig struct {
 // ─── Config Resolution ────────────────────────────────────────────────────────
 
 const maxIncludeDepth = 5
+
+// findDevxConfig locates devx.yaml by walking upwards from CWD.
+// It returns the absolute path if found, or an error if not.
+func findDevxConfig() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("getting working directory: %w", err)
+	}
+	path, dir, err := config.FindProjectConfig(cwd, "devx.yaml")
+	if err != nil {
+		return "", err
+	}
+	if dir != cwd {
+		fmt.Fprintf(os.Stderr, "📂 Using devx.yaml from %s\n", dir)
+	}
+	return path, nil
+}
+
+// mustFindDevxConfig is like findDevxConfig but returns a standardized user-friendly
+// error message when the config cannot be found.
+func mustFindDevxConfig() (string, error) {
+	path, err := findDevxConfig()
+	if err != nil {
+		return "", fmt.Errorf("could not find devx.yaml in the current directory or any parent directories. Please create one to use devx commands")
+	}
+	return path, nil
+}
 
 // resolveConfig reads a devx.yaml, processes all include directives recursively,
 // and applies the specified profile overlay. This is the single entry point for

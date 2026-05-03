@@ -79,8 +79,10 @@ func runTestUI(cmd *cobra.Command, args []string) error {
 	// Load devx.yaml for database topology and YAML-level test config
 	// Idea 44: Use resolveConfig so include blocks are processed
 	var cfgYaml DevxConfig
-	if cfg, err := resolveConfig("devx.yaml", ""); err == nil {
-		cfgYaml = *cfg
+	if yamlPath, err := findDevxConfig(); err == nil {
+		if cfg, err := resolveConfig(yamlPath, ""); err == nil {
+			cfgYaml = *cfg
+		}
 	}
 
 	// CLI flags take precedence over YAML values (CLI + YAML parity)

@@ -190,12 +190,14 @@ func loadSchemaKeys(path string) ([]string, error) {
 // sources, falling back to .env if devx.yaml is absent.
 // Idea 44: uses resolveConfig so env sources from included projects are merged.
 func loadAvailableSecrets() (map[string]string, string, error) {
-	if cfg, err := resolveConfig("devx.yaml", ""); err == nil && len(cfg.Env) > 0 {
-		secrets, serr := envvault.PullAll(cfg.Env)
-		if serr != nil {
-			return nil, "", serr
+	if yamlPath, err := findDevxConfig(); err == nil {
+		if cfg, err := resolveConfig(yamlPath, ""); err == nil && len(cfg.Env) > 0 {
+			secrets, serr := envvault.PullAll(cfg.Env)
+			if serr != nil {
+				return nil, "", serr
+			}
+			return secrets, fmt.Sprintf("devx.yaml (%s)", strings.Join(cfg.Env, ", ")), nil
 		}
-		return secrets, fmt.Sprintf("devx.yaml (%s)", strings.Join(cfg.Env, ", ")), nil
 	}
 
 	// Fallback: plain .env

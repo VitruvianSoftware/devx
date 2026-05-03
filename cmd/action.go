@@ -71,12 +71,17 @@ Define actions in devx.yaml:
 
 func runAction(_ *cobra.Command, args []string) error {
 	// Load config
-	cfg, err := resolveConfig("devx.yaml", "")
+	yamlPath, err := mustFindDevxConfig()
 	if err != nil {
 		if actionList {
 			fmt.Println("No devx.yaml found — no custom actions available.")
 			return nil
 		}
+		return err
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
 		return fmt.Errorf("cannot load devx.yaml: %w", err)
 	}
 

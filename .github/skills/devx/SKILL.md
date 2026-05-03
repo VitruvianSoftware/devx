@@ -51,18 +51,23 @@ When running a command that fails, `devx` avoids polluting standard error with u
 If you are dropped into a `devx` workspace and need to quickly understand how the services, databases, and network bounds interact, do NOT manually read through a massive `devx.yaml` file line-by-line.
 Instead, use `devx map` to generate an instant, agent-readable Mermaid.js topology graph. You can pipe this out via `devx map --output /tmp/topology.md` to see the exact component dependencies, healthcheck conditions, and tunnel exposures.
 
-## 🔀 6. Advanced Orchestration (`devx up`)
+## 📁 6. Configuration Discovery (Upward Traversal)
+
+`devx` and `devx homelab` commands automatically traverse upward from the current working directory to discover their configuration files (`devx.yaml` and `homelab.yaml`, respectively). 
+You do NOT need to `cd` back to the repository root to run `devx` commands. You can safely execute them from deep within nested subdirectories.
+
+## 🔀 7. Advanced Orchestration (`devx up`)
 
 You do not need to manually boot components sequentially and wait for them. `devx` features a robust DAG (Directed Acyclic Graph) orchestrator.
 Running `devx up` will automatically spawn all mapped databases, native services, and network tunnels in parallel, natively respecting `depends_on` wait conditions.
 If you or the user require a different topological slice of the system (e.g. bypassing the frontend React app to work only on the APIs), you can apply additive overlays to the execution via flags like `devx up --profile backend-only`.
 
-## 🌐 7. Dynamic Port Shifting & Discovery
+## 🌐 8. Dynamic Port Shifting & Discovery
 
 `devx` automatically negotiates and shifts ports if collisions (like a ghost `node` process on `:8080`) occur. Do NOT blindly assume services or databases map statically to their default host ports.
 To discover where a service or database is actually running, ALWAYS query the machine-readable state via `devx db list --json` and `devx tunnel list --json`. When writing scripts, always rely on the dynamically injected `.env` variables (e.g., `$PORT`, `$DATABASE_URL`) rather than hardcoding port strings.
 
-## 📚 8. Documentation is Mandatory (Definition of Done)
+## 📚 9. Documentation is Mandatory (Definition of Done)
 
 When shipping features on the `devx` CLI, the task is **not done** until the official documentation has been updated. Missing or outdated documentation directly harms the Developer Experience (DevX) mission.
 
@@ -70,7 +75,7 @@ When shipping features on the `devx` CLI, the task is **not done** until the off
 - **Validation:** Before running the `/push` workflow to cut a release, PR, or commit, you must pause and explicitly review the `docs/guide/` directory to ensure all new commands, flags, and `devx.yaml` schema fields are documented.
 - **Example configs:** Schema changes MUST be reflected with thorough examples in `devx.yaml.example`.
 
-## 🛠️ 9. CI and Task Execution (`devx action`)
+## 🛠️ 10. CI and Task Execution (`devx action`)
 
 Do NOT manually run native build or test commands (like `npm run build`, `go test`, `cargo test`, `pytest`, etc.) yourself.
 
@@ -82,10 +87,11 @@ Any time you need to execute unit tests, integration tests, or verify compilatio
 
 These devx wrappers natively emit rich telemetry for Grafana observability and enforce deterministic test environments. This rule is absolute: **Dogfood the local CLI.**
 
-## 🚀 10. Ship Code with `devx agent ship` (MANDATORY)
+## 🚀 11. Ship Code with `devx agent ship` or `review` (MANDATORY)
 
-You are **FORBIDDEN** from using raw `git push` in this repository. A pre-push git hook will block you if you try. Instead, you MUST use `devx agent ship` to commit, push, and verify CI:
+You are **FORBIDDEN** from using raw `git push` in this repository. A pre-push git hook will block you if you try. Instead, you MUST use `devx agent` commands to commit, push, and verify CI.
 
+**For automated merging (Default):**
 ```bash
 devx agent ship -m "feat: your commit message"
 ```
@@ -93,14 +99,21 @@ devx agent ship -m "feat: your commit message"
 This command orchestrates the full lifecycle:
 1. **Pre-flight:** Runs local tests, lint, and build automatically
 2. **Commit & Push:** Stages, commits, pushes (it bypasses the hook internally)
-3. **PR & Merge:** Creates a GitHub PR and squash-merges it
-4. **CI Poll:** Blocks your terminal until the CI pipeline returns green or red
+3. **PR & CI Poll:** Creates a PR and blocks your terminal until the CI pipeline completes
+4. **Merge:** Squash-merges the PR only if CI is green
 
-If the pipeline fails, `devx agent ship` returns Exit Code `53` with condensed failure logs. You MUST fix the issue and re-run `devx agent ship` immediately.
+**For human review (No Auto-Merge):**
+If the human specifically requests you to create a PR for them to review, use:
+```bash
+devx agent review -m "feat: your commit message"
+```
+This does the exact same pre-flight, push, and blocking CI poll as `ship`, but it **leaves the PR open** for human review instead of merging it.
+
+If the pipeline fails, both commands return Exit Code `53` with condensed failure logs. You MUST fix the issue and re-run the command immediately.
 
 For machine-readable output: `devx agent ship -m "message" --json`
 
-## 🔗 11. Hybrid Bridge (`devx bridge`)
+## 🔗 12. Hybrid Bridge (`devx bridge`)
 
 Connect the local environment to remote Kubernetes services. Bridge follows the **Client-Driven Architecture** principle — no permanent cluster-side controllers.
 

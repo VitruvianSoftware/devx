@@ -126,10 +126,12 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 
 		// Load explicit pipeline from devx.yaml if present
 		var pipeline *ship.PipelineConfig
-		if cfg, err := resolveConfig("devx.yaml", ""); err == nil && cfg.Pipeline != nil {
-			pipeline = convertPipeline(cfg.Pipeline)
-			if !outputJSON {
-				fmt.Printf("    %s  using devx.yaml pipeline config\n", shipStyleMuted.Render("ℹ"))
+		if yamlPath, err := findDevxConfig(); err == nil {
+			if cfg, err := resolveConfig(yamlPath, ""); err == nil && cfg.Pipeline != nil {
+				pipeline = convertPipeline(cfg.Pipeline)
+				if !outputJSON {
+					fmt.Printf("    %s  using devx.yaml pipeline config\n", shipStyleMuted.Render("ℹ"))
+				}
 			}
 		}
 

@@ -26,9 +26,17 @@ We go far beyond basic container networking by natively integrating the premium 
 The `devx` ecosystem separates configuration into two distinct files based on the scope of orchestration:
 
 1. **`devx.yaml` (Project-Level Local Dev):** This is the primary configuration file. It lives in your application's repository and defines the local development topology (databases, tunnels, CI steps, and dependent services). It is used by almost all `devx` commands (e.g., `devx up`, `devx test`, `devx action`).
+   - **Discovery Behavior**: `devx` automatically searches the current directory and all parent directories upward until it finds a `devx.yaml` file. This allows you to seamlessly run `devx` commands from any nested subdirectory within your project.
 2. **`homelab.yaml` (Infrastructure-Level Cluster Dev):** This file is exclusively used by the `devx homelab` command suite. It defines the desired state of a bare-metal Kubernetes cluster (node IPs, K3s versions, VM allocations) and is usually kept in a dedicated infrastructure repository.
+   - **Discovery Behavior**: Similar to `devx.yaml`, `devx homelab` automatically crawls upward from the current directory to locate your `homelab.yaml` configuration.
 
 These files do not override each other; they serve completely different domains.
+
+### Discovery Order (`devx.yaml`)
+
+1. Walk upward from CWD → first `devx.yaml` found wins
+2. `include:` directives within that file compose additional configs (relative to the config's directory)
+3. `~/.devx/config.yaml` provides machine-local overrides (e.g., VM provider)
 
 ## How It Works
 

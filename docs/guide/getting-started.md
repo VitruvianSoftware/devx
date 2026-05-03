@@ -116,6 +116,10 @@ devx db spawn postgres --name mydb
 
 `devx` uses a `.env` file in your project root for secrets:
 
+::: tip
+`devx` automatically searches upward from your current directory to find `devx.yaml`, so you can run commands like `devx up` from any subdirectory within your project — no need to `cd` back to the root.
+:::
+
 ```bash
 # .env
 CF_API_TOKEN=your-cloudflare-api-token

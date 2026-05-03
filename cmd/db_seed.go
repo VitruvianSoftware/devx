@@ -71,11 +71,16 @@ func runDbSeed(_ *cobra.Command, args []string) error {
 	// ── 1. Read devx.yaml ────────────────────────────────────────────────────
 	// Idea 44: resolveConfig processes include blocks so databases from neighbouring
 	// repos are visible and their Dir (working directory) is correctly set.
-	cfg, err := resolveConfig("devx.yaml", "")
+	yamlPath, err := mustFindDevxConfig()
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("could not find devx.yaml in the current directory")
+			return fmt.Errorf("could not find devx.yaml in the current directory or parent directories")
 		}
+		return fmt.Errorf("failed to locate devx.yaml: %w", err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
 		return fmt.Errorf("failed to read devx.yaml: %w", err)
 	}
 

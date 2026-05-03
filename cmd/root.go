@@ -49,8 +49,10 @@ It replaces a fragmented toolchain with a single, declarative CLI.
 Configuration Domains:
   • devx.yaml:    Project-level configuration for local application development.
                   Controls databases, tunnels, CI, and service orchestration.
+                  (Discovered recursively upward from the current directory)
   • homelab.yaml: Infrastructure-level config for bare-metal Kubernetes clusters.
                   Exclusively controls the 'devx homelab' command suite.
+                  (Discovered recursively upward from the current directory)
 
 Feature Ecosystem:
   • Local Infrastructure: Podman VMs, ephemeral databases, GCP emulators, and k3s.

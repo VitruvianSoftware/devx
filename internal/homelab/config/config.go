@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/VitruvianSoftware/devx/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -70,12 +71,26 @@ func (n *NodeConfig) GetVMName() string {
 }
 
 // Load reads and parses a config file from the given path.
+// It will search parent directories for the file if only a filename is provided.
 func Load(path string) (*Config, error) {
 	// Support HOMELAB_CONFIG env var as fallback.
 	if path == "homelab.yaml" {
 		if envPath := os.Getenv("HOMELAB_CONFIG"); envPath != "" {
 			path = envPath
 		}
+	}
+
+	// Crawl upwards to find the config if it's a simple filename
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("getting working directory: %w", err)
+	}
+	foundPath, foundDir, err := config.FindProjectConfig(cwd, path)
+	if err == nil {
+		if foundDir != cwd {
+			fmt.Fprintf(os.Stderr, "📂 Using %s from %s\n", path, foundDir)
+		}
+		path = foundPath
 	}
 
 	data, err := os.ReadFile(path)

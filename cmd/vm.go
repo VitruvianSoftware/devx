@@ -113,7 +113,11 @@ func resolveProviderName() string {
 
 // readProjectProvider reads the provider field from devx.yaml in the current directory.
 func readProjectProvider() string {
-	data, err := os.ReadFile("devx.yaml")
+	yamlPath, err := findDevxConfig()
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(yamlPath)
 	if err != nil {
 		return ""
 	}
