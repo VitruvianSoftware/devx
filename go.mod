@@ -1,6 +1,6 @@
 module github.com/VitruvianSoftware/devx
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/charmbracelet/bubbles v0.18.0
@@ -12,7 +12,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/magefile/mage v1.17.2
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/sync v0.11.0
+	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
