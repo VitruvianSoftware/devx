@@ -188,9 +188,10 @@ You must configure a relay destination (s3:// or gs://) in devx.yaml or pass --r
 		// Upload
 		backend, uri, _ := state.ParseRelay(relayCfg)
 		uploadURI := uri + "/" + bundleID + ".encrypted"
-		if backend == "s3" {
+		switch backend {
+		case "s3":
 			err = state.UploadToS3(encryptedPath, uploadURI)
-		} else if backend == "gcs" {
+		case "gcs":
 			err = state.UploadToGCS(encryptedPath, uploadURI)
 		}
 		if err != nil {

@@ -172,13 +172,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	_, err = io.Copy(out, in)
 	return err
@@ -189,13 +189,13 @@ func tarGzDirectory(srcDir, destArchive string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	gw := gzip.NewWriter(out)
-	defer gw.Close()
+	defer func() { _ = gw.Close() }()
 
 	tw := tar.NewWriter(gw)
-	defer tw.Close()
+	defer func() { _ = tw.Close() }()
 
 	return filepath.Walk(srcDir, func(file string, fi os.FileInfo, err error) error {
 		if err != nil {
@@ -226,7 +226,7 @@ func tarGzDirectory(srcDir, destArchive string) error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		_, err = io.Copy(tw, f)
 		return err
@@ -238,13 +238,13 @@ func untarGz(srcArchive, destDir string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	gr, err := gzip.NewReader(in)
 	if err != nil {
 		return err
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	tr := tar.NewReader(gr)
 
@@ -277,10 +277,10 @@ func untarGz(srcArchive, destDir string) error {
 				return err
 			}
 			if _, err := io.Copy(outFile, tr); err != nil {
-				outFile.Close()
+				_ = outFile.Close()
 				return err
 			}
-			outFile.Close()
+			_ = outFile.Close()
 		}
 	}
 	return nil

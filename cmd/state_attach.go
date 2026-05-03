@@ -91,9 +91,10 @@ var stateAttachCmd = &cobra.Command{
 			fmt.Printf("⬇️  Downloading state from %s...\n", backend)
 		}
 
-		if backend == "s3" {
+		switch backend {
+		case "s3":
 			err = state.DownloadFromS3(uri, encryptedPath)
-		} else if backend == "gcs" {
+		case "gcs":
 			err = state.DownloadFromGCS(uri, encryptedPath)
 		}
 

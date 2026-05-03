@@ -100,7 +100,7 @@ func EncryptFile(inputPath, outputPath, passphrase string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	// Write salt, nonce, and ciphertext
 	if _, err := outFile.Write(salt); err != nil {
