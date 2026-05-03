@@ -61,6 +61,7 @@ export default withMermaid(defineConfig({
           { text: 'Vault Secrets Syncing', link: '/guide/vaults' },
           { text: 'Smart File Syncing', link: '/guide/sync' },
           { text: 'Native Apps & Logs', link: '/guide/execution' },
+          { text: 'PR Preview Sandbox', link: '/guide/preview' },
           { text: 'Diagnostics & State', link: '/guide/state' }
         ]
       },

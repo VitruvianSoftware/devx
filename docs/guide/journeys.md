@@ -160,3 +160,24 @@ Then run:
 devx up
 ```
 `devx` will intelligently start your local databases, establish K8s port-forwards, and intercept staging traffic in the exact correct dependency order!
+
+---
+
+## 5. The Code Reviewer: Instant PR Sandboxing
+
+When reviewing a colleague's pull request, you shouldn't have to `git stash`, switch branches, re-provision databases, and pray your tunnel state is recoverable. `devx preview` creates a completely isolated sandbox.
+
+### Step 1: Preview the PR
+```bash
+devx preview 42
+```
+This creates an isolated git worktree, provisions namespaced databases (e.g., `devx-db-pr-42-postgres`), and exposes the PR's services on unique tunnel URLs — all without touching your current branch or active databases.
+
+### Step 2: Review and Test
+The sandbox runs exactly as if you had checked out the branch and run `devx up`. Open the PR's tunnel URL in your browser, run manual tests, or execute the PR's test suite from the worktree.
+
+### Step 3: Exit
+Press `Ctrl+C` to tear down the sandbox. The worktree, databases, tunnels, and temporary branches are cleaned up automatically. Your original branch and environment are exactly as you left them.
+
+### What if it crashes?
+If a preview session crashes before cleanup, `devx nuke` will discover the orphaned containers and worktrees and include them in its cleanup sweep.

@@ -22,6 +22,34 @@ To propose a new feature, copy the template below and add it to the appropriate 
 
 ---
 
+## 🟢 Active Ideas
+
+### 55. Instant PR Sandboxing (`devx preview`)
+* **Priority:** 🟢 P1
+* **Effort:** High
+* **Impact:** Eliminates context-switching friction during PR reviews.
+* **The Problem:** Reviewing a PR locally destroys flow state. You have to stash changes, checkout the branch, run migrations, and spin up dependencies.
+* **The Solution:** A command (`devx preview <PR_NUMBER>`) that automatically creates a temporary Git worktree for the PR, reads its `devx.yaml`, spins up isolated ephemeral databases for it, and exposes the app on a unique tunnel URL—all without touching your active Git branch.
+* **Key files:** `cmd/preview.go`, `internal/preview/sandbox.go`
+
+### 56. Peer-to-Peer State Replication (`devx state share` & `attach`)
+* **Priority:** 🟡 P2
+* **Effort:** High
+* **Impact:** Drastically reduces "works on my machine" debugging time.
+* **The Problem:** "It doesn't work on my machine." Helping a teammate means trying to manually replicate their database state and environment variables.
+* **The Solution:** Bundle the live memory state, the database snapshot, and the specific container image SHAs into an encrypted, portable artifact. A developer runs `devx state share` to get a unique ID, and a teammate runs `devx state attach <ID>` to instantly boot the exact broken environment.
+* **Key files:** `cmd/state_share.go`, `cmd/state_attach.go`, `internal/state/replication.go`
+
+### 57. AI-Driven Synthetic Data Generation (`devx db synthesize`)
+* **Priority:** 🟡 P3
+* **Effort:** Medium
+* **Impact:** Catches edge-case bugs by generating highly realistic, chaotic data.
+* **The Problem:** Enterprises lock down prod data, and manual seed scripts generate "perfect" data that misses edge-case bugs (weird Unicode names, missing fields, extreme lengths).
+* **The Solution:** Leverage the Local AI Bridge (`devx ai spawn`). The developer runs `devx db synthesize --engine postgres --records 1000`. `devx` parses the schema, passes it to the local LLM, and streams back highly realistic, chaotic synthetic SQL inserts directly into the local container.
+* **Key files:** `cmd/db_synthesize.go`, `internal/database/synthesizer.go`
+
+---
+
 ## 🔴 Cut or Rethink — Not Recommended
 
 > These ideas are either already solved by existing features, violate `devx` design principles, or target the wrong audience. They are preserved here for historical context.

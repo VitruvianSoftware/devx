@@ -67,6 +67,9 @@ func Collect(projectDir string, runtime provider.ContainerRuntime) (*Manifest, e
 	// 4. Bridge session files (Idea 46.1)
 	m.collectBridgeFiles()
 
+	// 5. Stale preview sandbox artifacts (Idea 55)
+	m.collectPreviewArtifacts(runtime)
+
 	return m, nil
 }
 
@@ -261,6 +264,70 @@ func (m *Manifest) collectBridgeFiles() {
 			Kind:        "file",
 		})
 		m.TotalSize += info.Size()
+	}
+}
+
+// collectPreviewArtifacts discovers orphaned preview sandbox resources (Idea 55).
+// This catches containers/volumes from crashed or abandoned preview sessions.
+func (m *Manifest) collectPreviewArtifacts(runtime provider.ContainerRuntime) {
+	// Containers matching devx-db-pr-* pattern
+	out, err := runtime.Exec("ps", "-a",
+		"--filter", "name=devx-db-pr-",
+		"--format", "{{.Names}}\t{{.Status}}")
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			parts := strings.SplitN(line, "\t", 2)
+			if len(parts) < 1 || parts[0] == "" {
+				continue
+			}
+			m.Items = append(m.Items, Item{
+				Category:    "preview",
+				Label:       parts[0],
+				SizeDisplay: "container",
+				Kind:        "container",
+			})
+		}
+	}
+
+	// Volumes matching devx-data-pr-* pattern
+	out, err = runtime.Exec("volume", "ls",
+		"--filter", "name=devx-data-pr-",
+		"--format", "{{.Name}}")
+	if err == nil {
+		for _, name := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+			m.Items = append(m.Items, Item{
+				Category:    "preview",
+				Label:       name,
+				SizeDisplay: "volume",
+				Kind:        "volume",
+			})
+		}
+	}
+
+	// Stale git worktrees matching devx-preview-*
+	wtOut, err := exec.Command("git", "worktree", "list", "--porcelain").Output()
+	if err == nil {
+		for _, line := range strings.Split(string(wtOut), "\n") {
+			if strings.HasPrefix(line, "worktree ") {
+				path := strings.TrimPrefix(line, "worktree ")
+				if strings.Contains(path, "devx-preview-") {
+					size := dirSize(path)
+					m.Items = append(m.Items, Item{
+						Category:    "preview",
+						Label:       fmt.Sprintf("worktree: %s", filepath.Base(path)),
+						Path:        path,
+						SizeBytes:   size,
+						SizeDisplay: formatBytes(size),
+						Kind:        "dir",
+					})
+					m.TotalSize += size
+				}
+			}
+		}
 	}
 }
 

@@ -111,7 +111,7 @@ func allTools() []toolDef {
 		{
 			Name:        "GitHub CLI",
 			Binary:      "gh",
-			FeatureArea: "Sites",
+			FeatureArea: "Sites, Preview",
 			Required:    true,
 			VersionFlag: "--version",
 			InstallBrew: "gh",

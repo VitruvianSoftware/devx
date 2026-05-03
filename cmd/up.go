@@ -78,6 +78,15 @@ var upCmd = &cobra.Command{
 			projectName = filepath.Base(mustGetwd())
 		}
 
+		// Idea 55: Allow preview sandboxes to override the project name for
+		// database namespace isolation. When DEVX_PROJECT_OVERRIDE is set,
+		// database containers are created with a unique prefix (e.g., pr-42)
+		// so they don't collide with the developer's active environment.
+		projectOverride := os.Getenv("DEVX_PROJECT_OVERRIDE")
+		if projectOverride != "" {
+			projectName = projectOverride
+		}
+
 		if len(cfgYaml.Databases) > 0 {
 			fmt.Printf("🏗️ Bootstrapping Project '%s' Databases...\n", projectName)
 			devxBin, err := os.Executable()
@@ -103,12 +112,18 @@ var upCmd = &cobra.Command{
 				if dbPort > 0 {
 					args = append(args, "--port", fmt.Sprintf("%d", dbPort))
 				}
+				if projectOverride != "" {
+					args = append(args, "--project", projectOverride)
+				}
 				cmd := exec.Command(devxBin, args...)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Run(); err != nil {
 					// Idea 35: Tail crash logs inline on failure
 					containerName := fmt.Sprintf("devx-db-%s", db.Engine)
+					if projectOverride != "" {
+						containerName = fmt.Sprintf("devx-db-%s-%s", projectOverride, db.Engine)
+					}
 					logs.TailContainerCrashLogs("podman", containerName, 50)
 					return fmt.Errorf("failed provisioning %s: %w", db.Engine, err)
 				}
