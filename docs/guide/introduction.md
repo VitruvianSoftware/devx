@@ -9,7 +9,7 @@ We relentlessly eliminate the daily friction that pulls developers out of their 
 
 While tools like **Docker Compose** excel at booting containers and **Skaffold** focuses on bridging local workflows to Kubernetes, `devx` serves as a comprehensive, end-to-end **Local Development Environment Orchestrator**. 
 
-We go far beyond basic container networking by natively integrating the premium capabilities developers usually pay for or duct-tape together into a single, unified CLI:
+We go far beyond basic container networking by natively integrating the premium capabilities developers usually pay for (or duct-tape together) into a single, unified CLI. Crucially, `devx` seamlessly bridges the gap between **local standalone containers** and **remote Kubernetes clusters** within the exact same workflow:
 
 | Problem | devx Solution |
 |---------|---------------|
@@ -25,10 +25,10 @@ We go far beyond basic container networking by natively integrating the premium 
 
 The `devx` ecosystem separates configuration into two distinct files based on the scope of orchestration:
 
-1. **`devx.yaml` (Project-Level Local Dev):** This is the primary configuration file. It lives in your application's repository and defines the local development topology (databases, tunnels, CI steps, and dependent services). It is used by almost all `devx` commands (e.g., `devx up`, `devx test`, `devx action`).
+1. **`devx.yaml` (Project-Level Local & Hybrid Dev):** This is the primary configuration file. It lives in your application's repository and defines your topology—this includes local standalone containers (databases, APIs) as well as **Hybrid Bridge connections** that route traffic directly to and from remote Kubernetes clusters. It is used by almost all `devx` commands (e.g., `devx up`, `devx test`, `devx action`).
    - **Discovery Behavior**: `devx` automatically searches the current directory and all parent directories upward until it finds a `devx.yaml` file. This allows you to seamlessly run `devx` commands from any nested subdirectory within your project.
-2. **`homelab.yaml` (Infrastructure-Level Cluster Dev):** This file is exclusively used by the `devx homelab` command suite. It defines the desired state of a bare-metal Kubernetes cluster (node IPs, K3s versions, VM allocations) and is usually kept in a dedicated infrastructure repository.
-   - **Discovery Behavior**: Similar to `devx.yaml`, `devx homelab` automatically crawls upward from the current directory to locate your `homelab.yaml` configuration.
+2. **`cluster.yaml` (Infrastructure-Level Multi-Node Dev):** This file is exclusively used by the `devx cluster` command suite. It defines the desired state of a multi-node Kubernetes cluster (node IPs, K3s versions, VM allocations) and is usually kept in a dedicated infrastructure repository.
+   - **Discovery Behavior**: Similar to `devx.yaml`, `devx cluster` automatically crawls upward from the current directory to locate your `cluster.yaml` configuration.
 
 These files do not override each other; they serve completely different domains.
 

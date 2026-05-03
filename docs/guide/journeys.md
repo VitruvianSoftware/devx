@@ -122,3 +122,41 @@ If you ruin the database during your debugging, simply restore it!
 ```bash
 devx db snapshot restore postgres debug-db "pre-test-state"
 ```
+
+---
+
+## 4. The Kubernetes Engineer: Hybrid Crossover
+
+When building a microservice that relies on a massive staging Kubernetes cluster (too large to run locally), `devx` lets you mix local containers with remote K8s services seamlessly.
+
+### Step 1: Start a Local Cluster (Optional)
+If you just need to test standard K8s manifests locally without destroying your host machine, spin up an instant, isolated control plane.
+```bash
+devx k8s spawn
+```
+This safely extracts the `kubeconfig` without corrupting your global `~/.kube/config`.
+
+### Step 2: Bridge Outbound (Connect)
+If your local standalone app needs to query a database or API running inside a remote staging cluster, you don't need to manually configure `kubectl port-forward` strings. 
+
+Define the target in `devx.yaml` under `bridge:`, then run:
+```bash
+devx bridge connect
+```
+Your local application can now seamlessly talk to the staging database via auto-injected `BRIDGE_*` environment variables.
+
+### Step 3: Bridge Inbound (Intercept)
+If you want real traffic from the staging cluster to hit your local code so you can use a local debugger, deploy the self-healing intercept agent.
+```bash
+devx bridge intercept my-service --steal
+```
+This deploys an ephemeral agent Pod that steals traffic destined for `my-service` and tunnels it back to your local Macbook. When you exit, it automatically restores the original traffic flow.
+
+### Alternative: The Full Hybrid Topology
+If you want to orchestrate local standalone containers and remote Kubernetes bridges simultaneously, simply set `runtime: bridge` on your dependencies in `devx.yaml`.
+
+Then run:
+```bash
+devx up
+```
+`devx` will intelligently start your local databases, establish K8s port-forwards, and intercept staging traffic in the exact correct dependency order!

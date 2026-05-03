@@ -53,7 +53,7 @@ Instead, use `devx map` to generate an instant, agent-readable Mermaid.js topolo
 
 ## 📁 6. Configuration Discovery (Upward Traversal)
 
-`devx` and `devx homelab` commands automatically traverse upward from the current working directory to discover their configuration files (`devx.yaml` and `homelab.yaml`, respectively). 
+`devx` and `devx cluster` commands automatically traverse upward from the current working directory to discover their configuration files (`devx.yaml` and `cluster.yaml`, respectively). 
 You do NOT need to `cd` back to the repository root to run `devx` commands. You can safely execute them from deep within nested subdirectories.
 
 ## 🔀 7. Advanced Orchestration (`devx up`)
@@ -74,6 +74,11 @@ When shipping features on the `devx` CLI, the task is **not done** until the off
 - **Checklist Requirement:** Every implementation plan (`implementation_plan.md`) and task tracker (`task.md`) you create MUST include a mandatory phase: `Documentation Updating`.
 - **Validation:** Before running the `/push` workflow to cut a release, PR, or commit, you must pause and explicitly review the `docs/guide/` directory to ensure all new commands, flags, and `devx.yaml` schema fields are documented.
 - **Example configs:** Schema changes MUST be reflected with thorough examples in `devx.yaml.example`.
+- **Taxonomy Synchronization:** If you restructure the VitePress sidebar (`docs/.vitepress/config.mjs`), you MUST synchronously replicate the exact same category structure across:
+  1. `README.md` (in the "Why devx?" feature groups)
+  2. `cmd/root.go` (in the `Feature Ecosystem` help text and `rootCmd.AddGroup` definitions)
+  3. Relevant `cmd/*.go` files (updating the `GroupID` assignments)
+  These four locations form the single source of truth for the project's capabilities and must never drift.
 
 ## 🛠️ 10. CI and Task Execution (`devx action`)
 

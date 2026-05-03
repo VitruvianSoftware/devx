@@ -25,29 +25,34 @@ While tools like **Docker Compose** excel at booting containers and **Skaffold**
 We go far beyond basic container networking by natively integrating the premium capabilities developers usually pay for or duct-tape together into a single, unified CLI:
 
 ### Local Infrastructure
-* 🔑 **Vault-Native Config Sync:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to automatically inject secrets natively directly into process environments.
-* 🌱 **Automated Database Seeding:** Dynamically injects connection strings & legacy fragments (`devx db seed`) from running containers directly into your native Node.js/Go seed scripts.
-* 🛠️ **Frictionless Resilience:** Built-in automatic Port-Shifting transparently overrides `EADDRINUSE` conflicts, and native `devx` crash-tailing instantly pinpoints startup failures precisely inline.
-* 🖥️ **Integrated Developer Tools:** We ship with native Bubble Tea TUIs for multiplexed log streaming, webhook HTTP request caching/replay, instant DB state snapshotting, and more.
+* 🐳 **Container VMs & Providers:** Provision customized Fedora CoreOS VMs via your chosen backend (Podman, Docker, OrbStack, Lima, Colima).
+* 🗄️ **Ephemeral Databases & Emulators:** One-click spin up of Postgres, Redis, GCP Cloud Emulators, and local S3 buckets with automatic `.env` injection.
+* ☢️ **The Nuke Button:** Instantly hard-reset corrupted project caches, volumes, and images with a single atomic command (`devx nuke`).
+
+### Kubernetes & Hybrid
+* 🔗 **Hybrid Bridge to Kubernetes:** Declaratively bridge remote K8s services into `devx up` with `runtime: bridge`. Outbound port-forwarding and inbound traffic interception participate natively in the DAG.
+* ☸️ **Zero-Config Local Kubernetes:** Spin up an instant, isolated K3s control plane directly inside your VM without destroying your host machine.
+* 🖥️ **Multi-Node Clusters:** Scale your local K8s development beyond a single laptop by provisioning distributed, highly available K3s clusters across multiple physical machines via Lima VMs.
 
 ### Networking & Edge
-* 🌐 **Instant Public Ingress:** Stop paying for ngrok. We securely wire your local containers to the internet instantly via Cloudflare Tunnels (`*.ipv1337.dev`), right out of the box.
-* 🔒 **Zero-Trust Corporate Access:** Stop fighting with heavy VPN clients. The `devx` VM natively joins your Tailscale mesh silently, giving your local apps direct access to staging and production databases.
-* 🔗 **Hybrid Bridge to Kubernetes:** Declaratively bridge remote K8s services into `devx up` with `runtime: bridge`. Outbound port-forwarding (`bridge_target`) and inbound traffic interception (`bridge_intercept`) participate in the DAG with correct dependency ordering, unified lifecycle, and bridge-native health checks.
+* 🌐 **Instant Public Ingress:** Stop paying for ngrok. Securely wire your local containers to the internet instantly via Cloudflare Tunnels (`*.ipv1337.dev`).
+* 📧 **Local Webhook & Email Catchers:** Integrated Bubble Tea TUIs for intercepting, caching, and replaying HTTP webhooks and SMTP traffic locally.
 
 ### Orchestration & State
-* 🚦 **Intelligent Service Orchestration:** Seamless DAG-based `depends_on` startup sequences rivaling Docker Compose and Skaffold, completely eliminating local "Connection Refused" loops.
-* ⚡ **Zero-Rebuild Hot Reloading:** Bypass slow VirtioFS volume mounts with intelligent Mutagen-powered file syncing (`devx sync up`) that propagates changes in milliseconds.
-* 🌐 **Multirepo Orchestration:** Compose multiple sibling `devx.yaml` files from neighbouring repositories via `include:` directives into a single unified local cluster — with fail-fast conflict detection and automatic working-directory injection per project.
+* 🚦 **Intelligent Orchestration:** Seamless DAG-based `depends_on` startup sequences rivaling Docker Compose, plus native Multirepo composing via `include:` directives.
+* 🔑 **Vault Secrets Syncing:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to inject secrets directly into your containers.
+* ⚡ **Smart File Syncing:** Bypass slow VirtioFS volume mounts with intelligent Mutagen-powered file syncing (`devx sync up`) that propagates changes in milliseconds.
+* ⏪ **Diagnostics & State:** Snapshot and restore complete database volumes using CRIU, plus redact-safe diagnostic dumps for frictionless support (`devx state`).
 
 ### Testing & Telemetry
-* 🧪 **Ephemeral E2E Testing:** Unlike Compose which corrupts your local databases during UI tests, `devx test ui` dynamically clones isolated, randomized copies of your database topology to run Cypress/Playwright tests safely.
-* ⏪ **Time-Travel Debugging:** Snapshot and restore complete macro-topology states (RAM, volumes, networks) using CRIU, plus redact-safe diagnostic dumps for frictionless support (`devx state`).
-* 📊 **Predictive Pre-Building:** Local telemetry tracks build durations and proactively nudges you when builds degrade. Opt-in background pre-building watches dependency manifests and silently primes container caches so restarts are instant.
+* 🧪 **Ephemeral E2E Testing:** Dynamically clone isolated, randomized copies of your database topology to run Cypress/Playwright tests safely.
+* 🩺 **Environment Doctor:** Run the built-in health check (`devx doctor`) to audit, authenticate, and auto-install all prerequisites effortlessly.
+* 📊 **Distributed Tracing & Mocking:** Instantly spawn OpenTelemetry backends (Jaeger/Grafana) and Prisma mock servers for complete observability and API isolation.
 
 ### Pipelines & CI/CD
 * 🔬 **Local CI Emulation:** Debug your GitHub Actions locally with `devx ci run` — matrix expansion, job DAGs, and parallel execution without the "fix ci" commit loop.
-* 🤖 **AI-Native from Day 1:** Fully compliant with AI Agents (Cursor, Claude Code, Gemina) via deterministic `--json` outputs, `--dry-run` safety mechanisms, and native Agent Skill discovery.
+* ⏱️ **Predictive Pre-Building:** Local telemetry tracks build durations and proactively nudges you to enable background pre-building to prime container caches.
+* 🤖 **AI-Native from Day 1:** Fully compliant with AI Agents via deterministic `--json` outputs, `--dry-run` safety mechanisms, and native Agent Skill discovery.
 
 `devx` provisions a customized **Fedora CoreOS** VM via your chosen backend (Lima, Colima, Docker, OrbStack, or Podman) and seamlessly drives this entire supercharged ecosystem.
 
@@ -158,8 +163,8 @@ The `devx` ecosystem separates configuration into two distinct files based on th
 
 1. **`devx.yaml` (Project-Level Local Dev):** This is the primary configuration file. It lives in your application's repository and defines the local development topology (databases, tunnels, CI steps, and dependent services). It is used by almost all `devx` commands (e.g., `devx up`, `devx test`, `devx action`).
    - **Discovery Behavior**: `devx` automatically searches the current directory and all parent directories upward until it finds a `devx.yaml` file. This allows you to seamlessly run `devx` commands from any nested subdirectory within your project.
-2. **`homelab.yaml` (Infrastructure-Level Cluster Dev):** This file is exclusively used by the `devx homelab` command suite. It defines the desired state of a bare-metal Kubernetes cluster (node IPs, K3s versions, VM allocations) and is usually kept in a dedicated infrastructure repository.
-   - **Discovery Behavior**: Similar to `devx.yaml`, `devx homelab` automatically crawls upward from the current directory to locate your `homelab.yaml` configuration.
+2. **`cluster.yaml` (Infrastructure-Level Multi-Node Dev):** This file is exclusively used by the `devx cluster` command suite. It defines the desired state of a multi-node Kubernetes cluster (node IPs, K3s versions, VM allocations) and is usually kept in a dedicated infrastructure repository.
+   - **Discovery Behavior**: Similar to `devx.yaml`, `devx cluster` automatically crawls upward from the current directory to locate your `cluster.yaml` configuration.
 
 These files do not override each other; they serve completely different domains.
 

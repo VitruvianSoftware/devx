@@ -1,0 +1,138 @@
+// Copyright (c) 2026 VitruvianSoftware
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// Package config handles loading, parsing, and validating the multi-node cluster
+// configuration from YAML files.
+package config
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/VitruvianSoftware/devx/internal/config"
+	"gopkg.in/yaml.v3"
+)
+
+// Config is the top-level configuration for a multi-node cluster.
+type Config struct {
+	Cluster ClusterConfig `yaml:"cluster"`
+	Nodes   []NodeConfig  `yaml:"nodes"`
+}
+
+// ClusterConfig holds cluster-wide settings.
+type ClusterConfig struct {
+	Name       string `yaml:"name"`
+	K3sVersion string `yaml:"k3sVersion"`
+	Kubeconfig string `yaml:"kubeconfig"`
+}
+
+// NodeConfig describes a single node in the cluster.
+type NodeConfig struct {
+	Host       string   `yaml:"host"`
+	Role       string   `yaml:"role"` // "server" or "agent"
+	Pool       string   `yaml:"pool"`
+	VM         VMConfig `yaml:"vm"`
+	VMName     string   `yaml:"vmName,omitempty"`     // Override default VM name (default: "k8s-node")
+	SSHUser    string   `yaml:"sshUser,omitempty"`    // SSH username (default: current user)
+	SSHPort    string   `yaml:"sshPort,omitempty"`    // SSH port (default: 22)
+	SSHKeyPath string   `yaml:"sshKeyPath,omitempty"` // Path to SSH private key (optional)
+}
+
+// VMConfig describes the resource allocation for a Lima VM.
+type VMConfig struct {
+	CPUs   int    `yaml:"cpus"`
+	Memory string `yaml:"memory"`
+	Disk   string `yaml:"disk"`
+}
+
+// GetVMName returns the VM name for this node, defaulting to "k8s-node".
+func (n *NodeConfig) GetVMName() string {
+	if n.VMName != "" {
+		return n.VMName
+	}
+	return "k8s-node"
+}
+
+// Load reads and parses a config file from the given path.
+// It will search parent directories for the file if only a filename is provided.
+func Load(path string) (*Config, error) {
+	// Support CLUSTER_CONFIG env var as fallback.
+	if path == "cluster.yaml" {
+		if envPath := os.Getenv("CLUSTER_CONFIG"); envPath != "" {
+			path = envPath
+		}
+	}
+
+	// Crawl upwards to find the config if it's a simple filename
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("getting working directory: %w", err)
+	}
+	foundPath, foundDir, err := config.FindProjectConfig(cwd, path)
+	if err == nil {
+		if foundDir != cwd {
+			fmt.Fprintf(os.Stderr, "📂 Using %s from %s\n", path, foundDir)
+		}
+		path = foundPath
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading config file %s: %w", path, err)
+	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing config file %s: %w", path, err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("validating config: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+// ServerNodes returns only the nodes with role "server".
+func (c *Config) ServerNodes() []NodeConfig {
+	var servers []NodeConfig
+	for _, n := range c.Nodes {
+		if n.Role == "server" {
+			servers = append(servers, n)
+		}
+	}
+	return servers
+}
+
+// AgentNodes returns only the nodes with role "agent".
+func (c *Config) AgentNodes() []NodeConfig {
+	var agents []NodeConfig
+	for _, n := range c.Nodes {
+		if n.Role == "agent" {
+			agents = append(agents, n)
+		}
+	}
+	return agents
+}
+
+// InitNode returns the first server node, which is used to bootstrap the cluster.
+func (c *Config) InitNode() NodeConfig {
+	return c.ServerNodes()[0]
+}

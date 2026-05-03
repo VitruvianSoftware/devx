@@ -53,7 +53,7 @@ Instead, use `devx map` to generate an instant, agent-readable Mermaid.js topolo
 
 ## 📁 6. Configuration Discovery (Upward Traversal)
 
-`devx` and `devx homelab` commands automatically traverse upward from the current working directory to discover their configuration files (`devx.yaml` and `homelab.yaml`, respectively). 
+`devx` and `devx cluster` commands automatically traverse upward from the current working directory to discover their configuration files (`devx.yaml` and `cluster.yaml`, respectively). 
 You do NOT need to `cd` back to the repository root to run `devx` commands. You can safely execute them from deep within nested subdirectories.
 
 ## 🔀 7. Advanced Orchestration (`devx up`)
