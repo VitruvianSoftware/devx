@@ -13,7 +13,21 @@
 
 ## 2. Design Decisions
 
-* **Design Principles Alignment:** [Explain how this implementation aligns with devx core principles (e.g., fail-fast validation, environment isolation, explicit vs implicit).]
+### Design Principles Alignment
+
+*Every implementation must align with our codified principles (see `docs/analysis/PRODUCT_ANALYSIS.md`). Check the ones that apply and explain how:*
+
+* [ ] **One CLI, everything** — Does this belong in devx or is it better as an external tool?
+* [ ] **Convention over configuration** — Are sensible defaults provided? Is zero-config the happy path?
+* [ ] **Transparency** — Does the command show explicit impact summaries before destructive actions?
+* [ ] **Idempotency** — Is this operation safely repeatable without side effects?
+* [ ] **AI-native** — Does it support `--json` structured output, deterministic exit codes, and `--dry-run`?
+* [ ] **CLI + YAML parity** — Can this be configured both via CLI flags and `devx.yaml`?
+* [ ] **Optimized Inner Loop** — Does this reduce the "code-to-feedback" cycle time?
+* [ ] **Client-Driven Architecture** — No permanent cluster-side controllers; ephemeral agents only?
+* [ ] **Absolute Portability** — Does it work identically across macOS/Linux, Intel/ARM?
+
+### Non-Obvious Choices
 * [Explicitly call out non-obvious choices.]
 * [Explain why alternative approaches were rejected.]
 
@@ -38,6 +52,7 @@
 * [ ] **Global Flags:** Explicitly state how `--dry-run`, `-y`, `--json`, and `--provider` are handled.
 * [ ] **Error Handling Strategy:** Define fail-fast vs. interactive recovery and error message quality.
 * [ ] **Environment & Context:** Specify WHERE commands execute (host vs. container vs. VM) and what assumptions are made.
+* [ ] **Pre-push Hook / `devx audit`:** Does this change exit codes, container execution paths, or scanning behavior? If so, assess impact on the pre-push guardrail (`hook.go`).
 
 ## 4. Configuration & Schema Changes
 
@@ -70,9 +85,11 @@
 * [ ] `.github/skills/devx/SKILL.md`
 * [ ] `.github/skills/platform-engineer/SKILL.md`
 
-### Example Configs
+### Example Configs & Templates
 * [ ] **`devx.yaml.example`:** Add commented examples of any new YAML configuration keys.
 * [ ] **`cluster.yaml.example`:** Update if cluster-related changes are made.
+* [ ] **Scaffold templates (`internal/scaffold/templates/`):** Update generated `devx.yaml` in project templates if schema changes.
+* [ ] **`CONTRIBUTING.md`:** Update the project structure diagram and "Adding a New Command" section if new packages or commands are added.
 
 ## 6. Verification Plan
 
