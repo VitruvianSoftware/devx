@@ -74,6 +74,11 @@ When shipping features on the `devx` CLI, the task is **not done** until the off
 - **Checklist Requirement:** Every implementation plan (`implementation_plan.md`) and task tracker (`task.md`) you create MUST include a mandatory phase: `Documentation Updating`.
 - **Validation:** Before running the `/push` workflow to cut a release, PR, or commit, you must pause and explicitly review the `docs/guide/` directory to ensure all new commands, flags, and `devx.yaml` schema fields are documented.
 - **Example configs:** Schema changes MUST be reflected with thorough examples in `devx.yaml.example`.
+- **Taxonomy Synchronization:** If you restructure the VitePress sidebar (`docs/.vitepress/config.mjs`), you MUST synchronously replicate the exact same category structure across:
+  1. `README.md` (in the "Why devx?" feature groups)
+  2. `cmd/root.go` (in the `Feature Ecosystem` help text and `rootCmd.AddGroup` definitions)
+  3. Relevant `cmd/*.go` files (updating the `GroupID` assignments)
+  These four locations form the single source of truth for the project's capabilities and must never drift.
 
 ## 🛠️ 10. CI and Task Execution (`devx action`)
 
@@ -189,3 +194,27 @@ The agent is a self-healing Kubernetes Job with:
 - **Self-healing** — on tunnel drop or SIGTERM, agent restores the original selector before exiting
 - **activeDeadlineSeconds: 14400** (4h auto-cleanup safety net)
 
+## 📦 13. State Replication (`devx state share` / `attach`)
+
+Share and restore exact running container states and database volumes across machines.
+State replication enforces a "Bring-Your-Own-Bucket" model using S3 or GCS.
+
+### Commands
+
+**Share State:**
+- `devx state share --json`: Bundle current CRIU checkpoints and database volumes, encrypt, and upload to relay.
+- `devx state share --db-only --json`: Skip container checkpoints (required for non-Podman users).
+- `devx state share --relay s3://my-bucket/state`: Override `devx.yaml` relay destination.
+
+**Attach State:**
+- `devx state attach <ID> -y`: Download, decrypt, and restore the state bundle (overwrites current local state).
+
+### Exit Codes
+| Code | Meaning |
+|------|---------|
+| 80 | No running devx containers/databases to share |
+| 81 | Failed to upload bundle to relay/bucket |
+| 82 | Malformed share ID |
+| 83 | Failed to download bundle |
+| 84 | Wrong passphrase or corrupted bundle (decryption failed) |
+| 85 | Checkpoint or snapshot restore failed |

@@ -323,3 +323,11 @@ profiles:
 #         condition: service_healthy
 #       - name: postgres
 #         condition: service_healthy
+#
+# ─── 8. State Replication (Idea 56) ──────────────────────────────────────────────
+# Configure where devx state share/attach bundles are stored.
+# If omitted, share and attach commands will require the --relay flag.
+# state:
+#   # Use your own S3/GCS bucket for secure team sharing (recommended)
+#   relay: "s3://my-team-devx-state/checkpoints"
+#   # relay: "gs://my-team-devx-state/checkpoints"
