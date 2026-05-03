@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/yamux v0.1.2
 	github.com/joho/godotenv v1.5.1
-	github.com/magefile/mage v1.17.0
+	github.com/magefile/mage v1.17.2
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/sync v0.11.0
 	gopkg.in/yaml.v3 v3.0.1
