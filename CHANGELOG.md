@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0](https://github.com/VitruvianSoftware/devx/compare/v0.34.0...v0.35.0) (2026-05-03)
+
+
+### Features
+
+* implement upward configuration discovery ([eeac698](https://github.com/VitruvianSoftware/devx/commit/eeac6984040d91766490e50b440cf9d9d173c16e))
+
+
+### Bug Fixes
+
+* ignore os.Chdir error in cleanup to satisfy errcheck linter ([3281ff3](https://github.com/VitruvianSoftware/devx/commit/3281ff3d9a29974e7a30c6544a21c2cc1bdc4948))
+
 ## [0.34.0](https://github.com/VitruvianSoftware/devx/compare/v0.33.0...v0.34.0) (2026-05-02)
 
 
