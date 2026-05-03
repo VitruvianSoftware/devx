@@ -94,7 +94,7 @@ var upCmd = &cobra.Command{
 				if dbPort > 0 {
 					actual, shifted, warning := network.ResolvePort(dbPort)
 					if shifted {
-						fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
+						_, _ = fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
 					}
 					dbPort = actual
 				}
@@ -166,7 +166,7 @@ var upCmd = &cobra.Command{
 			resolvedPort := tConfig.Port
 			actual, shifted, warning := network.ResolvePort(resolvedPort)
 			if shifted {
-				fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
 				resolvedPort = actual
 			}
 
@@ -350,7 +350,7 @@ var upCmd = &cobra.Command{
 
 			// Idea 46.3: Generate bridge.env for devx shell after all bridge services are healthy
 			if err := dag.WriteBridgeEnvFile(); err != nil {
-				fmt.Fprintf(os.Stderr, "⚠️  Could not write bridge.env: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stderr, "⚠️  Could not write bridge.env: %v\n", err)
 			}
 
 			// Idea 43: Hint about file syncing when sync blocks are present

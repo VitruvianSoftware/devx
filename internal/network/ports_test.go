@@ -44,7 +44,7 @@ func TestCheckPortAvailable_OccupiedPort(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to start listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }() 
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	if CheckPortAvailable(port) {
@@ -92,7 +92,7 @@ func TestResolvePort_WithShift(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to start listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }() 
 
 	occupiedPort := ln.Addr().(*net.TCPAddr).Port
 

@@ -39,17 +39,17 @@ var hookPrePushCmd = &cobra.Command{
 	Use:   "pre-push",
 	Short: "Invoked by the .git/hooks/pre-push hook",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		fmt.Fprintln(os.Stderr)
-		fmt.Fprintln(os.Stderr, "╭──────────────────────────────────────────────────────────────────╮")
-		fmt.Fprintln(os.Stderr, "│  ✋ Direct 'git push' is blocked by devx.                        │")
-		fmt.Fprintln(os.Stderr, "│                                                                  │")
-		fmt.Fprintln(os.Stderr, "│  AI Agents MUST use:   devx agent ship -m \"commit message\"       │")
-		fmt.Fprintln(os.Stderr, "│  Humans can bypass:    git push --no-verify                      │")
-		fmt.Fprintln(os.Stderr, "│                                                                  │")
-		fmt.Fprintln(os.Stderr, "│  This guardrail ensures pre-flight checks and CI verification    │")
-		fmt.Fprintln(os.Stderr, "│  are never skipped.                                              │")
-		fmt.Fprintln(os.Stderr, "╰──────────────────────────────────────────────────────────────────╯")
-		fmt.Fprintln(os.Stderr)
+		_, _ = fmt.Fprintln(os.Stderr)
+		_, _ = fmt.Fprintln(os.Stderr, "╭──────────────────────────────────────────────────────────────────╮")
+		_, _ = fmt.Fprintln(os.Stderr, "│  ✋ Direct 'git push' is blocked by devx.                        │")
+		_, _ = fmt.Fprintln(os.Stderr, "│                                                                  │")
+		_, _ = fmt.Fprintln(os.Stderr, "│  AI Agents MUST use:   devx agent ship -m \"commit message\"       │")
+		_, _ = fmt.Fprintln(os.Stderr, "│  Humans can bypass:    git push --no-verify                      │")
+		_, _ = fmt.Fprintln(os.Stderr, "│                                                                  │")
+		_, _ = fmt.Fprintln(os.Stderr, "│  This guardrail ensures pre-flight checks and CI verification    │")
+		_, _ = fmt.Fprintln(os.Stderr, "│  are never skipped.                                              │")
+		_, _ = fmt.Fprintln(os.Stderr, "╰──────────────────────────────────────────────────────────────────╯")
+		_, _ = fmt.Fprintln(os.Stderr)
 		os.Exit(1)
 		return nil
 	},

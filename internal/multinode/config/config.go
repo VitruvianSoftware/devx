@@ -88,7 +88,7 @@ func Load(path string) (*Config, error) {
 	foundPath, foundDir, err := config.FindProjectConfig(cwd, path)
 	if err == nil {
 		if foundDir != cwd {
-			fmt.Fprintf(os.Stderr, "📂 Using %s from %s\n", path, foundDir)
+			_, _ = fmt.Fprintf(os.Stderr, "📂 Using %s from %s\n", path, foundDir)
 		}
 		path = foundPath
 	}

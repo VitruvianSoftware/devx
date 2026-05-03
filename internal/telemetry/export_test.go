@@ -148,7 +148,7 @@ func TestExportSpan_SuccessfulDelivery(t *testing.T) {
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
-	defer server.Close()
+	defer func() { 	server.Close() }() 
 
 	// Temporarily override the endpoint for this test
 	// We can't easily do this without modifying the const, so we test BuildOTLPPayload instead

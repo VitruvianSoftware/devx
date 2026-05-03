@@ -32,9 +32,9 @@ import (
 var mapOutputFile string
 
 var mapCmd = &cobra.Command{
-	Use:   "map",
+	Use:     "map",
 	GroupID: "orchestration",
-	Short: "Generate a visual architecture map from devx.yaml as a Mermaid diagram",
+	Short:   "Generate a visual architecture map from devx.yaml as a Mermaid diagram",
 	Long: `Parses the devx.yaml service dependency graph and generates a Mermaid.js
 flowchart showing databases, services, tunnels, and their interconnections.
 
@@ -90,7 +90,7 @@ func GenerateMermaid(cfg DevxConfig) string {
 		if db.Port > 0 {
 			label += fmt.Sprintf(":%d", db.Port)
 		}
-		sb.WriteString(fmt.Sprintf("    %s[(\"%s\")]:::db\n", id, label))
+		_, _ = fmt.Fprintf(&sb, "    %s[(\"%s\")]:::db\n", id, label)
 	}
 
 	// Services — rounded rectangle shape
@@ -103,7 +103,7 @@ func GenerateMermaid(cfg DevxConfig) string {
 		if svc.Runtime != "" && svc.Runtime != "host" {
 			label += fmt.Sprintf(" [%s]", svc.Runtime)
 		}
-		sb.WriteString(fmt.Sprintf("    %s(\"%s\"):::svc\n", id, label))
+		_, _ = fmt.Fprintf(&sb, "    %s(\"%s\"):::svc\n", id, label)
 	}
 
 	// Tunnels — hexagonal shape
@@ -113,7 +113,7 @@ func GenerateMermaid(cfg DevxConfig) string {
 		if t.Port > 0 {
 			label += fmt.Sprintf(":%d", t.Port)
 		}
-		sb.WriteString(fmt.Sprintf("    %s{{\"%s\"}}:::tunnel\n", id, label))
+		_, _ = fmt.Fprintf(&sb, "    %s{{\"%s\"}}:::tunnel\n", id, label)
 	}
 
 	sb.WriteString("\n")
@@ -128,9 +128,9 @@ func GenerateMermaid(cfg DevxConfig) string {
 				edgeLabel = dep.Condition
 			}
 			if edgeLabel != "" {
-				sb.WriteString(fmt.Sprintf("    %s -->|\"%s\"| %s\n", depID, edgeLabel, svcID))
+				_, _ = fmt.Fprintf(&sb, "    %s -->|\"%s\"| %s\n", depID, edgeLabel, svcID)
 			} else {
-				sb.WriteString(fmt.Sprintf("    %s --> %s\n", depID, svcID))
+				_, _ = fmt.Fprintf(&sb, "    %s --> %s\n", depID, svcID)
 			}
 		}
 	}
@@ -145,7 +145,7 @@ func GenerateMermaid(cfg DevxConfig) string {
 	for _, t := range cfg.Tunnels {
 		tunnelID := sanitizeID("tunnel_" + t.Name)
 		if svcID, ok := portToService[t.Port]; ok {
-			sb.WriteString(fmt.Sprintf("    %s -.->|\"expose\"| %s\n", svcID, tunnelID))
+			_, _ = fmt.Fprintf(&sb, "    %s -.->|\"expose\"| %s\n", svcID, tunnelID)
 		}
 	}
 

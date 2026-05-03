@@ -77,7 +77,7 @@ func contextWithSignal(parent context.Context, timeout time.Duration) context.Co
 	go func() {
 		select {
 		case <-sigCh:
-			fmt.Fprintln(os.Stderr, "\n⚠️  Received interrupt signal, cancelling...")
+			_, _ = fmt.Fprintln(os.Stderr, "\n⚠️  Received interrupt signal, cancelling...")
 			cancel()
 		case <-ctx.Done():
 		}

@@ -187,7 +187,7 @@ func (m SetupModel) View() string {
 			detail = StyleMuted.Render("—")
 		}
 
-		b.WriteString(fmt.Sprintf("  %s  %s  %s\n", icon, name, detail))
+		_, _ = fmt.Fprintf(&b, "  %s  %s  %s\n", icon, name, detail)
 	}
 
 	// Auth URL callout

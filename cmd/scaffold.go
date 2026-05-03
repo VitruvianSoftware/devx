@@ -178,7 +178,7 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 	if !scaffoldNoGit {
 		if err := scaffold.PostScaffold(templateID, outDir); err != nil {
 			// Non-fatal: git init failure shouldn't block the developer
-			fmt.Fprintf(os.Stderr, "⚠️  Post-scaffold hooks: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "⚠️  Post-scaffold hooks: %v\n", err)
 		}
 	}
 

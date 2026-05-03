@@ -41,7 +41,7 @@ func GetFreePort() (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to find free port: %w", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }() 
 
 	addr := ln.Addr().(*net.TCPAddr)
 	return addr.Port, nil

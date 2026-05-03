@@ -149,7 +149,7 @@ func runShell(_ *cobra.Command, _ []string) error {
 				}
 				fmt.Printf("🔒 Injected %d secrets from remote vaults seamlessly.\n", len(secrets))
 			} else {
-				fmt.Fprintf(os.Stderr, "⚠️ Warning: Failed to fetch secrets from vault: %v\n", sErr)
+				_, _ = fmt.Fprintf(os.Stderr, "⚠️ Warning: Failed to fetch secrets from vault: %v\n", sErr)
 			}
 		}
 	} else if _, sErr := os.Stat(".env"); sErr == nil {

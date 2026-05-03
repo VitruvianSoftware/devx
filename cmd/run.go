@@ -79,7 +79,7 @@ Global flags are parsed before '--':
 		if err != nil {
 			fmt.Printf("Warning: Could not open log file: %v\n", err)
 		} else {
-			defer logFile.Close()
+			defer func() { _ = logFile.Close() }() 
 		}
 
 		if !outputJSON {
@@ -111,7 +111,7 @@ Global flags are parsed before '--':
 
 			err = command.Start()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to start process: %v\n", err)
+				_, _ = fmt.Fprintf(os.Stderr, "Failed to start process: %v\n", err)
 				os.Exit(1)
 			}
 

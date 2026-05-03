@@ -148,16 +148,16 @@ func GenerateMarkdown(r *DumpReport) string {
 	sb.WriteString("# DevX Diagnostic Report\n\n")
 
 	sb.WriteString("## 1. System & Doctor Audit\n")
-	sb.WriteString(fmt.Sprintf("- OS: %s\n", r.DoctorReport.System.OS))
-	sb.WriteString(fmt.Sprintf("- Arch: %s\n", r.DoctorReport.System.Arch))
-	sb.WriteString(fmt.Sprintf("- Package Manager: %s\n\n", r.DoctorReport.System.PackageManager))
+	_, _ = fmt.Fprintf(&sb, "- OS: %s\n", r.DoctorReport.System.OS)
+	_, _ = fmt.Fprintf(&sb, "- Arch: %s\n", r.DoctorReport.System.Arch)
+	_, _ = fmt.Fprintf(&sb, "- Package Manager: %s\n\n", r.DoctorReport.System.PackageManager)
 
 	for _, tool := range r.DoctorReport.Tools {
 		status := "✅ Installed"
 		if !tool.Installed {
 			status = "❌ Missing"
 		}
-		sb.WriteString(fmt.Sprintf("- %s: %s (v: %s)\n", status, tool.Name, tool.Version))
+		_, _ = fmt.Fprintf(&sb, "- %s: %s (v: %s)\n", status, tool.Name, tool.Version)
 	}
 	sb.WriteString("\n## 2. Credentials\n")
 	for _, cred := range r.DoctorReport.Credentials {
@@ -165,21 +165,21 @@ func GenerateMarkdown(r *DumpReport) string {
 		if !cred.Configured {
 			status = "❌ Missing"
 		}
-		sb.WriteString(fmt.Sprintf("- %s: %s\n", status, cred.Name))
+		_, _ = fmt.Fprintf(&sb, "- %s: %s\n", status, cred.Name)
 	}
 
 	sb.WriteString("\n## 3. Virtual Machine (Infrastructure)\n")
-	sb.WriteString(fmt.Sprintf("- Name: %s\n", r.VM.Name))
-	sb.WriteString(fmt.Sprintf("- Provider: %s\n", r.VM.Provider))
-	sb.WriteString(fmt.Sprintf("- State: %s\n", r.VM.State))
-	sb.WriteString(fmt.Sprintf("- Tailscale: %s\n", r.VM.Tailscale))
+	_, _ = fmt.Fprintf(&sb, "- Name: %s\n", r.VM.Name)
+	_, _ = fmt.Fprintf(&sb, "- Provider: %s\n", r.VM.Provider)
+	_, _ = fmt.Fprintf(&sb, "- State: %s\n", r.VM.State)
+	_, _ = fmt.Fprintf(&sb, "- Tailscale: %s\n", r.VM.Tailscale)
 
 	sb.WriteString("\n## 4. Tunnels (Exposed Ports)\n")
 	if len(r.Tunnels) == 0 {
 		sb.WriteString("- No tunnels currently exposed.\n")
 	}
 	for _, t := range r.Tunnels {
-		sb.WriteString(fmt.Sprintf("- %s: https://%s\n", t.Name, t.Domain))
+		_, _ = fmt.Fprintf(&sb, "- %s: https://%s\n", t.Name, t.Domain)
 	}
 
 	sb.WriteString("\n## 5. Topology (Containers)\n")
@@ -187,9 +187,9 @@ func GenerateMarkdown(r *DumpReport) string {
 		sb.WriteString("- No managed containers detected.\n")
 	}
 	for _, c := range r.Topology.DevxManagedContainers {
-		sb.WriteString(fmt.Sprintf("### %s\n", c.Name))
-		sb.WriteString(fmt.Sprintf("- Image: %s\n", c.Image))
-		sb.WriteString(fmt.Sprintf("- State: %s\n", c.State))
+		_, _ = fmt.Fprintf(&sb, "### %s\n", c.Name)
+		_, _ = fmt.Fprintf(&sb, "- Image: %s\n", c.Image)
+		_, _ = fmt.Fprintf(&sb, "- State: %s\n", c.State)
 		if c.Logs != "" {
 			sb.WriteString("\n<details><summary><b>Crash Logs (Last 25 lines)</b></summary>\n\n```\n")
 			sb.WriteString(c.Logs)

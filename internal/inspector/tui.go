@@ -276,9 +276,9 @@ func (m TUIModel) renderListView() string {
 	b.WriteString(headerStyle.Render("  devx tunnel inspect"))
 	b.WriteString("\n")
 	if m.tunnelURL != "" {
-		b.WriteString(fmt.Sprintf("  🌐 %s → localhost:%s", urlStyle.Render(m.tunnelURL), m.targetPort))
+		_, _ = fmt.Fprintf(&b, "  🌐 %s → localhost:%s", urlStyle.Render(m.tunnelURL), m.targetPort)
 	} else {
-		b.WriteString(fmt.Sprintf("  Proxy → localhost:%s", m.targetPort))
+		_, _ = fmt.Fprintf(&b, "  Proxy → localhost:%s", m.targetPort)
 	}
 	b.WriteString("\n")
 	b.WriteString(mutedStyle.Render(fmt.Sprintf("  localhost:%d | %d requests captured", m.proxyPort, len(m.exchanges))))
@@ -372,12 +372,11 @@ func (m TUIModel) renderDetailView() string {
 	}
 	b.WriteString(headerStyle.Render(title))
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("  %s %s → %s (%s)",
+	fmt.Fprintf(&b, "  %s %s → %s (%s)",
 		methodStyle(ex.Method),
 		rowStyle.Render(ex.Path),
 		statusStyle(ex.StatusCode).Render(fmt.Sprintf("%d", ex.StatusCode)),
-		mutedStyle.Render(formatDuration(ex.Duration)),
-	))
+		mutedStyle.Render(formatDuration(ex.Duration)))
 	b.WriteString("\n")
 
 	// Build detail content
@@ -481,10 +480,9 @@ func renderHeaders(h http.Header) string {
 	sort.Strings(keys)
 	for _, k := range keys {
 		for _, v := range h[k] {
-			b.WriteString(fmt.Sprintf("%s: %s\n",
+			fmt.Fprintf(&b, "%s: %s\n",
 				lipgloss.NewStyle().Foreground(cyan).Render(k),
-				mutedStyle.Render(v),
-			))
+				mutedStyle.Render(v))
 		}
 	}
 	return b.String()

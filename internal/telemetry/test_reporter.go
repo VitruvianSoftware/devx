@@ -111,7 +111,7 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 
 	go func() {
 		defer wg.Done()
-		defer pipeReader.Close()
+		defer func() { _ = pipeReader.Close() }() 
 
 		scanner := bufio.NewScanner(pipeReader)
 		for scanner.Scan() {
@@ -120,7 +120,7 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 			var event GoTestEvent
 			if err := json.Unmarshal(line, &event); err != nil {
 				// Not JSON — compilation error or build failure. Always show.
-				fmt.Fprintln(stderr, string(line))
+				_, _ = fmt.Fprintln(stderr, string(line))
 				continue
 			}
 
@@ -133,12 +133,12 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 			case "output":
 				// Always write to log file if available (full detail)
 				if logWriter != nil {
-					fmt.Fprint(logWriter, event.Output)
+					_, _ = fmt.Fprint(logWriter, event.Output)
 				}
 
 				if detailed {
 					// Detailed mode: pass everything through verbatim
-					fmt.Fprint(stdout, event.Output)
+					_, _ = fmt.Fprint(stdout, event.Output)
 				} else {
 					// Default mode: buffer test-level output for failure replay
 					if event.Test != "" {
@@ -167,9 +167,9 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 
 					switch event.Action {
 					case "pass":
-						fmt.Fprintf(stdout, "  ✓ %s (%s)\n", pkg, formatPkgDur(dur))
+						_, _ = fmt.Fprintf(stdout, "  ✓ %s (%s)\n", pkg, formatPkgDur(dur))
 					case "fail":
-						fmt.Fprintf(stdout, "  ✗ %s (%s)\n", pkg, formatPkgDur(dur))
+						_, _ = fmt.Fprintf(stdout, "  ✗ %s (%s)\n", pkg, formatPkgDur(dur))
 					}
 					continue
 				}
@@ -199,27 +199,28 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 				if detailed {
 					// Detailed mode: print every test result
 					symbol := "✓"
-					if event.Action == "fail" {
+					switch event.Action {
+					case "fail":
 						symbol = "✗"
-					} else if event.Action == "skip" {
+					case "skip":
 						symbol = "○"
 					}
 					durMs := dur.Milliseconds()
 					if durMs == 0 {
-						fmt.Fprintf(stdout, "%s %s  %s (<1ms)\n", symbol, strings.ToUpper(event.Action), event.Test)
+						_, _ = fmt.Fprintf(stdout, "%s %s  %s (<1ms)\n", symbol, strings.ToUpper(event.Action), event.Test)
 					} else {
-						fmt.Fprintf(stdout, "%s %s  %s (%dms)\n", symbol, strings.ToUpper(event.Action), event.Test, durMs)
+						_, _ = fmt.Fprintf(stdout, "%s %s  %s (%dms)\n", symbol, strings.ToUpper(event.Action), event.Test, durMs)
 					}
 				} else if event.Action == "fail" {
 					// Default mode: dump the buffered output for this failed test
 					key := event.Package + "/" + event.Test
-					fmt.Fprintf(stdout, "\n  ✗ FAIL %s\n", event.Test)
+					_, _ = fmt.Fprintf(stdout, "\n  ✗ FAIL %s\n", event.Test)
 					if buf, ok := testOutputBuf[key]; ok {
 						for _, line := range buf {
-							fmt.Fprintf(stdout, "    %s", line)
+							_, _ = fmt.Fprintf(stdout, "    %s", line)
 						}
 					}
-					fmt.Fprintln(stdout)
+					_, _ = fmt.Fprintln(stdout)
 				}
 
 				// Clean up buffer
@@ -251,7 +252,7 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 	}()
 
 	err = cmd.Wait()
-	pipeWriter.Close()
+	_ = pipeWriter.Close()
 	wg.Wait() // Wait for all output processing to complete
 
 	// Print summary line in default mode
@@ -266,7 +267,7 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 		if totalSkipped > 0 {
 			parts = append(parts, fmt.Sprintf("%d skipped", totalSkipped))
 		}
-		fmt.Fprintf(stdout, "  %d packages, %s\n", pkgCount, strings.Join(parts, ", "))
+		_, _ = fmt.Fprintf(stdout, "  %d packages, %s\n", pkgCount, strings.Join(parts, ", "))
 	}
 
 	exitCode := 0

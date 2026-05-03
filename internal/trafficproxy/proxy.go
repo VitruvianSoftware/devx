@@ -98,7 +98,7 @@ func Start(targetPort string, profileName string) (int, func(), error) {
 }
 
 func handleConnection(ctx context.Context, src net.Conn, targetPort string, prof Profile) {
-	defer src.Close()
+	defer func() { _ = src.Close() }() 
 
 	if prof.Latency > 0 {
 		delay := prof.Latency
@@ -120,7 +120,7 @@ func handleConnection(ctx context.Context, src net.Conn, targetPort string, prof
 	if err != nil {
 		return
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }() 
 
 	errc := make(chan error, 2)
 

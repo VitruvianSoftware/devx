@@ -51,7 +51,7 @@ var crashLineStyle = lipgloss.NewStyle().
 func TailContainerCrashLogs(runtime, containerName string, lines int) {
 	out, err := exec.Command(runtime, "logs", "--tail", fmt.Sprintf("%d", lines), containerName).CombinedOutput()
 	if err != nil || len(out) == 0 {
-		fmt.Fprintf(os.Stderr, "  (could not retrieve logs for %s)\n", containerName)
+		_, _ = fmt.Fprintf(os.Stderr, "  (could not retrieve logs for %s)\n", containerName)
 		return
 	}
 
@@ -65,10 +65,10 @@ func TailHostCrashLogs(serviceName string, lines int) {
 
 	f, err := os.Open(logPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "  (could not retrieve logs for %s: %v)\n", serviceName, err)
+		_, _ = fmt.Fprintf(os.Stderr, "  (could not retrieve logs for %s: %v)\n", serviceName, err)
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }() 
 
 	// Read all lines, then take last N
 	var allLines []string
@@ -100,5 +100,5 @@ func renderCrashBox(name, logType, output string) {
 	body := strings.Join(styledLines, "\n")
 	box := crashBoxStyle.Render(header + "\n\n" + body)
 
-	fmt.Fprintln(os.Stderr, box)
+	_, _ = fmt.Fprintln(os.Stderr, box)
 }

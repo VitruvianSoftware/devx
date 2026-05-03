@@ -89,7 +89,7 @@ func DeployWithSSH(ignPath, machineName string, sshFn SSHFunc) error {
 					gz, err := gzip.NewReader(bytes.NewReader(decoded))
 					if err == nil {
 						raw, _ := io.ReadAll(gz)
-						gz.Close()
+						_ = gz.Close()
 						decoded = raw
 					}
 				}

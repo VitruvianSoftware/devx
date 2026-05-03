@@ -292,7 +292,7 @@ func runBridgeIntercept(_ *cobra.Command, args []string) error {
 	}
 	session.Intercepts = append(session.Intercepts, interceptEntry)
 	if err := bridge.SaveSession(session); err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  Could not save session: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "⚠️  Could not save session: %v\n", err)
 	}
 
 	// 17. Output
@@ -315,7 +315,7 @@ func runBridgeIntercept(_ *cobra.Command, args []string) error {
 	select {
 	case <-ctx.Done():
 	case <-tunnel.Done():
-		fmt.Fprintf(os.Stderr, "\n⚠️  Tunnel connection lost\n")
+		_, _ = fmt.Fprintf(os.Stderr, "\n⚠️  Tunnel connection lost\n")
 	}
 
 	// 19. Graceful teardown
@@ -326,8 +326,8 @@ func runBridgeIntercept(_ *cobra.Command, args []string) error {
 	tunnel.Stop()
 
 	if err := bridge.RestoreServiceSelector(kcPath, kubeCtx, svcState); err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  Failed to restore selector: %v\n", err)
-		fmt.Fprintf(os.Stderr, "    The agent will auto-restore it within 30s.\n")
+		_, _ = fmt.Fprintf(os.Stderr, "⚠️  Failed to restore selector: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "    The agent will auto-restore it within 30s.\n")
 	} else if !outputJSON {
 		fmt.Printf("  %s  Service selector restored\n", tui.IconDone)
 	}

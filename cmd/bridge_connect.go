@@ -189,10 +189,10 @@ func runBridgeConnect(_ *cobra.Command, _ []string) error {
 
 	// 9. Persist session and generate env file
 	if err := bridge.SaveSession(session); err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  Could not save session: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "⚠️  Could not save session: %v\n", err)
 	}
 	if err := bridge.GenerateEnvFile(session.Entries); err != nil {
-		fmt.Fprintf(os.Stderr, "⚠️  Could not generate bridge.env: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "⚠️  Could not generate bridge.env: %v\n", err)
 	}
 
 	// 10. Display active bridges
@@ -211,7 +211,7 @@ func runBridgeConnect(_ *cobra.Command, _ []string) error {
 	case <-ctx.Done():
 		// Ctrl+C received
 	case err := <-errCh:
-		fmt.Fprintf(os.Stderr, "\n❌ Bridge error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "\n❌ Bridge error: %v\n", err)
 	}
 
 	// 12. Graceful teardown

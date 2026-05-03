@@ -62,13 +62,13 @@ func Build(templatePath, tunnelToken, tunnelID, hostname, cfDomain, runtime stri
 	if err != nil {
 		return "", fmt.Errorf("creating temp Butane file: %w", err)
 	}
-	defer os.Remove(buFile.Name()) // clean up input after compilation
+	defer func() { _ = os.Remove(buFile.Name()) }()  // clean up input after compilation
 
 	if _, err := buFile.WriteString(populated); err != nil {
-		buFile.Close()
+		_ = buFile.Close()
 		return "", fmt.Errorf("writing Butane file: %w", err)
 	}
-	buFile.Close()
+	_ = buFile.Close()
 
 	// Write Ignition output to a temp file
 	ignFile, err := os.CreateTemp("", "devx-*.ign")
@@ -76,14 +76,14 @@ func Build(templatePath, tunnelToken, tunnelID, hostname, cfDomain, runtime stri
 		return "", fmt.Errorf("creating temp Ignition file: %w", err)
 	}
 	ignPath := ignFile.Name()
-	ignFile.Close()
+	_ = ignFile.Close()
 
 	// Compile with butane
 	var stderr bytes.Buffer
 	cmd := exec.Command("butane", "--pretty", "--strict", "--output", ignPath, buFile.Name())
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		os.Remove(ignPath)
+		_ = os.Remove(ignPath)
 		return "", fmt.Errorf("butane compile failed: %w\n%s", err, stderr.String())
 	}
 
@@ -97,7 +97,7 @@ func Validate(templatePath string) error {
 	if err != nil {
 		return err
 	}
-	os.Remove(path)
+	_ = os.Remove(path)
 	return nil
 }
 

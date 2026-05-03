@@ -203,7 +203,7 @@ func Scaffold(templateID, targetDir string, vars Vars, force bool) (Result, erro
 			if err != nil {
 				return fmt.Errorf("create %s: %w", outputPath, err)
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }() 
 
 			if err := tmpl.Execute(f, vars); err != nil {
 				return fmt.Errorf("render %s: %w", path, err)

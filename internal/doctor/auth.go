@@ -215,7 +215,7 @@ func runCloudflareTokenSetup(envFile string) bool {
 		fmt.Printf("    ✗ Failed to open %s: %v\n", envFile, err)
 		return false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }() 
 
 	if _, err := fmt.Fprintf(f, "\nCLOUDFLARE_API_TOKEN=%s\n", token); err != nil {
 		fmt.Printf("    ✗ Failed to write to %s: %v\n", envFile, err)

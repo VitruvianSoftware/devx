@@ -94,7 +94,7 @@ func (pw *PrefixedWriter) Write(p []byte) (n int, err error) {
 
 		pw.mu.Lock()
 		styledPrefix := pw.style.Render(fmt.Sprintf("%-20s", pw.prefix))
-		fmt.Fprintf(pw.dest, "%s │ %s\n", styledPrefix, line)
+		_, _ = fmt.Fprintf(pw.dest, "%s │ %s\n", styledPrefix, line)
 		pw.mu.Unlock()
 	}
 
@@ -106,7 +106,7 @@ func (pw *PrefixedWriter) Flush() {
 	if len(pw.buf) > 0 {
 		pw.mu.Lock()
 		styledPrefix := pw.style.Render(fmt.Sprintf("%-20s", pw.prefix))
-		fmt.Fprintf(pw.dest, "%s │ %s\n", styledPrefix, string(pw.buf))
+		_, _ = fmt.Fprintf(pw.dest, "%s │ %s\n", styledPrefix, string(pw.buf))
 		pw.mu.Unlock()
 		pw.buf = nil
 	}

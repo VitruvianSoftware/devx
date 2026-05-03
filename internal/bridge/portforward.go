@@ -191,7 +191,7 @@ func (pf *PortForward) run(ctx context.Context) error {
 			conn, err := net.DialTimeout("tcp",
 				fmt.Sprintf("127.0.0.1:%d", pf.LocalPort), 200*time.Millisecond)
 			if err == nil {
-				conn.Close()
+				_ = conn.Close()
 				pf.setState(StateHealthy)
 				return
 			}

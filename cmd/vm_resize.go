@@ -42,7 +42,7 @@ var vmResizeCmd = &cobra.Command{
 		}
 
 		if prov.Name() != "podman" {
-			return fmt.Errorf("resize is only supported on Podman. Docker/Orbstack manage resources dynamically.")
+			return fmt.Errorf("resize is only supported on Podman. Docker/Orbstack manage resources dynamically")
 		}
 
 		fmt.Printf("Resizing %s VM to %d CPUs, %d MB RAM...\n", prov.Name(), cpus, memoryMB)

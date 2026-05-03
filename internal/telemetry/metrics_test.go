@@ -35,9 +35,9 @@ func setupTestMetrics(t *testing.T) (cleanup func()) {
 	tmp := t.TempDir()
 	// Override HOME so metricsPath() resolves to temp dir
 	orig := os.Getenv("HOME")
-	os.Setenv("HOME", tmp)
+	_ = os.Setenv("HOME", tmp)
 	return func() {
-		os.Setenv("HOME", orig)
+		_ = os.Setenv("HOME", orig)
 	}
 }
 
@@ -110,7 +110,7 @@ func TestNudgeIfSlow_BelowThreshold(t *testing.T) {
 
 	NudgeIfSlow("build", 30*time.Second, 60*time.Second, false)
 
-	w.Close()
+	_ = w.Close()
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(r); err != nil {
 		t.Fatalf("buf.ReadFrom: %v", err)
@@ -132,7 +132,7 @@ func TestNudgeIfSlow_AboveThreshold(t *testing.T) {
 
 	NudgeIfSlow("build", 65*time.Second, 60*time.Second, false)
 
-	w.Close()
+	_ = w.Close()
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(r); err != nil {
 		t.Fatalf("buf.ReadFrom: %v", err)
@@ -157,7 +157,7 @@ func TestNudgeIfSlow_SuppressedInJSONMode(t *testing.T) {
 
 	NudgeIfSlow("build", 120*time.Second, 60*time.Second, true)
 
-	w.Close()
+	_ = w.Close()
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(r); err != nil {
 		t.Fatalf("buf.ReadFrom: %v", err)

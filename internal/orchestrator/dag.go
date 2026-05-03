@@ -285,7 +285,7 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 							if n.Port > 0 {
 								actual, shifted, warning := network.ResolvePort(n.Port)
 								if shifted {
-									fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
+									_, _ = fmt.Fprintf(os.Stderr, "\n%s\n\n", warning)
 									n.Port = actual
 								}
 							}

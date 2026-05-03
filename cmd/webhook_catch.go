@@ -92,18 +92,18 @@ func runWebhookCatch(_ *cobra.Command, _ []string) error {
 			tui.IconRunning, localURL)
 		publicURL = startWebhookTunnel(addr)
 		if publicURL == "" {
-			fmt.Fprintf(os.Stderr, "  ⚠ Tunnel failed — continuing with local URL only\n")
+			_, _ = fmt.Fprintf(os.Stderr, "  ⚠ Tunnel failed — continuing with local URL only\n")
 		}
 	}
 
 	// ── Print env var hints before entering the TUI ──────────────────────────
-	fmt.Fprintf(os.Stderr, "\n%s\n\n", tui.StyleTitle.Render("devx webhook catch"))
-	fmt.Fprintf(os.Stderr, "  Set in your app's .env:\n\n")
-	fmt.Fprintf(os.Stderr, "    WEBHOOK_URL=%s\n", localURL)
+	_, _ = fmt.Fprintf(os.Stderr, "\n%s\n\n", tui.StyleTitle.Render("devx webhook catch"))
+	_, _ = fmt.Fprintf(os.Stderr, "  Set in your app's .env:\n\n")
+	_, _ = fmt.Fprintf(os.Stderr, "    WEBHOOK_URL=%s\n", localURL)
 	if publicURL != "" {
-		fmt.Fprintf(os.Stderr, "    WEBHOOK_URL=%s   (public)\n", publicURL)
+		_, _ = fmt.Fprintf(os.Stderr, "    WEBHOOK_URL=%s   (public)\n", publicURL)
 	}
-	fmt.Fprintln(os.Stderr)
+	_, _ = fmt.Fprintln(os.Stderr)
 
 	// If we have a real TTY (interactive terminal), launch the Bubble Tea TUI.
 	// Otherwise (CI, piped output, --json) fall back to streaming JSON lines.
@@ -116,7 +116,7 @@ func runWebhookCatch(_ *cobra.Command, _ []string) error {
 
 // runWebhookTUI runs the full Bubble Tea interactive TUI.
 func runWebhookTUI(srv *webhook.Server, localURL, publicURL string) error {
-	fmt.Fprintf(os.Stderr, "  Starting TUI... (q to quit)\n\n")
+	_, _ = fmt.Fprintf(os.Stderr, "  Starting TUI... (q to quit)\n\n")
 	time.Sleep(200 * time.Millisecond)
 
 	model := webhook.NewModel(localURL, publicURL)
@@ -146,7 +146,7 @@ func runWebhookTUI(srv *webhook.Server, localURL, publicURL string) error {
 // runWebhookJSONStream logs each request as a JSON line — useful in CI or
 // when piping to jq.
 func runWebhookJSONStream(srv *webhook.Server) error {
-	fmt.Fprintf(os.Stderr, "  Streaming requests as JSON (Ctrl+C to stop)\n\n")
+	_, _ = fmt.Fprintf(os.Stderr, "  Streaming requests as JSON (Ctrl+C to stop)\n\n")
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)

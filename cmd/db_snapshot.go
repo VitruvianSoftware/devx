@@ -145,10 +145,10 @@ var snapshotListCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "NAME\tENGINE\tSIZE\tCREATED")
-		fmt.Fprintln(w, "────\t──────\t────\t───────")
+		_, _ = fmt.Fprintln(w, "NAME\tENGINE\tSIZE\tCREATED")
+		_, _ = fmt.Fprintln(w, "────\t──────\t────\t───────")
 		for _, s := range snapshots {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				s.Name,
 				s.Engine,
 				humanizeBytes(s.SizeBytes),
