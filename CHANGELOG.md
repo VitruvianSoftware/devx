@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0](https://github.com/VitruvianSoftware/devx/compare/v0.35.0...v0.36.0) (2026-05-03)
+
+
+### Features
+
+* trigger release for cluster refactor ([ed5ede3](https://github.com/VitruvianSoftware/devx/commit/ed5ede35ace7ed7ae3927b0a189e1078ea531c9a))
+
 ## [0.35.0](https://github.com/VitruvianSoftware/devx/compare/v0.34.0...v0.35.0) (2026-05-03)
 
 
