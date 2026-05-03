@@ -21,3 +21,13 @@ When helping developers debug "works on my machine" issues, you can instruct the
 - They will receive an ID (e.g., `s3://bucket/path:passphrase`).
 - You can instantly reproduce their exact environment locally by running: `devx state attach <ID> -y`.
 - Note: This requires S3 or GCS to be configured in their `devx.yaml`.
+
+## 3. AI-Driven Synthetic Data Generation
+When developers need realistic test data for edge-case testing, use `devx db synthesize` instead of manual fixture creation.
+
+- Run: `devx db synthesize postgres --records 100` to generate 100 chaotic records.
+- Supported engines: `postgres` and `mysql` only.
+- AI provider priority: Local Ollama → Local LM Studio → `OPENAI_API_KEY` env var.
+- Use `--dry-run` to preview the extracted schema and LLM prompt without generating data.
+- Use `--model <name>` to override the default model.
+- Exit codes: `86` (no AI provider), `87` (LLM failed), `88` (unsupported engine), `89` (SQL execution failed).

@@ -26,7 +26,7 @@ We go far beyond basic container networking by natively integrating the premium 
 
 ### Local Infrastructure
 * 🐳 **Container VMs & Providers:** Provision customized Fedora CoreOS VMs via your chosen backend (Podman, Docker, OrbStack, Lima, Colima).
-* 🗄️ **Ephemeral Databases & Emulators:** One-click spin up of Postgres, Redis, GCP Cloud Emulators, and local S3 buckets with automatic `.env` injection.
+* 🗄️ **Ephemeral Databases & Emulators:** One-click spin up of Postgres, Redis, GCP Cloud Emulators, and local S3 buckets with automatic `.env` injection. AI-driven synthetic data generation (`devx db synthesize`) creates chaotic, edge-case-heavy test records via local or cloud LLMs.
 * ☢️ **The Nuke Button:** Instantly hard-reset corrupted project caches, volumes, and images with a single atomic command (`devx nuke`).
 
 ### Kubernetes & Hybrid

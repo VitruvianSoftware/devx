@@ -8,7 +8,7 @@ When an idea is fully implemented and shipped, it is **migrated to `FEATURES.md`
 
 ## Idea Template
 
-To propose a new feature, copy the template below and add it to the appropriate priority section. Please ensure you increment the Idea Number sequentially (the last shipped feature was 33).
+To propose a new feature, copy the template below and add it to the appropriate priority section. Please ensure you increment the Idea Number sequentially (the last shipped feature was 57).
 
 ```markdown
 ### [Idea Number]. [Feature Title]
@@ -25,13 +25,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 ## 🟢 Active Ideas
 
 
-### 57. AI-Driven Synthetic Data Generation (`devx db synthesize`)
-* **Priority:** 🟡 P3
-* **Effort:** Medium
-* **Impact:** Catches edge-case bugs by generating highly realistic, chaotic data.
-* **The Problem:** Enterprises lock down prod data, and manual seed scripts generate "perfect" data that misses edge-case bugs (weird Unicode names, missing fields, extreme lengths).
-* **The Solution:** Leverage the Local AI Bridge (`devx ai spawn`). The developer runs `devx db synthesize --engine postgres --records 1000`. `devx` parses the schema, passes it to the local LLM, and streams back highly realistic, chaotic synthetic SQL inserts directly into the local container.
-* **Key files:** `cmd/db_synthesize.go`, `internal/database/synthesizer.go`
 
 ### 58. Remote Audit via K8s Job (`devx audit --remote`)
 * **Priority:** 🟡 P3
