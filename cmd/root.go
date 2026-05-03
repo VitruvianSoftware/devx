@@ -44,8 +44,15 @@ var rootCmd = &cobra.Command{
 	Use:   "devx",
 	Short: "Supercharged local dev environment",
 	Long: `devx is the unified orchestration layer for your modern developer lifecycle.
-It replaces a fragmented toolchain with a single, declarative CLI powered by devx.yaml:
+It replaces a fragmented toolchain with a single, declarative CLI.
 
+Configuration Domains:
+  • devx.yaml:    Project-level configuration for local application development.
+                  Controls databases, tunnels, CI, and service orchestration.
+  • homelab.yaml: Infrastructure-level config for bare-metal Kubernetes clusters.
+                  Exclusively controls the 'devx homelab' command suite.
+
+Feature Ecosystem:
   • Local Infrastructure: Podman VMs, ephemeral databases, GCP emulators, and k3s.
   • Networking & Edge: Instant Cloudflare Tunnels, Tailscale, and hybrid Kubernetes bridging.
   • Orchestration & State: Multi-repo management, intelligent file syncing, and unified TUI logs.
