@@ -77,10 +77,10 @@ Run 'devx vm init' to bootstrap your machine, or 'devx up' to start services.`,
 		select {
 		case result := <-updateResult:
 			if result != nil && result.UpdateAvailable {
-				fmt.Fprintf(os.Stderr, "\n╭─────────────────────────────────────────────────╮\n")
-				fmt.Fprintf(os.Stderr, "│  ✦ devx %s is available (you have %s)  │\n", result.Latest, result.Current)
-				fmt.Fprintf(os.Stderr, "│    Run: devx upgrade                            │\n")
-				fmt.Fprintf(os.Stderr, "╰─────────────────────────────────────────────────╯\n")
+				_, _ = fmt.Fprintf(os.Stderr, "\n╭─────────────────────────────────────────────────╮\n")
+				_, _ = fmt.Fprintf(os.Stderr, "│  ✦ devx %s is available (you have %s)  │\n", result.Latest, result.Current)
+				_, _ = fmt.Fprintf(os.Stderr, "│    Run: devx upgrade                            │\n")
+				_, _ = fmt.Fprintf(os.Stderr, "╰─────────────────────────────────────────────────╯\n")
 			}
 		default:
 			// Check hasn't finished yet — skip silently
@@ -92,11 +92,11 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		var dex *devxerr.DevxError
 		if errors.As(err, &dex) {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(dex.ExitCode)
 		}
 
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

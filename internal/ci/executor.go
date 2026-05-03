@@ -245,7 +245,7 @@ func executeJob(cfg ExecuteConfig, ej ExpandedJob, image string, outputMu *sync.
 
 	// Print template warnings
 	for _, w := range tc.Warnings {
-		fmt.Fprintf(writer, "%s\n", w)
+		_, _ = fmt.Fprintf(writer, "%s\n", w)
 	}
 	writer.Flush()
 
@@ -286,7 +286,7 @@ func executeStep(cfg ExecuteConfig, step Step, containerName string, tc *Templat
 
 	// LIMITATION: Skip uses: actions with visible warning
 	if step.Uses != "" {
-		fmt.Fprintf(writer, "⚠️  SKIPPED (uses: %s) — devx ci run only executes run: blocks\n", step.Uses)
+		_, _ = fmt.Fprintf(writer, "⚠️  SKIPPED (uses: %s) — devx ci run only executes run: blocks\n", step.Uses)
 		result.Status = "skipped"
 		result.Duration = time.Since(start)
 		return result
@@ -335,7 +335,7 @@ func executeStep(cfg ExecuteConfig, step Step, containerName string, tc *Templat
 	}
 	defer cancel()
 
-	fmt.Fprintf(writer, "▶ %s\n", stepName)
+	_, _ = fmt.Fprintf(writer, "▶ %s\n", stepName)
 
 	cmd := exec.CommandContext(ctx, cfg.Runtime, execArgs...)
 	cmd.Stdout = writer
@@ -345,10 +345,10 @@ func executeStep(cfg ExecuteConfig, step Step, containerName string, tc *Templat
 		result.Status = "failed"
 		result.Output = err.Error()
 		if step.ContinueOnError {
-			fmt.Fprintf(writer, "⚠️  Step failed but continue-on-error is set — continuing\n")
+			_, _ = fmt.Fprintf(writer, "⚠️  Step failed but continue-on-error is set — continuing\n")
 			result.Status = "passed" // treat as soft failure
 		} else {
-			fmt.Fprintf(writer, "❌ Step failed: %v\n", err)
+			_, _ = fmt.Fprintf(writer, "❌ Step failed: %v\n", err)
 		}
 	}
 

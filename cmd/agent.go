@@ -101,7 +101,7 @@ var agentInitCmd = &cobra.Command{
 		for _, a := range selectedAgents {
 			for _, s := range selectedSkills {
 				if err := agent.Install(a, s, agentForceUpdate); err != nil {
-					fmt.Fprintf(os.Stderr, "failed to install %s/%s config: %v\n", a, s, err)
+					_, _ = fmt.Fprintf(os.Stderr, "failed to install %s/%s config: %v\n", a, s, err)
 				}
 			}
 		}

@@ -70,28 +70,28 @@ func SelfUpgrade(tag string, progress io.Writer) error {
 	tarURL := DownloadURL(tag)
 	csumsURL := ChecksumURL(tag)
 
-	fmt.Fprintf(progress, "  → Downloading %s...\n", tarURL)
+	_, _ = fmt.Fprintf(progress, "  → Downloading %s...\n", tarURL)
 	tarBytes, err := downloadBytes(tarURL)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
 
 	// Verify SHA-256 checksum against the release's checksums.txt
-	fmt.Fprintf(progress, "  → Verifying checksum...\n")
+	_, _ = fmt.Fprintf(progress, "  → Verifying checksum...\n")
 	expectedSum, err := fetchExpectedChecksum(csumsURL, filepath.Base(tarURL))
 	if err != nil {
 		// Non-fatal: some older releases may not have a checksums file
-		fmt.Fprintf(progress, "  ⚠ Checksum verification skipped: %v\n", err)
+		_, _ = fmt.Fprintf(progress, "  ⚠ Checksum verification skipped: %v\n", err)
 	} else {
 		actualSum := fmt.Sprintf("%x", sha256.Sum256(tarBytes))
 		if actualSum != expectedSum {
 			return fmt.Errorf("checksum mismatch — aborting to protect your system\n  expected: %s\n  got:      %s", expectedSum, actualSum)
 		}
-		fmt.Fprintf(progress, "  ✓ Checksum verified.\n")
+		_, _ = fmt.Fprintf(progress, "  ✓ Checksum verified.\n")
 	}
 
 	// Extract the devx binary from the tar.gz
-	fmt.Fprintf(progress, "  → Extracting binary...\n")
+	_, _ = fmt.Fprintf(progress, "  → Extracting binary...\n")
 	newBinary, err := extractBinary(tarBytes, "devx")
 	if err != nil {
 		return fmt.Errorf("extraction failed: %w", err)
@@ -119,7 +119,7 @@ func SelfUpgrade(tag string, progress io.Writer) error {
 
 	// Atomic replace — on Unix, os.Rename works even when the binary is running.
 	// The old inode stays alive until the OS process closes it naturally.
-	fmt.Fprintf(progress, "  → Installing to %s...\n", execPath)
+	_, _ = fmt.Fprintf(progress, "  → Installing to %s...\n", execPath)
 	if err := os.Rename(tmpPath, execPath); err != nil {
 		return fmt.Errorf("could not replace %s: %w\n\nTip: try running with sudo: sudo devx upgrade", execPath, err)
 	}
@@ -144,7 +144,7 @@ func downloadBytes(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP %d fetching %s", resp.StatusCode, url)
 	}
@@ -175,7 +175,7 @@ func extractBinary(tarGzBytes []byte, binaryName string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("not a valid gzip archive: %w", err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }() 
 
 	tr := tar.NewReader(gr)
 	for {

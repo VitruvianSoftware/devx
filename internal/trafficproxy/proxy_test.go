@@ -35,7 +35,7 @@ func TestTrafficProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }() 
 
 	port := l.Addr().(*net.TCPAddr).Port
 
@@ -46,7 +46,7 @@ func TestTrafficProxy(t *testing.T) {
 				return
 			}
 			go func(c net.Conn) {
-				defer c.Close()
+				defer func() { _ = c.Close() }() 
 				_, _ = io.Copy(c, c)
 			}(conn)
 		}
@@ -64,7 +64,7 @@ func TestTrafficProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }() 
 
 	payload := []byte("hello shaping proxy")
 	if _, err := conn.Write(payload); err != nil {

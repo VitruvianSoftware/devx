@@ -64,7 +64,7 @@ func ensureVMRunning() error {
 	}
 
 	if !prov.IsRunning(cfg.DevHostname) {
-		fmt.Fprintln(os.Stderr, "😴 VM is asleep. Waking it up...")
+		_, _ = fmt.Fprintln(os.Stderr, "😴 VM is asleep. Waking it up...")
 		if err := prov.Start(cfg.DevHostname); err != nil {
 			if strings.Contains(err.Error(), "VM does not exist") {
 				var setup bool

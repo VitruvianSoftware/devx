@@ -163,13 +163,12 @@ func (m Model) renderRequest(n int, req Request) string {
 	ts := styleMuted.Render(req.Time.Format("15:04:05.000"))
 	dur := styleMuted.Render(fmt.Sprintf("%dms", req.Duration.Milliseconds()))
 
-	sb.WriteString(fmt.Sprintf("\n  %s  %s  %s  %s  %s\n",
+	fmt.Fprintf(&sb, "\n  %s  %s  %s  %s  %s\n",
 		styleMuted.Render(fmt.Sprintf("#%-3d", n)),
 		ts,
 		method,
 		path,
-		dur,
-	))
+		dur)
 
 	// ── Headers ─────────────────────────────────────────────────────────────
 	importantHeaders := []string{
@@ -183,10 +182,9 @@ func (m Model) renderRequest(n int, req Request) string {
 			if h == "Authorization" && len(v) > 20 {
 				v = v[:12] + "..." + styleMuted.Render(" (redacted)")
 			}
-			sb.WriteString(fmt.Sprintf("       %s %s\n",
+			fmt.Fprintf(&sb, "       %s %s\n",
 				styleHeader.Render(fmt.Sprintf("%-25s", h+":")),
-				styleMuted.Render(v),
-			))
+				styleMuted.Render(v))
 		}
 	}
 

@@ -69,11 +69,11 @@ func (d *DockerProvider) StopAll() error {
 }
 
 func (d *DockerProvider) Sleep(_ string) error {
-	return fmt.Errorf("Docker Desktop and OrbStack manage their own VM sleep state natively via macOS.")
+	return fmt.Errorf("docker Desktop and OrbStack manage their own VM sleep state natively via macOS")
 }
 
 func (d *DockerProvider) Resize(_ string, _, _ int) error {
-	return fmt.Errorf("Docker Desktop and OrbStack manage their hardware limits dynamically or via GUI. Native CLI resizing is only supported on Podman.")
+	return fmt.Errorf("docker Desktop and OrbStack manage their hardware limits dynamically or via GUI, native CLI resizing is only supported on Podman")
 }
 
 func (d *DockerProvider) Remove(name string) error {

@@ -32,7 +32,7 @@ func TestSessionSaveLoadClear(t *testing.T) {
 	tmpDir := t.TempDir()
 	origHome := os.Getenv("HOME")
 	t.Setenv("HOME", tmpDir)
-	defer func() { os.Setenv("HOME", origHome) }()
+	defer func() { _ = os.Setenv("HOME", origHome) }()
 
 	// Ensure .devx dir exists
 	_ = os.MkdirAll(filepath.Join(tmpDir, ".devx"), 0o755)

@@ -146,7 +146,7 @@ func (t *Tunnel) acceptStreams(ctx context.Context) {
 
 // proxyStream connects a Yamux stream to localhost:<LocalPort> and copies bytes bidirectionally.
 func (t *Tunnel) proxyStream(stream *yamux.Stream) {
-	defer stream.Close()
+	defer func() { _ = stream.Close() }() 
 
 	localConn, err := net.DialTimeout("tcp",
 		fmt.Sprintf("127.0.0.1:%d", t.cfg.LocalPort), 5*time.Second)
@@ -154,7 +154,7 @@ func (t *Tunnel) proxyStream(stream *yamux.Stream) {
 		// Local app not listening — close the stream
 		return
 	}
-	defer localConn.Close()
+	defer func() { _ = localConn.Close() }() 
 
 	// Bidirectional copy
 	var wg sync.WaitGroup
@@ -212,7 +212,7 @@ func findFreePort() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }() 
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 

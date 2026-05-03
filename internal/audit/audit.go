@@ -169,8 +169,8 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 		authFile, authErr := os.CreateTemp("", "devx-audit-auth-*.json")
 		if authErr == nil {
 			_, _ = authFile.WriteString("{}")
-			authFile.Close()
-			defer os.Remove(authFile.Name())
+			_ = authFile.Close()
+			defer func() { _ = os.Remove(authFile.Name()) }() 
 		}
 
 		pullCmd := exec.Command(rt, "pull", "--quiet", t.Image)

@@ -88,12 +88,12 @@ func resolveAuto() (VMProvider, ContainerRuntime, error) {
 	detected := Detect()
 	if len(detected) == 0 {
 		return nil, nil, fmt.Errorf(
-			"no supported VM backend found.\n" +
-				"Install one of: podman, lima, colima, docker, or orbstack.\n" +
+			"no supported VM backend found\n" +
+				"Install one of: podman, lima, colima, docker, or orbstack\n" +
 				"  brew install podman    # recommended\n" +
 				"  brew install lima      # lightweight alternative\n" +
 				"  brew install colima    # Lima with batteries included\n" +
-				"Run 'devx doctor' for full prerequisite details.")
+				"Run 'devx doctor' for full prerequisite details")
 	}
 	if len(detected) == 1 {
 		return buildProvider(detected[0].Name)

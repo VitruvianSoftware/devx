@@ -61,7 +61,7 @@ func (s *BridgeNodeState) Cleanup() {
 	// Intercept cleanup: restore selector BEFORE removing agent
 	if s.SvcState != nil {
 		if err := bridge.RestoreServiceSelector(s.Kubeconfig, s.Context, s.SvcState); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  Failed to restore selector for %s: %v (agent will auto-restore)\n", s.SvcState.Name, err)
+			_, _ = fmt.Fprintf(os.Stderr, "⚠️  Failed to restore selector for %s: %v (agent will auto-restore)\n", s.SvcState.Name, err)
 		}
 	}
 	if s.Tunnel != nil {

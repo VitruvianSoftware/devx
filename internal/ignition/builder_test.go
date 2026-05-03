@@ -40,7 +40,7 @@ func makeTemplate(t *testing.T, content string) string {
 	if _, err := f.WriteString(content); err != nil {
 		t.Fatalf("writing template: %v", err)
 	}
-	f.Close()
+	_ = f.Close()
 	return f.Name()
 }
 
@@ -68,7 +68,7 @@ func TestBuild_SubstitutesVariables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
-	defer os.Remove(ignPath)
+	defer func() { _ = os.Remove(ignPath) }() 
 
 	data, err := os.ReadFile(ignPath)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestBuild_WritesToTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
-	defer os.Remove(ignPath)
+	defer func() { _ = os.Remove(ignPath) }() 
 
 	// Should be a real file in the OS temp directory
 	if !strings.HasPrefix(ignPath, os.TempDir()) {

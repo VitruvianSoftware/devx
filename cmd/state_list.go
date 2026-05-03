@@ -53,10 +53,10 @@ var stateListCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "NAME\tCONTAINERS\tSIZE\tCREATED")
-		fmt.Fprintln(w, "────\t──────────\t────\t───────")
+		_, _ = fmt.Fprintln(w, "NAME\tCONTAINERS\tSIZE\tCREATED")
+		_, _ = fmt.Fprintln(w, "────\t──────────\t────\t───────")
 		for _, cp := range checkpoints {
-			fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
+			_, _ = fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
 				cp.Name,
 				cp.ContainerCount,
 				humanizeBytes(cp.SizeBytes),

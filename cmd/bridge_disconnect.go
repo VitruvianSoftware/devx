@@ -146,7 +146,7 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 			OriginalSelector: ic.OriginalSelector,
 		}
 		if err := bridge.RestoreServiceSelector(session.Kubeconfig, session.Context, svcState); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  Failed to restore %s selector: %v\n", ic.Service, err)
+			_, _ = fmt.Fprintf(os.Stderr, "⚠️  Failed to restore %s selector: %v\n", ic.Service, err)
 		}
 		_ = bridge.RemoveAgent(session.Kubeconfig, session.Context, ic.Namespace, ic.SessionID)
 

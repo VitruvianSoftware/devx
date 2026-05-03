@@ -168,7 +168,7 @@ func runAction(_ *cobra.Command, args []string) error {
 	if logErr != nil {
 		fmt.Printf("Warning: Could not open log file: %v\n", logErr)
 	} else {
-		defer logFile.Close()
+		defer func() { _ = logFile.Close() }() 
 	}
 
 	var outWriter, errWriter io.Writer
@@ -210,7 +210,7 @@ func runAction(_ *cobra.Command, args []string) error {
 
 		cmdStart := time.Now()
 		if err := command.Start(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to start %q: %v\n", strings.Join(cmdArgs, " "), err)
+			_, _ = fmt.Fprintf(os.Stderr, "Failed to start %q: %v\n", strings.Join(cmdArgs, " "), err)
 			exitCode = 1
 			break
 		}

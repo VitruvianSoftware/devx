@@ -62,7 +62,7 @@ SECRET_API_KEY=supersecret
 	// 3. Mock Ollama running locally by opening port 11434 (ignore failure if already running)
 	l, err := net.Listen("tcp", "127.0.0.1:11434")
 	if err == nil {
-		defer l.Close()
+		defer func() { _ = l.Close() }() 
 	}
 
 	// Give the listener a tiny bit of time to bind

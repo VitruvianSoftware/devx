@@ -136,10 +136,11 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 	for _, e := range session.Entries {
 		icon := tui.IconDone
 		stateLabel := tui.StyleDetailDone.Render(e.State)
-		if e.State == "failed" {
+		switch e.State {
+		case "failed":
 			icon = tui.IconFailed
 			stateLabel = tui.StyleDetailError.Render(e.State)
-		} else if e.State == "starting" {
+		case "starting":
 			icon = tui.StyleDetailRunning.Render("●")
 			stateLabel = tui.StyleDetailRunning.Render(e.State)
 		}

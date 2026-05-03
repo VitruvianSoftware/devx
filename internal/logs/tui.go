@@ -172,7 +172,7 @@ func (m Model) renderedLines() string {
 		prefix := style.Render(fmt.Sprintf("[%s]", l.Service))
 
 		// Wrap lines nicely or just truncate. For now just standard format.
-		sb.WriteString(fmt.Sprintf("%s %s %s\n", l.Timestamp.Format("15:04:05"), prefix, l.Message))
+		_, _ = fmt.Fprintf(&sb, "%s %s %s\n", l.Timestamp.Format("15:04:05"), prefix, l.Message)
 	}
 	return sb.String()
 }

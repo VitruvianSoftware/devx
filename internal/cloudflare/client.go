@@ -151,8 +151,8 @@ func CleanupExposedTunnels(devName string) (int, error) {
 			if err == nil {
 				credFile := fmt.Sprintf("%s/.cloudflared/%s.json", home, t.ID)
 				configFile := fmt.Sprintf("%s/.cloudflared/%s-config.yml", home, t.ID)
-				os.Remove(credFile)
-				os.Remove(configFile)
+				_ = os.Remove(credFile)
+				_ = os.Remove(configFile)
 			}
 
 			count++
@@ -217,10 +217,10 @@ func WriteMultiIngressConfig(tunnelID string, entries []IngressEntry) (string, e
 	configFile := fmt.Sprintf("%s/.cloudflared/%s-config.yml", home, tunnelID)
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("tunnel: %s\ncredentials-file: %s\n\ningress:\n", tunnelID, credFile))
+	_, _ = fmt.Fprintf(&sb, "tunnel: %s\ncredentials-file: %s\n\ningress:\n", tunnelID, credFile)
 
 	for _, entry := range entries {
-		sb.WriteString(fmt.Sprintf("  - hostname: %s\n    service: http://localhost:%s\n", entry.Hostname, entry.TargetPort))
+		_, _ = fmt.Fprintf(&sb, "  - hostname: %s\n    service: http://localhost:%s\n", entry.Hostname, entry.TargetPort)
 	}
 	sb.WriteString("  - service: http_status:404\n")
 

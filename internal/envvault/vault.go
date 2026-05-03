@@ -286,7 +286,7 @@ func pushGCP(uri string, content []byte) error {
 
 func checkBitwardenUnlocked() error {
 	if _, err := exec.LookPath("bw"); err != nil {
-		return fmt.Errorf("Bitwarden CLI 'bw' not found in PATH")
+		return fmt.Errorf("bitwarden CLI 'bw' not found in PATH")
 	}
 
 	cmd := exec.Command("bw", "status")
@@ -350,9 +350,10 @@ func checkBitwardenUnlocked() error {
 		}
 
 		args := []string{"login"}
-		if loginMethod == "apikey" {
+		switch loginMethod {
+		case "apikey":
 			args = append(args, "--apikey")
-		} else if loginMethod == "sso" {
+		case "sso":
 			args = append(args, "--sso")
 		}
 
@@ -368,7 +369,7 @@ func checkBitwardenUnlocked() error {
 		// Recursively self-evaluate since 'bw login' leaves the CLI in a 'locked' state in this shell context
 		return checkBitwardenUnlocked()
 	} else if status.Status != "unlocked" {
-		return fmt.Errorf("Bitwarden vault is %s. Please resolve this state manually.", status.Status)
+		return fmt.Errorf("bitwarden vault is %s. please resolve this state manually", status.Status)
 	}
 
 	return nil

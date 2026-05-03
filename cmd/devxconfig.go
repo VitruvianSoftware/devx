@@ -261,7 +261,7 @@ func findDevxConfig() (string, error) {
 		return "", err
 	}
 	if dir != cwd {
-		fmt.Fprintf(os.Stderr, "📂 Using devx.yaml from %s\n", dir)
+		_, _ = fmt.Fprintf(os.Stderr, "📂 Using devx.yaml from %s\n", dir)
 	}
 	return path, nil
 }
@@ -422,7 +422,7 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 				if existing.Engine == db.Engine {
 					return nil, fmt.Errorf(
 						"conflict: database engine %q defined in both %s and %s\n\n"+
-							"Rename one or use a 'profiles:' overlay in the parent devx.yaml to resolve.",
+							"Rename one or use a 'profiles:' overlay in the parent devx.yaml to resolve",
 						db.Engine, absPath, incAbsPath,
 					)
 				}
@@ -438,7 +438,7 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 					return nil, fmt.Errorf(
 						"conflict: service %q defined in both %s and %s\n\n"+
 							"Rename one service or use a 'profiles:' overlay in the parent devx.yaml to resolve.\n"+
-							"Tip: use descriptive names like 'payments-api' instead of just 'api'.",
+							"Tip: use descriptive names like 'payments-api' instead of just 'api'",
 						svc.Name, absPath, incAbsPath,
 					)
 				}
@@ -459,7 +459,7 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 				if existing.Name == t.Name {
 					return nil, fmt.Errorf(
 						"conflict: tunnel %q defined in both %s and %s\n\n"+
-							"Rename one or use a 'profiles:' overlay in the parent devx.yaml to resolve.",
+							"Rename one or use a 'profiles:' overlay in the parent devx.yaml to resolve",
 						t.Name, absPath, incAbsPath,
 					)
 				}
@@ -473,7 +473,7 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 				if existing.Name == m.Name {
 					return nil, fmt.Errorf(
 						"conflict: mock %q defined in both %s and %s\n\n"+
-							"Rename one or use a 'profiles:' overlay in the parent devx.yaml to resolve.",
+							"Rename one or use a 'profiles:' overlay in the parent devx.yaml to resolve",
 						m.Name, absPath, incAbsPath,
 					)
 				}

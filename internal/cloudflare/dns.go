@@ -94,7 +94,7 @@ func cfRequest(method, path string, body interface{}) (*cfAPIResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cloudflare API request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }() 
 
 	var apiResp cfAPIResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {

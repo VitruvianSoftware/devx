@@ -48,7 +48,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 			w.WriteHeader(404)
 		}
 	}))
-	defer app.Close()
+	defer func() { app.Close() }() 
 
 	// Start inspector proxy pointing at the app
 	ch := make(chan CapturedExchange, 32)
@@ -62,7 +62,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer proxy.Close()
+	defer func() { _ = proxy.Close() }() 
 
 	proxyBase := fmt.Sprintf("http://localhost:%d", port)
 
@@ -73,7 +73,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 		t.Fatalf("GET: %v", err)
 	}
 	body, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -96,7 +96,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 		t.Fatalf("POST: %v", err)
 	}
 	_, _ = io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode != 201 {
 		t.Fatalf("expected 201, got %d", resp.StatusCode)
@@ -117,7 +117,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET: %v", err)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	ex = <-ch
 	if ex.StatusCode != 404 {
 		t.Fatalf("expected 404, got %d", ex.StatusCode)

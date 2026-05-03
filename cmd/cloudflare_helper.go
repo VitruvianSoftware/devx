@@ -50,7 +50,7 @@ func ensureCloudflareLogin() error {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("Cloudflare login failed: %w", err)
+			return fmt.Errorf("cloudflare login failed: %w", err)
 		}
 		// Confirm login succeeded
 		if err := cloudflare.CheckLogin(); err == nil {

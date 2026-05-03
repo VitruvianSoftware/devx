@@ -57,7 +57,7 @@ func RecordEvent(event string, duration time.Duration, attrs ...Attribute) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }() 
 
 	// Acquire exclusive lock
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
@@ -123,9 +123,9 @@ func NudgeIfSlow(event string, duration, threshold time.Duration, jsonMode bool)
 	if jsonMode || duration < threshold {
 		return
 	}
-	fmt.Fprintf(os.Stderr, "\n💡 Tip: Your %s took %s. Enable 'predictive_build: true' on container\n", event, duration.Round(time.Second))
-	fmt.Fprintf(os.Stderr, "   services in devx.yaml to have devx silently pre-build heavy dependency\n")
-	fmt.Fprintf(os.Stderr, "   layers in the background. See: https://devx.vitruviansoftware.dev/guide/caching\n\n")
+	_, _ = fmt.Fprintf(os.Stderr, "\n💡 Tip: Your %s took %s. Enable 'predictive_build: true' on container\n", event, duration.Round(time.Second))
+	_, _ = fmt.Fprintf(os.Stderr, "   services in devx.yaml to have devx silently pre-build heavy dependency\n")
+	_, _ = fmt.Fprintf(os.Stderr, "   layers in the background. See: https://devx.vitruviansoftware.dev/guide/caching\n\n")
 }
 
 // LoadMetrics reads all metric entries from the local metrics file.

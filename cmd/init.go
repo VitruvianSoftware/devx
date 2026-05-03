@@ -180,7 +180,7 @@ func runInit(cmd *cobra.Command, _ []string) error {
 		func() (string, error) {
 			defer func() {
 				if state.ignPath != "" {
-					os.Remove(state.ignPath)
+					_ = os.Remove(state.ignPath)
 					state.ignPath = ""
 				}
 			}()
