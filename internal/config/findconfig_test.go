@@ -110,7 +110,7 @@ func TestFindProjectConfig_ReturnsAbsPath(t *testing.T) {
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("failed to chdir: %v", err)
 	}
-	t.Cleanup(func() { os.Chdir(origDir) })
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
 
 	foundPath, foundDir, err := FindProjectConfig(".", configName)
 	if err != nil {
