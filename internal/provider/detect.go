@@ -22,8 +22,11 @@ package provider
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/VitruvianSoftware/devx/internal/config"
 )
 
 // DetectedProvider holds information about a VM backend found on the system.
@@ -131,7 +134,7 @@ func buildProvider(name string) (VMProvider, ContainerRuntime, error) {
 		return &DockerProvider{}, &DockerRuntime{}, nil
 	case "lima":
 		return &LimaProvider{}, &NerdctlRuntime{
-			ShellCmd: []string{"limactl", "shell", "default"},
+			ShellCmd: []string{"limactl", "shell", resolveVMName()},
 		}, nil
 	case "colima":
 		return &ColimaProvider{}, &NerdctlRuntime{
@@ -158,6 +161,22 @@ func (e *MultipleProvidersError) Error() string {
 }
 
 // --- helpers ---
+
+// resolveVMName returns the Lima VM instance name by mirroring the same
+// config cascade used by ensureVMRunning() in cmd/vm_autoresume.go:
+//   USER env var → config.New(user, "", "", "") → DevHostname.
+// Falls back to "default" if nothing resolves.
+func resolveVMName() string {
+	user := os.Getenv("USER")
+	if user == "" {
+		return "default"
+	}
+	cfg := config.New(user, "", "", "")
+	if cfg.DevHostname != "" {
+		return cfg.DevHostname
+	}
+	return "default"
+}
 
 func detectVersion(binary string) string {
 	// Try --version first, then version (no dashes)

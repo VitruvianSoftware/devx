@@ -36,6 +36,7 @@ import (
 
 var spawnPort int
 var spawnRuntime string
+var spawnProject string
 
 var spawnCmd = &cobra.Command{
 	Use:   "spawn <engine>",
@@ -55,6 +56,8 @@ func init() {
 		"Host port to expose (defaults to the engine's standard port)")
 	spawnCmd.Flags().StringVar(&spawnRuntime, "runtime", "podman",
 		"Container runtime to use (podman, docker)")
+	spawnCmd.Flags().StringVar(&spawnProject, "project", "",
+		"Namespace isolation prefix for containers and volumes (e.g., pr-42)")
 	dbCmd.AddCommand(spawnCmd)
 }
 
@@ -78,6 +81,10 @@ func runSpawn(_ *cobra.Command, args []string) error {
 
 	containerName := fmt.Sprintf("devx-db-%s", engineName)
 	volumeName := fmt.Sprintf("devx-data-%s", engineName)
+	if spawnProject != "" {
+		containerName = fmt.Sprintf("devx-db-%s-%s", spawnProject, engineName)
+		volumeName = fmt.Sprintf("devx-data-%s-%s", spawnProject, engineName)
+	}
 
 	// Check if already running
 	checkCmd := exec.Command(runtime, "inspect", containerName, "--format", "{{.State.Running}}")

@@ -42,6 +42,7 @@ We go far beyond basic container networking by natively integrating the premium 
 * 🚦 **Intelligent Orchestration:** Seamless DAG-based `depends_on` startup sequences rivaling Docker Compose, plus native Multirepo composing via `include:` directives.
 * 🔑 **Vault Secrets Syncing:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to inject secrets directly into your containers.
 * ⚡ **Smart File Syncing:** Bypass slow VirtioFS volume mounts with intelligent Mutagen-powered file syncing (`devx sync up`) that propagates changes in milliseconds.
+* 🔍 **Instant PR Sandboxing:** Review any PR without switching branches. `devx preview 42` creates an isolated worktree with dedicated databases and tunnel URLs, then cleans up automatically on exit.
 * ⏪ **Diagnostics & State:** Snapshot and restore complete database volumes using CRIU, plus redact-safe diagnostic dumps for frictionless support (`devx state`).
 
 ### Testing & Telemetry
@@ -110,7 +111,7 @@ devx doctor auth       # authenticate required services
 | [Podman](https://podman.io) / [Lima](https://lima-vm.io/) / [Colima](https://github.com/abiosoft/colima) / [Docker](https://docker.com) | | Any VM backend of your choice |
 | [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `brew install cloudflare/cloudflare/cloudflared` | Cloudflare tunnel daemon |
 | [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler |
-| [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`) |
+| [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`, `devx preview`) |
 
 </details>
 

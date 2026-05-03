@@ -26,17 +26,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/audit"
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/devx/internal/provider"
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
 
-var auditRuntime string
 var auditOnlySecrets bool
 var auditOnlyVulns bool
 
@@ -51,6 +48,9 @@ var auditCmd = &cobra.Command{
 
 Both tools are run natively if installed on your machine, or automatically
 via an ephemeral read-only container if not — no installation required.
+
+The container runtime is determined by the active --provider setting
+(podman, lima, colima, docker, orbstack).
 
 Tip: Run 'devx audit install-hooks' once to wire this into git pre-push
 so it runs automatically before every push.`,
@@ -76,10 +76,6 @@ var auditInstallHooksCmd = &cobra.Command{
 }
 
 func init() {
-	for _, cmd := range []*cobra.Command{auditCmd, auditSecretsCmd, auditVulnsCmd} {
-		cmd.Flags().StringVar(&auditRuntime, "runtime", "",
-			"Container runtime override (podman or docker — auto-detected if empty)")
-	}
 	auditCmd.Flags().BoolVar(&auditOnlySecrets, "secrets", false, "Run only secrets scan")
 	auditCmd.Flags().BoolVar(&auditOnlyVulns, "vulns", false, "Run only vulnerability scan")
 
@@ -99,18 +95,33 @@ var (
 	auditStyleMode    = lipgloss.NewStyle().Foreground(lipgloss.Color("#E3B341"))
 )
 
+// resolveAuditRuntime returns the ContainerRuntime from the provider cascade.
+// This ensures audit uses the same backend as devx up / devx shell.
+func resolveAuditRuntime() provider.ContainerRuntime {
+	prov, err := getFullProvider()
+	if err != nil {
+		return nil
+	}
+	return prov.Runtime
+}
+
 func runAudit(_ *cobra.Command, _ []string) error {
+	if err := ensureVMRunning(); err != nil {
+		return err
+	}
+
 	runSecrets := !auditOnlyVulns
 	runVulns := !auditOnlySecrets
 
 	cwd, _ := os.Getwd()
+	rt := resolveAuditRuntime()
 
 	fmt.Printf("\n%s\n\n", tui.StyleTitle.Render("devx audit"))
 
 	var totalIssues int
 
 	if runSecrets {
-		found, err := execScan(audit.Gitleaks, cwd, auditRuntime)
+		found, err := execScan(audit.Gitleaks, cwd, rt)
 		if err != nil {
 			return err
 		}
@@ -120,7 +131,7 @@ func runAudit(_ *cobra.Command, _ []string) error {
 	}
 
 	if runVulns {
-		found, err := execScan(audit.Trivy, cwd, auditRuntime)
+		found, err := execScan(audit.Trivy, cwd, rt)
 		if err != nil {
 			return err
 		}
@@ -142,9 +153,14 @@ func runAudit(_ *cobra.Command, _ []string) error {
 }
 
 func runAuditSecrets(_ *cobra.Command, _ []string) error {
+	if err := ensureVMRunning(); err != nil {
+		return err
+	}
+
 	cwd, _ := os.Getwd()
+	rt := resolveAuditRuntime()
 	fmt.Printf("\n%s\n\n", tui.StyleTitle.Render("devx audit secrets"))
-	found, err := execScan(audit.Gitleaks, cwd, auditRuntime)
+	found, err := execScan(audit.Gitleaks, cwd, rt)
 	if err != nil {
 		return err
 	}
@@ -156,9 +172,14 @@ func runAuditSecrets(_ *cobra.Command, _ []string) error {
 }
 
 func runAuditVulns(_ *cobra.Command, _ []string) error {
+	if err := ensureVMRunning(); err != nil {
+		return err
+	}
+
 	cwd, _ := os.Getwd()
+	rt := resolveAuditRuntime()
 	fmt.Printf("\n%s\n\n", tui.StyleTitle.Render("devx audit vulns"))
-	found, err := execScan(audit.Trivy, cwd, auditRuntime)
+	found, err := execScan(audit.Trivy, cwd, rt)
 	if err != nil {
 		return err
 	}
@@ -184,15 +205,16 @@ func runAuditInstallHooks(_ *cobra.Command, _ []string) error {
 }
 
 // execScan runs a single tool and prints a rich status header + output.
-func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error) {
-	mode, rt := audit.Detect(tool)
-	if runtime != "" {
-		rt = runtime
-	}
+func execScan(tool audit.Tool, cwd string, rt provider.ContainerRuntime) (foundIssues bool, err error) {
+	mode := audit.Detect(tool, rt)
 
 	modeLabel := auditStyleMode.Render("native")
 	if mode == audit.ModeContainer {
-		modeLabel = auditStyleMode.Render("container (" + rt + ")")
+		rtName := "container"
+		if rt != nil {
+			rtName = rt.Name()
+		}
+		modeLabel = auditStyleMode.Render("container (" + rtName + ")")
 	}
 
 	fmt.Printf("  %s %s  %s\n",
@@ -207,62 +229,7 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 	}
 
 	start := time.Now()
-	out, found, runErr := audit.Run(tool, cwd, runtime, format)
-
-	// ── VM not running: offer to start it and retry ────────────────────────
-	if runErr == audit.ErrVMNotRunning {
-		prov, pErr := getVMProvider()
-		if pErr != nil {
-			return false, pErr
-		}
-		vmName := prov.Name()
-
-		fmt.Printf("  %s  %s VM is not running.\n", auditStyleFail.Render("!"), capitalizeProvider(vmName))
-		if NonInteractive {
-			return false, fmt.Errorf("%s VM is sleeping — please start it first", vmName)
-		}
-
-		var startVM bool
-		form := huh.NewForm(
-			huh.NewGroup(
-				huh.NewConfirm().
-					Title(fmt.Sprintf("Start %s VM?", capitalizeProvider(vmName))).
-					Description(fmt.Sprintf("devx audit needs the %s VM to run the scanner container. Start it now?", capitalizeProvider(vmName))).
-					Affirmative("Yes, start it").
-					Negative("Skip this scan").
-					Value(&startVM),
-			),
-		).WithTheme(huh.ThemeCatppuccin())
-		_ = form.Run()
-
-		if !startVM {
-			fmt.Printf("  %s Skipped (VM not started)\n\n", auditStyleMuted.Render("—"))
-			return false, nil
-		}
-
-		fmt.Printf("  %s Starting %s VM...\n", auditStyleMuted.Render("→"), capitalizeProvider(vmName))
-		
-		devName := os.Getenv("USER")
-		if devName == "" {
-			devName = "developer"
-		}
-		cfg := config.New(devName, "", "", "")
-		if s, err := secrets.Load(envFile); err == nil && s.DevHostname != "" {
-			cfg.DevHostname = s.DevHostname
-		}
-		if cfg.DevHostname == "" {
-			cfg.DevHostname = "devx"
-		}
-
-		if err := prov.Start(cfg.DevHostname); err != nil {
-			return false, fmt.Errorf("failed to start %s VM: %w", vmName, err)
-		}
-		fmt.Println()
-
-		// Retry the scan now that the VM is up
-		start = time.Now()
-		out, found, runErr = audit.Run(tool, cwd, runtime, format)
-	}
+	out, found, runErr := audit.Run(tool, cwd, rt, format)
 
 	if runErr != nil {
 		fmt.Printf("  %s  %s\n\n", auditStyleFail.Render("ERROR"), runErr.Error())
@@ -292,11 +259,4 @@ func execScan(tool audit.Tool, cwd, runtime string) (foundIssues bool, err error
 	}
 
 	return found, nil
-}
-
-func capitalizeProvider(s string) string {
-	if s == "" {
-		return ""
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
 }

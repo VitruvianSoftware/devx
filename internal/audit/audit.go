@@ -25,10 +25,13 @@
 package audit
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/VitruvianSoftware/devx/internal/provider"
 )
 
 // ToolMode describes how an audit tool should be executed.
@@ -112,20 +115,13 @@ var Gitleaks = Tool{
 	},
 }
 
-// Detect returns the execution mode for a tool — native if the binary is in
-// $PATH, container otherwise. It also returns which runtime to use.
-func Detect(t Tool) (ToolMode, string) {
+// Detect returns the execution mode for a tool. If the binary is on $PATH,
+// native mode is used. Otherwise container mode is used with the provided runtime.
+func Detect(t Tool, rt provider.ContainerRuntime) ToolMode {
 	if _, err := exec.LookPath(t.BinaryName); err == nil {
-		return ModeNative, ""
+		return ModeNative
 	}
-	// Prefer podman, fall back to docker
-	if _, err := exec.LookPath("podman"); err == nil {
-		return ModeContainer, "podman"
-	}
-	if _, err := exec.LookPath("docker"); err == nil {
-		return ModeContainer, "docker"
-	}
-	return ModeContainer, ""
+	return ModeContainer
 }
 
 // ErrVMNotRunning is returned when the container runtime is present but the
@@ -134,14 +130,16 @@ var ErrVMNotRunning = fmt.Errorf("podman VM is not running")
 
 // Run executes the tool against the given directory, returning combined output
 // and any error. exitCode 1 from the scanner is treated as "found issues".
-func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
-	mode, rt := Detect(t)
-	if runtime != "" {
-		rt = runtime
-	}
-	if mode == ModeContainer && rt == "" {
+//
+// The rt parameter provides the container runtime abstraction. For Lima this
+// proxies commands through `limactl shell <vm> nerdctl`, for Podman it runs
+// `podman` directly, etc. If rt is nil and the tool isn't available natively,
+// an error is returned.
+func Run(t Tool, cwd string, rt provider.ContainerRuntime, format string) (string, bool, error) {
+	mode := Detect(t, rt)
+	if mode == ModeContainer && rt == nil {
 		return "", false, fmt.Errorf(
-			"%s is not installed and no container runtime was found. Install %s or podman/docker",
+			"%s is not installed and no container runtime is available. Install %s or configure a VM provider",
 			t.Name, t.BinaryName,
 		)
 	}
@@ -170,10 +168,10 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 		if authErr == nil {
 			_, _ = authFile.WriteString("{}")
 			_ = authFile.Close()
-			defer func() { _ = os.Remove(authFile.Name()) }() 
+			defer func() { _ = os.Remove(authFile.Name()) }()
 		}
 
-		pullCmd := exec.Command(rt, "pull", "--quiet", t.Image)
+		pullCmd := rt.CommandContext(context.Background(), "pull", "--quiet", t.Image)
 		if authErr == nil {
 			pullCmd.Env = append(os.Environ(), "REGISTRY_AUTH_FILE="+authFile.Name())
 		}
@@ -188,7 +186,7 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 			"-v", cwd + ":/scan:ro",
 		}, t.Image)
 		containerArgs = append(containerArgs, t.ContainerArgs(cwd, format)...)
-		cmd = exec.Command(rt, containerArgs...)
+		cmd = rt.CommandContext(context.Background(), containerArgs...)
 		// Apply the same bypass on run: if the pull failed or was skipped, the
 		// image may still need to be fetched at run time. {} is a valid empty
 		// auth config that tells Podman to use anonymous auth for all registries.
@@ -215,18 +213,21 @@ func Run(t Tool, cwd, runtime, format string) (string, bool, error) {
 
 // checkContainerRuntime pings the runtime daemon and returns a descriptive
 // error if it's not reachable (e.g. podman machine is sleeping).
-func checkContainerRuntime(rt string) error {
-	out, err := exec.Command(rt, "info", "--format", "{{.Host.OS}}").CombinedOutput()
+// Uses a bare `info` command without --format to work across podman, docker,
+// and nerdctl which have incompatible template schemas.
+func checkContainerRuntime(rt provider.ContainerRuntime) error {
+	out, err := rt.Exec("info")
 	if err == nil {
 		return nil // daemon is up
 	}
 	// Detect the "VM not started" case specifically
-	if strings.Contains(string(out), "Cannot connect to Podman") ||
-		strings.Contains(string(out), "connection refused") ||
-		strings.Contains(string(out), "no such file or directory") {
+	if strings.Contains(out, "Cannot connect to Podman") ||
+		strings.Contains(out, "connection refused") ||
+		strings.Contains(out, "no such file or directory") ||
+		strings.Contains(out, "Cannot connect to the Docker daemon") {
 		return ErrVMNotRunning
 	}
-	return fmt.Errorf("container runtime %q is not reachable: %w", rt, err)
+	return fmt.Errorf("container runtime %q is not reachable: %w", rt.Name(), err)
 }
 
 // InstallPrePushHook writes a git pre-push hook to .git/hooks/pre-push.

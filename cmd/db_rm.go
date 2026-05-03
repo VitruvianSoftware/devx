@@ -33,6 +33,7 @@ import (
 
 var rmRuntime string
 var rmKeepVolume bool
+var rmProject string
 
 var dbRmCmd = &cobra.Command{
 	Use:   "rm <engine>",
@@ -47,6 +48,8 @@ func init() {
 		"Container runtime to use (podman, docker)")
 	dbRmCmd.Flags().BoolVar(&rmKeepVolume, "keep-volume", false,
 		"Keep the persistent data volume (only remove the container)")
+	dbRmCmd.Flags().StringVar(&rmProject, "project", "",
+		"Namespace isolation prefix for containers and volumes (e.g., pr-42)")
 	dbCmd.AddCommand(dbRmCmd)
 }
 
@@ -60,6 +63,10 @@ func runDbRm(_ *cobra.Command, args []string) error {
 	runtime := rmRuntime
 	containerName := fmt.Sprintf("devx-db-%s", engineName)
 	volumeName := fmt.Sprintf("devx-data-%s", engineName)
+	if rmProject != "" {
+		containerName = fmt.Sprintf("devx-db-%s-%s", rmProject, engineName)
+		volumeName = fmt.Sprintf("devx-data-%s-%s", rmProject, engineName)
+	}
 
 	if DryRun {
 		fmt.Printf("DRY RUN: Would stop and remove container %s\n", containerName)
