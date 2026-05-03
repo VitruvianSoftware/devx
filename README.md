@@ -152,6 +152,15 @@ devx tunnel expose 3000 --name myapp
 # → https://myapp.your-name.ipv1337.dev
 ```
 
+## Configuration Domains
+
+The `devx` ecosystem separates configuration into two distinct files based on the scope of orchestration:
+
+1. **`devx.yaml` (Project-Level Local Dev):** This is the primary configuration file. It lives in your application's repository and defines the local development topology (databases, tunnels, CI steps, and dependent services). It is used by almost all `devx` commands (e.g., `devx up`, `devx test`, `devx action`).
+2. **`homelab.yaml` (Infrastructure-Level Cluster Dev):** This file is exclusively used by the `devx homelab` command suite. It defines the desired state of a bare-metal Kubernetes cluster (node IPs, K3s versions, VM allocations) and is usually kept in a dedicated infrastructure repository.
+
+These files do not override each other; they serve completely different domains.
+
 ## Architecture
 
 ```mermaid
