@@ -49,6 +49,14 @@ const (
 	CodeBridgeUnsupportedProtocol     = 70 // Target port uses UDP (not supported in 46.2)
 	CodeBridgeTunnelFailed            = 71 // Yamux tunnel failed to establish or dropped
 	CodeBridgeServiceNotInterceptable = 72 // Service has no selector or is ExternalName type
+
+	// State Replication Errors (Idea 56)
+	CodeStateShareNoContainers  = 80 // No running devx containers to share
+	CodeStateShareUploadFailed  = 81 // Failed to upload bundle to relay/bucket
+	CodeStateAttachInvalidID    = 82 // Malformed share ID
+	CodeStateAttachDownloadFail = 83 // Failed to download bundle
+	CodeStateAttachDecryptFail  = 84 // Wrong passphrase or corrupted bundle
+	CodeStateAttachRestoreFail  = 85 // Checkpoint or snapshot restore failed
 )
 
 // DevxError wraps a standard error with a stable machine-readable exit code.

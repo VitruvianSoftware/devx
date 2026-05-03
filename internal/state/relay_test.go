@@ -18,22 +18,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package cmd
+package state
 
-import (
-	"github.com/spf13/cobra"
-)
+import "testing"
 
-var stateCmd = &cobra.Command{
-	Use:   "state",
-	GroupID: "orchestration",
-	Short: "Manage topological state (diagnostic dumps, checkpoints, and restores)",
-	Long: `The state command hierarchy manages the macro state of the entire devx environment.
-	
-You can generate full diagnostic dumps, checkpoint/restore the system snapshot using CRIU,
-and share your complete running environment with teammates via 'devx state share'.`,
-}
+func TestParseRelay(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantBackend string
+		wantURI     string
+		wantErr     bool
+	}{
+		{"s3://my-bucket/path", "s3", "s3://my-bucket/path", false},
+		{"gs://my-bucket/path", "gcs", "gs://my-bucket/path", false},
+		{"http://my-bucket", "", "", true},
+		{"invalid", "", "", true},
+		{"s3://", "s3", "s3://", false}, // Technically valid prefix
+	}
 
-func init() {
-	rootCmd.AddCommand(stateCmd)
+	for _, tt := range tests {
+		backend, uri, err := ParseRelay(tt.input)
+		if (err != nil) != tt.wantErr {
+			t.Errorf("ParseRelay(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			continue
+		}
+		if backend != tt.wantBackend {
+			t.Errorf("ParseRelay(%q) backend = %v, want %v", tt.input, backend, tt.wantBackend)
+		}
+		if uri != tt.wantURI {
+			t.Errorf("ParseRelay(%q) uri = %v, want %v", tt.input, uri, tt.wantURI)
+		}
+	}
 }

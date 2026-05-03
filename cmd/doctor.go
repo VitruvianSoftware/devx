@@ -289,6 +289,11 @@ func computeFeatureReadiness(r doctor.Report) []featureReadiness {
 			ready:   tools["kubectl"],
 			missing: missingList(tools, "kubectl"),
 		},
+		{
+			command: "devx state share",
+			ready:   (tools["podman"] || tools["docker"] || tools["limactl"] || tools["colima"]) && (tools["aws"] || tools["gcloud"]),
+			missing: joinMissing("podman, docker, lima, or colima", missingList(tools, "aws", "gcloud")),
+		},
 	}
 }
 

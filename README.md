@@ -43,7 +43,7 @@ We go far beyond basic container networking by natively integrating the premium 
 * 🔑 **Vault Secrets Syncing:** Stop DMing `.env` files. `devx` connects to 1Password, Bitwarden, or GCP Secret Manager to inject secrets directly into your containers.
 * ⚡ **Smart File Syncing:** Bypass slow VirtioFS volume mounts with intelligent Mutagen-powered file syncing (`devx sync up`) that propagates changes in milliseconds.
 * 🔍 **Instant PR Sandboxing:** Review any PR without switching branches. `devx preview 42` creates an isolated worktree with dedicated databases and tunnel URLs, then cleans up automatically on exit.
-* ⏪ **Diagnostics & State:** Snapshot and restore complete database volumes using CRIU, plus redact-safe diagnostic dumps for frictionless support (`devx state`).
+* ⏪ **Diagnostics & State:** Snapshot and restore complete database volumes using CRIU, bundle and share your exact environment with teammates (`devx state share`), and generate redact-safe diagnostic dumps for frictionless support.
 
 ### Testing & Telemetry
 * 🧪 **Ephemeral E2E Testing:** Dynamically clone isolated, randomized copies of your database topology to run Cypress/Playwright tests safely.

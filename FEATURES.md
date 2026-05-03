@@ -431,3 +431,19 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** Emulating distributed multi-node Kubernetes clusters locally usually relies on single-machine nested solutions like `kind` or `minikube`. But testing real node failure, distributed latency, or edge architectures requires a real multi-machine cluster. Setting this up manually across several developer MacBooks requires heavy bespoke network configuration, SSH key exchanges, and tedious K3s token management.
 * **The Solution:** The `devx cluster` suite (`init`, `join`, `apply`, `upgrade`, `remove`, `destroy`) automates the entire lifecycle based on a single declarative `cluster.yaml`. It seamlessly provisions Lima VMs on each defined host machine, wires up socket_vmnet for flat layer-2 network bridging, automatically discovers node IP addresses, exchanges tokens, configures etcd HA clustering on server nodes, and securely exports the final `kubeconfig`. Fully integrates with `devx doctor` for automatic prerequisite provisioning and validation of cross-node network matrix health.
 * **Key files:** `cmd/cluster_mgmt.go`, `internal/multinode/cluster/cluster.go`, `internal/multinode/k3s/k3s.go`, `internal/multinode/doctor/doctor.go`, `docs/guide/multinode.md`
+
+### 55. Instant PR Sandboxing (`devx preview`)
+* **Priority:** ✅ Shipped
+* **Effort:** High
+* **Impact:** Eliminates context-switching friction during PR reviews.
+* **The Problem:** Reviewing a PR locally destroys flow state. You have to stash changes, checkout the branch, run migrations, and spin up dependencies.
+* **The Solution:** A command (`devx preview <PR_NUMBER>`) that automatically creates a temporary Git worktree for the PR, reads its `devx.yaml`, spins up isolated ephemeral databases for it, and exposes the app on a unique tunnel URL—all without touching your active Git branch.
+* **Key files:** `cmd/preview.go`, `internal/preview/sandbox.go`
+
+### 56. Peer-to-Peer State Replication (`devx state share` & `attach`)
+* **Priority:** ✅ Shipped
+* **Effort:** High
+* **Impact:** Drastically reduces "works on my machine" debugging time.
+* **The Problem:** "It doesn't work on my machine." Helping a teammate means trying to manually replicate their database state and environment variables.
+* **The Solution:** Bundles the live memory state (CRIU checkpoints), exported database volumes, and environment metadata into a single AES-256-GCM encrypted, portable `.tar.gz` artifact. A developer runs `devx state share` to get a unique ID, and a teammate runs `devx state attach <ID>` to instantly boot the exact broken environment. Uses a "Bring-Your-Own-Bucket" model supporting S3 and GCS, and gracefully falls back to a "DB-only" mode for runtimes that don't support CRIU.
+* **Key files:** `cmd/state_share.go`, `cmd/state_attach.go`, `internal/state/replication.go`, `internal/state/crypto.go`, `internal/state/relay.go`

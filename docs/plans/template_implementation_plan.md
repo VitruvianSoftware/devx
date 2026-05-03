@@ -119,6 +119,7 @@
 - [ ] My verification plan **tests edge cases**, not just the happy path.
 - [ ] I have **not assumed default values** without checking if they can be overridden at runtime.
 - [ ] I have audited all **4 agent skill template files** for stale command references.
+- [ ] I have verified that the project/task status (**IDEAS.md → FEATURES.md**) will be updated.
 
 ---
 

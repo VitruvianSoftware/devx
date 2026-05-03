@@ -65,7 +65,8 @@ export default withMermaid(defineConfig({
           { text: 'Smart File Syncing', link: '/guide/sync' },
           { text: 'Native Apps & Logs', link: '/guide/execution' },
           { text: 'PR Preview Sandbox', link: '/guide/preview' },
-          { text: 'Diagnostics & State', link: '/guide/state' }
+          { text: 'Diagnostics & State', link: '/guide/state' },
+          { text: 'State Replication', link: '/guide/state-replication' }
         ]
       },
       {

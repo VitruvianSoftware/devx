@@ -194,3 +194,27 @@ The agent is a self-healing Kubernetes Job with:
 - **Self-healing** — on tunnel drop or SIGTERM, agent restores the original selector before exiting
 - **activeDeadlineSeconds: 14400** (4h auto-cleanup safety net)
 
+## 📦 13. State Replication (`devx state share` / `attach`)
+
+Share and restore exact running container states and database volumes across machines.
+State replication enforces a "Bring-Your-Own-Bucket" model using S3 or GCS.
+
+### Commands
+
+**Share State:**
+- `devx state share --json`: Bundle current CRIU checkpoints and database volumes, encrypt, and upload to relay.
+- `devx state share --db-only --json`: Skip container checkpoints (required for non-Podman users).
+- `devx state share --relay s3://my-bucket/state`: Override `devx.yaml` relay destination.
+
+**Attach State:**
+- `devx state attach <ID> -y`: Download, decrypt, and restore the state bundle (overwrites current local state).
+
+### Exit Codes
+| Code | Meaning |
+|------|---------|
+| 80 | No running devx containers/databases to share |
+| 81 | Failed to upload bundle to relay/bucket |
+| 82 | Malformed share ID |
+| 83 | Failed to download bundle |
+| 84 | Wrong passphrase or corrupted bundle (decryption failed) |
+| 85 | Checkpoint or snapshot restore failed |

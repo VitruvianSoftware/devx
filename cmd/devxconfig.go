@@ -228,6 +228,11 @@ type DevxConfigBridge struct {
 	Intercepts []DevxConfigBridgeIntercept `yaml:"intercepts"`   // Inbound: traffic intercept targets (46.2)
 }
 
+// DevxConfigState defines state sharing/replication settings.
+type DevxConfigState struct {
+	Relay string `yaml:"relay"` // Upload destination: s3://... or gs://...
+}
+
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
 	Name          string                              `yaml:"name"`            // Project name
@@ -243,6 +248,7 @@ type DevxConfig struct {
 	Pipeline      *DevxConfigPipeline                 `yaml:"pipeline"`        // Explicit pipeline stages (Idea 45.2)
 	CustomActions map[string]DevxConfigCustomAction   `yaml:"customActions"`   // Named tasks (scaffolded for Idea 45.3)
 	Bridge        *DevxConfigBridge                   `yaml:"bridge"`          // Hybrid edge-to-local routing (Idea 46.1)
+	State         *DevxConfigState                    `yaml:"state"`           // State replication settings (Idea 56)
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────

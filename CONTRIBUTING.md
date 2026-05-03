@@ -75,6 +75,7 @@ devx/
 │   ├── prereqs/            # Prerequisite validation
 │   ├── provider/           # VMProvider interface + backends
 │   ├── secrets/            # .env secret management
+│   ├── state/              # State replication and checkpoints (Idea 56)
 │   ├── tailscale/          # Tailscale agent management
 │   └── tui/                # Terminal UI components
 ├── main.go                 # Entry point
