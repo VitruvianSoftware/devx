@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.1](https://github.com/VitruvianSoftware/devx/compare/v0.39.0...v0.39.1) (2026-05-04)
+
+
+### Bug Fixes
+
+* **agent:** rename internal agent templates target to .agents for antigravity skills ([d95afa4](https://github.com/VitruvianSoftware/devx/commit/d95afa4ad4b91f024903b709aae7a31b08f88557))
+* **updater:** support GITHUB_TOKEN to bypass GitHub API rate limits during devx upgrade ([fc3b927](https://github.com/VitruvianSoftware/devx/commit/fc3b92743ad082cc7c71995f344d0c098d3e1858))
+
 ## [0.39.0](https://github.com/VitruvianSoftware/devx/compare/v0.38.0...v0.39.0) (2026-05-04)
 
 
