@@ -77,15 +77,32 @@ func tryOllamaLaunch(prompt string) (*AgentResult, error) {
 		return nil, fmt.Errorf("ollama not found")
 	}
 
+	// Get first available model to avoid interactive prompt
+	listOut, err := exec.Command(ollamaPath, "list").Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list ollama models")
+	}
+	
+	lines := strings.Split(strings.TrimSpace(string(listOut)), "\n")
+	if len(lines) < 2 {
+		return nil, fmt.Errorf("no ollama models found (run ollama pull first)")
+	}
+	
+	fields := strings.Fields(lines[1])
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("invalid ollama list output")
+	}
+	model := fields[0]
+
 	// Find a supported agent that's installed
 	for _, agent := range ollamaLaunchAgents {
 		if _, err := exec.LookPath(agent); err != nil {
 			continue
 		}
 
-		// Run: ollama launch <agent> -- -p "prompt" --permission-mode plan
+		// Run: ollama launch <agent> --model <model> -- -p "prompt" --permission-mode plan
 		// plan mode = read-only (safe), -p = print mode (non-interactive)
-		cmd := exec.Command(ollamaPath, "launch", agent, "--",
+		cmd := exec.Command(ollamaPath, "launch", agent, "--model", model, "--",
 			"-p", prompt,
 			"--permission-mode", "plan",
 		)
