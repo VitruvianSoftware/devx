@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0](https://github.com/VitruvianSoftware/devx/compare/v0.38.0...v0.39.0) (2026-05-04)
+
+
+### Features
+
+* implement AI-driven synthetic data generation (Idea 57) ([#161](https://github.com/VitruvianSoftware/devx/issues/161)) ([2ea31d6](https://github.com/VitruvianSoftware/devx/commit/2ea31d6cee96a80304f0c95b73359b7aac706b5f))
+
 ## [0.38.0](https://github.com/VitruvianSoftware/devx/compare/v0.37.0...v0.38.0) (2026-05-03)
 
 
