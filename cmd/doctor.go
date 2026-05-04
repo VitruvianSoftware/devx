@@ -211,6 +211,22 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 			tui.StyleMuted.Render("No AI providers detected — AI features will use rule-based fallbacks"),
 		)
 	}
+
+	// Tip: suggest ollama launch when Ollama exists + agents found but no cloud keys
+	if report.AI.AgentsFound > 0 && !report.AI.CloudReady {
+		hasOllama := false
+		for _, p := range report.AI.Providers {
+			if p.Name == "Ollama" && (p.Available || strings.Contains(p.Note, "Installed")) {
+				hasOllama = true
+				break
+			}
+		}
+		if hasOllama {
+			fmt.Printf("\n    %s\n",
+				tui.StyleDetailRunning.Render("💡 Tip: Run 'ollama launch claude' to connect coding agents to local models — no API keys needed."),
+			)
+		}
+	}
 	fmt.Println()
 
 	// ── Summary ─────────────────────────────────────────────────────
