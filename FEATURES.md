@@ -100,19 +100,18 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
   - Report version where possible (`podman --version`, `gh --version`, etc.)
   - Color-coded output: ✅ installed, ❌ missing, ⚠️ outdated
   - Group tools by feature area (Core, Tunnels, Sites, Vault, etc.)
-* **Tools to audit:**
 
-  | Tool | Feature Area | Required? | Install Command |
-  |------|-------------|-----------|-----------------|
-  | `podman` | Core (VM) | Yes (if `--provider=podman`) | `brew install podman` |
-  | `docker` | Core (VM) | Yes (if `--provider=docker`) | `brew install docker` |
-  | `orb` | Core (VM) | Yes (if `--provider=orbstack`) | `brew install orbstack` |
-  | `cloudflared` | Tunnels | Yes | `brew install cloudflare/cloudflare/cloudflared` |
-  | `butane` | VM Init | Yes | `brew install butane` |
-  | `gh` | Sites | Yes (for `sites` commands) | `brew install gh` |
-  | `op` | Vault (1Password) | Optional | `brew install 1password-cli` |
-  | `bw` | Vault (Bitwarden) | Optional | `brew install bitwarden-cli` |
-  | `gcloud` | Vault (GCP) | Optional | `brew install google-cloud-sdk` |
+| Tool | Feature Area | Install Command |
+|------|-------------|-----------------|
+| `podman`, `docker`, `orb`, `limactl`, `colima` | Core VM | `brew install podman` / `docker` / `orbstack` / `lima` / `colima` |
+| `cloudflared` | Tunnels | `brew install cloudflare/cloudflare/cloudflared` |
+| `butane` | VM Init | `brew install butane` |
+| `gh` | Sites, Preview | `brew install gh` |
+| `aws`, `gcloud` | State Replication | `brew install awscli` / `google-cloud-sdk` |
+| `nerdctl` | Container Runtime | `brew install nerdctl` |
+| `op`, `bw`, `gcloud` | Vault | `brew install 1password-cli` / `bitwarden-cli` / `google-cloud-sdk` |
+| `mutagen` | File Sync | `brew install mutagen-io/mutagen/mutagen` |
+| `kubectl` | Bridge | `brew install kubectl` |
 
 #### Task 16b: System & Package Manager Detection (DONE)
 * **Status:** DONE — implemented as part of `DetectSystem()` in `internal/doctor/check.go`. Detects macOS/Linux, architecture, and package manager (brew, apt, dnf, pacman, yum, apk, nix).
@@ -128,7 +127,7 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **What:** Offer to install missing tools automatically using the detected package manager.
 * **Details:**
   - Interactive mode: present a checklist of missing tools, let the developer select which to install
-  - Non-interactive mode (`-y`): install all missing required tools
+  - Non-interactive mode (`-y`): install all missing core tools
   - Show the exact commands being run before executing (transparency)
   - Handle tap/repository additions (e.g., `brew tap cloudflare/cloudflare` before installing `cloudflared`)
   - Summarize what was installed and any post-install steps needed
@@ -170,11 +169,14 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
     System:   macOS 15.3 (arm64) • Homebrew 4.x
 
     CLI Tools:
-      ✅ podman     4.9.4    (Core VM)
-      ✅ cloudflared 2024.12  (Tunnels)
-      ✅ butane      0.22.0   (Ignition)
-      ✅ gh          2.65.0   (Sites)
-      ❌ op          —        (1Password Vault) [optional]
+      ✅ podman     5.8.1        Core VM — VM backend (--provider=podman)
+      ✅ cloudflared 2024.12     Tunnels
+      ✅ butane      0.22.0      VM Init
+      ✅ gh          2.65.0      Sites, Preview
+      ✅ docker     29.4.2       Core VM — VM backend (--provider=docker)
+      — op          not installed Vault — for 1Password secret integration
+      ✅ bw          2024.1      Vault — for Bitwarden secret integration
+      ✅ gcloud     450.0.0      Vault, State Replication — for GCP secrets and devx state share with gs://
 
     Credentials:
       ✅ Cloudflare API Token  configured (.env)
@@ -355,7 +357,7 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 
 ### 43. Smart File Syncing — Zero-Rebuild Hot Reloading (DONE)
 * **The Problem:** Hot reloading using OS-level volume mounts on macOS (VirtioFS) is catastrophically slow for file trees with thousands of entries (e.g., `node_modules`). Rebuilding full container images to inject code changes disrupts developer flow state entirely.
-* **The Solution:** Implemented `devx sync up`. Wraps [Mutagen](https://mutagen.io/) as a first-class sync engine behind the `devx sync` subcommand. Sync sessions create high-performance, bidirectional file sync between host directories and running containers, propagating changes in milliseconds. Automatically excludes `.git`, `node_modules`, and other heavy directories by default. Supports Podman via transparent `DOCKER_HOST` injection. Fully integrated with `devx doctor` (optional tool check), `devx nuke` (session cleanup), and all global flags (`--dry-run`, `--json`, `-y`).
+* **The Solution:** Implemented `devx sync up`. Wraps [Mutagen](https://mutagen.io/) as a first-class sync engine behind the `devx sync` subcommand. Sync sessions create high-performance, bidirectional file sync between host directories and running containers, propagating changes in milliseconds. Automatically excludes `.git`, `node_modules`, and other heavy directories by default. Supports Podman via transparent `DOCKER_HOST` injection. Fully integrated with `devx doctor` (File Sync tool check), `devx nuke` (session cleanup), and all global flags (`--dry-run`, `--json`, `-y`).
 * **Key files:** `cmd/sync.go`, `cmd/sync_up.go`, `cmd/sync_list.go`, `cmd/sync_rm.go`, `internal/sync/daemon.go`
 
 ---

@@ -18,19 +18,20 @@ Runs a full environment audit with four sections:
 Detects your OS, architecture, and package manager.
 
 ### CLI Tools
-Checks all 9 tools that devx depends on, grouped by required vs optional:
+Checks all tools that devx depends on. Each tool displays its feature area inline, so you immediately know *why* it's needed:
 
-| Tool | Binary | Feature | Required? |
-|------|--------|---------|-----------|
-| Any VM backend | `lima`, `colima`, `podman`, etc. | Core VM | Yes |
-| Cloudflared | `cloudflared` | Tunnels | Yes |
-| Butane | `butane` | VM Init | Yes |
-| GitHub CLI | `gh` | Sites | Yes |
-| Docker | `docker` | Core VM (alt) | Optional |
-| OrbStack | `orb` | Core VM (alt) | Optional |
-| 1Password CLI | `op` | Vault | Optional |
-| Bitwarden CLI | `bw` | Vault | Optional |
-| Google Cloud SDK | `gcloud` | Vault | Optional |
+| Tool | Feature Area | Purpose |
+|------|-------------|---------|
+| `podman`, `docker`, `orb`, `limactl`, `colima` | Core VM | VM backend providers |
+| `cloudflared` | Tunnels | Cloudflare tunnel daemon |
+| `butane` | VM Init | Ignition config compiler |
+| `gh` | Sites, Preview | GitHub CLI |
+| `aws` | State Replication | S3 state sharing |
+| `gcloud` | Vault, State Replication | GCP secrets + GCS state sharing |
+| `nerdctl` | Container Runtime | Container CLI for Lima/Colima |
+| `op`, `bw` | Vault | Secret manager CLIs |
+| `mutagen` | File Sync | Hot reloading engine |
+| `kubectl` | Bridge | Hybrid K8s bridge |
 
 ### Credentials
 Verifies all authentication sessions and API tokens:
@@ -66,8 +67,8 @@ Maps tool + credential requirements to devx commands, telling you exactly which 
 Detects missing tools and installs them using your system's package manager.
 
 ```bash
-devx doctor install          # install missing required tools only
-devx doctor install --all    # include optional tools too
+devx doctor install          # install missing core tools only
+devx doctor install --all    # include tools for optional features too
 devx doctor install -y       # auto-confirm (no prompts)
 ```
 
@@ -77,9 +78,9 @@ The command shows you the exact install plan before executing:
 📦 Install Plan
   Package Manager:  brew
 
-    →  Butane                required
+    →  Butane                VM Init
        brew install butane
-    →  GitHub CLI            required
+    →  GitHub CLI            Sites, Preview
        brew install gh
 
   Install 2 tool(s)? [y/N]

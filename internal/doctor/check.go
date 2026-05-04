@@ -152,16 +152,7 @@ func allTools() []toolDef {
 			Required:    false,
 			VersionFlag: "--version",
 			InstallBrew: "awscli",
-			Note:        "Required for devx state share with s3://",
-		},
-		{
-			Name:        "GCloud CLI",
-			Binary:      "gcloud",
-			FeatureArea: "State Replication",
-			Required:    false,
-			VersionFlag: "--version",
-			InstallBrew: "google-cloud-sdk",
-			Note:        "Required for devx state share with gs://",
+			Note:        "for devx state share with s3://",
 		},
 		{
 			Name:        "OrbStack",
@@ -220,11 +211,11 @@ func allTools() []toolDef {
 		{
 			Name:        "Google Cloud SDK",
 			Binary:      "gcloud",
-			FeatureArea: "Vault",
+			FeatureArea: "Vault, State Replication",
 			Required:    false,
 			VersionFlag: "--version",
 			InstallBrew: "google-cloud-sdk",
-			Note:        "for GCP Secret Manager integration",
+			Note:        "for GCP secrets and devx state share with gs://",
 		},
 		{
 			Name:        "Mutagen",
