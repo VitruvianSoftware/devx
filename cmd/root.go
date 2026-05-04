@@ -24,7 +24,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/VitruvianSoftware/devx/internal/ai"
 	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
 	"github.com/VitruvianSoftware/devx/internal/updater"
@@ -91,13 +93,27 @@ Run 'devx vm init' to bootstrap your machine, or 'devx up' to start services.`,
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		var dex *devxerr.DevxError
+		exitCode := 1
 		if errors.As(err, &dex) {
-			_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(dex.ExitCode)
+			exitCode = dex.ExitCode
 		}
 
 		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+
+		// Idea 59: Attempt intelligent failure diagnosis before exiting.
+		// Suppressed in --json mode so AI agents parsing structured output
+		// don't get free-form diagnosis text injected.
+		if !outputJSON {
+			cmdName := ""
+			if len(os.Args) > 1 {
+				cmdName = strings.Join(os.Args[1:], " ")
+			}
+			if diagnosis := ai.DiagnoseFailure(cmdName, exitCode, err.Error(), ""); diagnosis != "" {
+				_, _ = fmt.Fprintf(os.Stderr, "\n%s\n", diagnosis)
+			}
+		}
+
+		os.Exit(exitCode)
 	}
 }
 

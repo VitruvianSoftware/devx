@@ -49,6 +49,10 @@ When running a command that fails, `devx` avoids polluting standard error with u
 - `Exit 87 (CodeDBSynthLLMFailed)`: LLM API request failed or timed out during `devx db synthesize`.
 - `Exit 88 (CodeDBSynthUnsupported)`: Engine does not support DDL extraction. Only `postgres` and `mysql` are supported.
 - `Exit 89 (CodeDBSynthSQLFailed)`: Generated SQL failed to execute against the database container.
+- `Exit 90 (CodeDiagnosisTimeout)`: AI diagnosis timed out during failure recovery.
+- `Exit 91 (CodeDBAskNoAI)`: No AI provider found for natural language database query.
+- `Exit 92 (CodeDBAskQueryFailed)`: Generated SQL failed to execute during `devx db ask`.
+- `Exit 93 (CodeDBAskReadOnly)`: Write attempted without `--allow-writes` during `devx db ask`.
 
 ## 🗺️ 5. Architectural Awareness (`devx map`)
 
@@ -250,3 +254,27 @@ Only `postgres` and `mysql` support DDL extraction. Running against `redis` or `
 | 87 | LLM API request failed or timed out |
 | 88 | Engine does not support DDL extraction (mongo/redis) |
 | 89 | Generated SQL failed to execute against the database |
+
+## 🗣️ 15. Natural Language Database Queries (`devx db ask`)
+
+Use natural language to query local databases. `devx` extracts the schema and translates the question into safe SQL. All queries are wrapped in a read-only transaction by default.
+
+### Commands
+
+- `devx db ask postgres "users who signed up this week"`
+- `devx db ask mysql "show me the 5 largest tables"`
+
+**Built-in Diagnostics (No AI needed):**
+- `devx db ask postgres --sizes` (Table sizes and row counts)
+- `devx db ask postgres --recent` (Last 10 rows from each table)
+- `devx db ask postgres --missing-indexes` (Tables without indexes)
+- `devx db ask postgres --nulls <table>` (Column NULL ratios)
+
+### Flags
+
+- `--dry-run`: Preview the generated SQL without executing it.
+- `--json`: Get structured JSON output instead of the rendered TUI table.
+- `--allow-writes`: Allow the generated query to perform write operations (must use `-y` or you will be blocked by a confirmation prompt).
+- `--model`: Override the default LLM model.
+
+If the command fails due to no AI provider, the exit code will be `91`. Generated query failures result in `92`. Attempting a write without `--allow-writes` results in `93`.
