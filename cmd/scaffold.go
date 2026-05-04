@@ -189,7 +189,7 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		var runDoctor bool
 		err := huh.NewConfirm().
 			Title("Run 'devx doctor' to verify your environment is ready?").
-			Description("Checks that all required tools (podman, cloudflared, etc.) are installed.").
+			Description("Checks that all tools for your devx features are installed.").
 			Affirmative("Yes, check now").
 			Negative("No, skip").
 			Value(&runDoctor).

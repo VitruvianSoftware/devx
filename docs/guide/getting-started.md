@@ -10,26 +10,24 @@ devx doctor install    # install any missing tools via your package manager
 devx doctor auth       # walk through authenticating required services
 ```
 
-`devx doctor` checks for all 9 CLI tools and 7 credentials that devx uses, and tells you exactly what's ready and what needs attention.
+`devx doctor` checks all CLI tools and credentials that devx uses — grouped by feature area — and tells you exactly what's ready and what needs attention.
 
 ### Manual Setup
 
 If you prefer to install manually:
 
-| Tool | Install | Purpose | Required? |
-|------|---------|---------| --------- |
-| [Podman](https://podman.io) | `brew install podman` | VM and container runtime | Optional |
-| [Lima](https://lima-vm.io/) | `brew install lima` | VM backend | Optional |
-| [Colima](https://github.com/abiosoft/colima) | `brew install colima` | VM backend | Optional |
-| [nerdctl](https://github.com/containerd/nerdctl) | `brew install nerdctl` | Container CLI for Lima/Colima VMs | Optional |
-| [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | `brew install cloudflare/cloudflare/cloudflared` | Cloudflare tunnel daemon | Yes |
-| [butane](https://coreos.github.io/butane/) | `brew install butane` | Ignition config compiler | Yes |
-| [gh](https://cli.github.com) | `brew install gh` | GitHub CLI (for `devx sites`) | Yes |
-| [docker](https://docker.com) | `brew install docker` | VM backend | Optional |
-| [orbstack](https://orbstack.dev) | `brew install orbstack` | VM backend | Optional |
-| [1Password CLI](https://1password.com/downloads/command-line) | `brew install 1password-cli` | Vault secret sync | Optional |
-| [Bitwarden CLI](https://bitwarden.com/help/cli/) | `brew install bitwarden-cli` | Vault secret sync | Optional |
-| [gcloud](https://cloud.google.com/sdk) | `brew install google-cloud-sdk` | GCP Secret Manager | Optional |
+| Tool | Feature Area | Install |
+|------|-------------|---------|
+| [Podman](https://podman.io), [Docker](https://docker.com), [OrbStack](https://orbstack.dev), [Lima](https://lima-vm.io/), [Colima](https://github.com/abiosoft/colima) | Core VM | `brew install podman` / `docker` / `orbstack` / `lima` / `colima` |
+| [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/) | Tunnels | `brew install cloudflare/cloudflare/cloudflared` |
+| [butane](https://coreos.github.io/butane/) | VM Init | `brew install butane` |
+| [gh](https://cli.github.com) | Sites, Preview | `brew install gh` |
+| [AWS CLI](https://aws.amazon.com/cli/) | State Replication | `brew install awscli` |
+| [gcloud](https://cloud.google.com/sdk) | Vault, State Replication | `brew install google-cloud-sdk` |
+| [nerdctl](https://github.com/containerd/nerdctl) | Container Runtime | `brew install nerdctl` |
+| [1Password CLI](https://1password.com/downloads/command-line), [Bitwarden CLI](https://bitwarden.com/help/cli/) | Vault | `brew install 1password-cli` / `bitwarden-cli` |
+| [Mutagen](https://mutagen.io) | File Sync | `brew install mutagen-io/mutagen/mutagen` |
+| [kubectl](https://kubernetes.io/docs/tasks/tools/) | Bridge | `brew install kubectl` |
 
 ### Choosing a VM Backend
 

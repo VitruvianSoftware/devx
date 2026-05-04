@@ -80,31 +80,13 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 
 	// ── CLI Tools ───────────────────────────────────────────────────
 	fmt.Println(tui.StyleTitle.Render("  CLI Tools"))
-
-	// Group: required first, then optional
-	requiredTools := make([]doctor.ToolStatus, 0)
-	optionalTools := make([]doctor.ToolStatus, 0)
-	for _, t := range report.Tools {
-		if t.Required {
-			requiredTools = append(requiredTools, t)
-		} else {
-			optionalTools = append(optionalTools, t)
-		}
-	}
+	fmt.Println()
 
 	missingRequired := 0
-	for _, t := range requiredTools {
+	for _, t := range report.Tools {
 		printToolRow(t)
-		if !t.Installed {
+		if t.Required && !t.Installed {
 			missingRequired++
-		}
-	}
-
-	if len(optionalTools) > 0 {
-		fmt.Println()
-		fmt.Println(tui.StyleMuted.Render("  Optional:"))
-		for _, t := range optionalTools {
-			printToolRow(t)
 		}
 	}
 	fmt.Println()
@@ -247,43 +229,37 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 }
 
 func printToolRow(t doctor.ToolStatus) {
+	// Build the description suffix: "FeatureArea — note" or just "FeatureArea"
+	suffix := t.FeatureArea
+	if t.Note != "" {
+		suffix += " — " + t.Note
+	}
+
 	if t.Installed {
 		ver := t.Version
 		if ver == "" {
 			ver = "✓"
 		}
-		note := ""
-		if t.Note != "" {
-			note = tui.StyleMuted.Render(" " + t.Note)
-		}
-		fmt.Printf("    %s  %-14s %-12s %s%s\n",
+		fmt.Printf("    %s  %-14s %-12s %s\n",
 			tui.IconDone,
 			t.Binary,
 			tui.StyleDetailDone.Render(ver),
-			tui.StyleMuted.Render("("+t.FeatureArea+")"),
-			note,
+			tui.StyleMuted.Render(suffix),
 		)
 	} else {
 		label := "missing"
-		if !t.Required {
-			label = "not installed"
-		}
-		note := ""
-		if t.Note != "" {
-			note = tui.StyleMuted.Render(" " + t.Note)
-		}
 		icon := tui.IconFailed
 		style := tui.StyleDetailError
 		if !t.Required {
+			label = "not installed"
 			icon = tui.StyleMuted.Render("—")
 			style = tui.StyleMuted
 		}
-		fmt.Printf("    %s  %-14s %-12s %s%s\n",
+		fmt.Printf("    %s  %-14s %-12s %s\n",
 			icon,
 			t.Binary,
 			style.Render(label),
-			tui.StyleMuted.Render("("+t.FeatureArea+")"),
-			note,
+			tui.StyleMuted.Render(suffix),
 		)
 	}
 }
@@ -474,11 +450,11 @@ var doctorInstallCmd = &cobra.Command{
 	Long: `Detects missing CLI tools and installs them using your system's
 package manager (Homebrew on macOS, apt/dnf on Linux).
 
-By default, only required tools are installed. Use --all to include optional ones.
+By default, only core tools are installed. Use --all to include tools for optional features.
 
 Examples:
-  devx doctor install          # install missing required tools
-  devx doctor install --all    # install all missing tools (including optional)
+  devx doctor install          # install missing core tools
+  devx doctor install --all    # install all missing tools (including optional features)
   devx doctor install -y       # auto-confirm, no prompts`,
 	RunE: runDoctorInstall,
 }
@@ -507,10 +483,7 @@ func runDoctorInstall(_ *cobra.Command, _ []string) error {
 	fmt.Printf("  %s  %s\n\n", tui.StyleLabel.Render("Package Manager:"), plan.PackageManager)
 
 	for _, s := range plan.Steps {
-		reqLabel := tui.StyleDetailDone.Render("required")
-		if !s.IsRequired {
-			reqLabel = tui.StyleMuted.Render("optional")
-		}
+		reqLabel := tui.StyleMuted.Render(s.FeatureArea)
 		fmt.Printf("    %s  %-20s %s\n",
 			tui.StyleDetailRunning.Render("→"),
 			s.Tool,
@@ -623,7 +596,7 @@ func runDoctorAuth(_ *cobra.Command, _ []string) error {
 
 func init() {
 	doctorInstallCmd.Flags().BoolVar(&doctorInstallAll, "all", false,
-		"Install all missing tools, including optional ones")
+		"Install all missing tools, including those for optional features")
 
 	doctorCmd.AddCommand(doctorInstallCmd)
 	doctorCmd.AddCommand(doctorAuthCmd)

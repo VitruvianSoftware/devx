@@ -35,10 +35,11 @@ type InstallPlan struct {
 
 // InstallStep is a single install action.
 type InstallStep struct {
-	Tool       string `json:"tool"`
-	Command    string `json:"command"`
-	Tap        string `json:"tap,omitempty"`
-	IsRequired bool   `json:"required"`
+	Tool        string `json:"tool"`
+	Command     string `json:"command"`
+	Tap         string `json:"tap,omitempty"`
+	IsRequired  bool   `json:"required"`
+	FeatureArea string `json:"feature_area,omitempty"`
 }
 
 // PlanInstall looks at missing tools and returns the commands needed to install them.
@@ -64,8 +65,9 @@ func PlanInstall(requiredOnly bool) (*InstallPlan, error) {
 		}
 
 		step := InstallStep{
-			Tool:       t.Name,
-			IsRequired: t.Required,
+			Tool:        t.Name,
+			IsRequired:  t.Required,
+			FeatureArea: t.FeatureArea,
 		}
 
 		switch sys.PackageManager {
