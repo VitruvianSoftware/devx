@@ -24,12 +24,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
+	"github.com/VitruvianSoftware/devx/internal/ai"
 	"github.com/VitruvianSoftware/devx/internal/ship"
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
@@ -92,8 +94,13 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		return installShipHook()
 	}
 
+	// Auto-generate commit message via AI if -m is not provided
 	if shipCommitMsg == "" {
-		return fmt.Errorf("commit message is required: devx agent ship -m \"your message\"")
+		generated, err := generateCommitMessage()
+		if err != nil {
+			return fmt.Errorf("commit message is required: devx agent ship -m \"your message\"\n  (auto-generate failed: %v)", err)
+		}
+		shipCommitMsg = generated
 	}
 
 	cwd, _ := os.Getwd()
@@ -317,7 +324,7 @@ func installShipHook() error {
 
 func init() {
 	agentShipCmd.Flags().StringVarP(&shipCommitMsg, "message", "m", "",
-		"Commit message (required)")
+		"Commit message (omit to auto-generate via AI)")
 	agentShipCmd.Flags().StringVar(&shipBaseBranch, "base", "main",
 		"Base branch for the PR (default: main)")
 	agentShipCmd.Flags().DurationVar(&shipCITimeout, "ci-timeout", 10*time.Minute,
@@ -358,4 +365,75 @@ func convertStage(s *DevxConfigPipelineStage) *ship.PipelineStage {
 		Before: s.Before,
 		After:  s.After,
 	}
+}
+
+// generateCommitMessage uses AI to auto-generate a conventional commit message
+// from the current git diff.
+func generateCommitMessage() (string, error) {
+	// Get the diff
+	diff, err := exec.Command("git", "diff", "--cached", "--stat").CombinedOutput()
+	if err != nil || strings.TrimSpace(string(diff)) == "" {
+		// No staged changes — try unstaged
+		diff, err = exec.Command("git", "diff", "--stat").CombinedOutput()
+		if err != nil || strings.TrimSpace(string(diff)) == "" {
+			return "", fmt.Errorf("no diff available to generate commit message from")
+		}
+	}
+
+	// Get a more detailed diff for the AI (limited to avoid token overflow)
+	detailedDiff, _ := exec.Command("git", "diff", "--cached").CombinedOutput()
+	if strings.TrimSpace(string(detailedDiff)) == "" {
+		detailedDiff, _ = exec.Command("git", "diff").CombinedOutput()
+	}
+
+	// Truncate diff if too large (keep first 4000 chars)
+	diffText := string(detailedDiff)
+	if len(diffText) > 4000 {
+		diffText = diffText[:4000] + "\n... (diff truncated)"
+	}
+
+	prompt := fmt.Sprintf(`Generate a conventional commit message for this diff. Follow these rules:
+1. Use the format: type(scope): description
+2. Types: feat, fix, docs, refactor, test, chore, style, perf
+3. Keep the first line under 72 characters
+4. Add a blank line then a brief body if the change is complex
+5. Output ONLY the commit message text — no explanations, no code fences, no quotes
+
+Diff:
+%s`, diffText)
+
+	if !outputJSON {
+		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸"), "Auto-generating commit message via AI...")
+	}
+
+	result, err := ai.RunAgentPrompt(prompt)
+	if err != nil {
+		return "", err
+	}
+
+	if result.Mode == ai.AgentModeNone {
+		return "", fmt.Errorf("no AI provider available")
+	}
+
+	msg := strings.TrimSpace(result.Output)
+	if msg == "" {
+		return "", fmt.Errorf("AI returned empty commit message")
+	}
+
+	// Clean up: remove any wrapping quotes the AI might add
+	msg = strings.Trim(msg, "\"'`")
+
+	if !outputJSON {
+		fmt.Printf("    %s  %s %s\n",
+			shipStylePass.Render("✓"),
+			"generated via",
+			shipStyleMuted.Render(string(result.Mode)),
+		)
+		fmt.Printf("    %s  %s\n\n",
+			shipStyleMuted.Render("→"),
+			msg,
+		)
+	}
+
+	return msg, nil
 }
