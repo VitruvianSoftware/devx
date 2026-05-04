@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.43.0](https://github.com/VitruvianSoftware/devx/compare/v0.42.0...v0.43.0) (2026-05-04)
+
+
+### Features
+
+* **doctor:** rework CLI tool output to feature-area flat list ([#168](https://github.com/VitruvianSoftware/devx/issues/168)) ([18faa8b](https://github.com/VitruvianSoftware/devx/commit/18faa8bcbbc3a826f1f3c9c4c7de4492c887201d))
+
 ## [0.42.0](https://github.com/VitruvianSoftware/devx/compare/v0.41.0...v0.42.0) (2026-05-04)
 
 
