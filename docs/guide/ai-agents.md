@@ -36,7 +36,15 @@ Which skills should we inject?
   [•] Platform Engineering SOP (Mandatory Docs) — Enforces strict documentation-first behavior and image embedding requirements.
 ```
 
-`devx` then writes the appropriate `SKILL.md` files into each agent's config directory:
+**Step 3** — Setup Local AI Bridge (Optional):
+
+```
+Would you like to configure your agents to use local LLMs via Ollama?
+  This bridges Claude Code, OpenCode, etc. to run completely offline.
+  [y/N]
+```
+
+`devx` then writes the appropriate `SKILL.md` files into each agent's config directory, and runs `ollama launch <agent> --config` behind the scenes to bridge them to local models.
 
 | Agent | Skill destination |
 |---|---|
@@ -85,11 +93,29 @@ The next `devx agent init` will offer the new skill automatically.
 
 When an AI agent opens your project, it immediately reads these skill files to understand your architecture and rules — without needing to read the entire codebase first. It also enforces team standards that would otherwise need to be repeated in every prompt.
 
-## `devx agent ship` — Deterministic Pipeline Guardrail
+## `devx agent ship` & `devx agent review`
 
-AI agents have a fundamental weakness: they forget to verify CI pipelines after merging code. `devx agent ship` eliminates this by wrapping the entire commit → push → PR → CI lifecycle into a single blocking command.
+AI agents have a fundamental weakness: they forget to verify CI pipelines after merging code. 
+`devx agent ship` eliminates this by wrapping the entire commit → push → PR → CI lifecycle into a single blocking command. `devx agent review` does the same, but leaves the PR open for human review instead of auto-merging.
 
-### Usage
+### AI-Powered Commits
+
+Both commands support **auto-generating commit messages** if you omit the `-m` flag. `devx` will read your `git diff` and seamlessly invoke a local AI backend (via `ollama launch`, or falling back to cloud providers) to generate a conventional commit message.
+
+```bash
+# Auto-generates message (e.g., "feat: add new feature")
+devx agent ship
+```
+
+### Local AI Code Review
+
+You can run a local AI code review before creating a PR. The AI will inspect your diff for bugs, security vulnerabilities, and missing error handling (ignoring stylistic bikeshedding).
+
+```bash
+devx agent review --ai-review
+```
+
+### Pipeline Lifecycle
 
 ```bash
 devx agent ship -m "feat: implement new feature"
@@ -100,8 +126,9 @@ This command executes four phases sequentially:
 | Phase | Description |
 |---|---|
 | **Pre-flight** | Runs local tests, lint, and build for the auto-detected stack |
+| **AI Review** | *(Optional)* Runs local AI code review if `--ai-review` is passed |
 | **Commit & Push** | Stages, commits, and pushes (bypassing the pre-push hook internally) |
-| **PR & Merge** | Creates a GitHub PR and squash-merges it |
+| **PR & Merge** | Creates a GitHub PR and squash-merges it (or leaves open if `review`) |
 | **CI Poll** | **Blocks the terminal** until the CI pipeline completes on main |
 
 The command returns deterministic exit codes (documented in the [Exit Codes & Telemetry](#exit-codes-telemetry) section below).

@@ -8,7 +8,7 @@ When an idea is fully implemented and shipped, it is **migrated to `FEATURES.md`
 
 ## Idea Template
 
-To propose a new feature, copy the template below and add it to the appropriate priority section. Please ensure you increment the Idea Number sequentially (the last shipped feature was 57).
+To propose a new feature, copy the template below and add it to the appropriate priority section. Please ensure you increment the Idea Number sequentially (the last shipped feature was 64).
 
 ```markdown
 ### [Idea Number]. [Feature Title]

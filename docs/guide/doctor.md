@@ -42,6 +42,14 @@ Verifies all authentication sessions and API tokens:
 - **CF Tunnel Token** — checks `.env` for `CF_TUNNEL_TOKEN`
 - **Vault credentials** — checks `op`, `bw`, or `gcloud` auth status (only if installed)
 
+### AI Landscape
+Verifies local AI inference providers, cloud API keys, and installed coding agents:
+
+- **Local Providers** — checks if Ollama or LM Studio are installed and running
+- **Cloud Providers** — checks if `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY` are exported
+- **Coding Agents** — detects installed CLI agents like Claude Code (`claude`), OpenCode (`opencode`), or Codex (`codex`)
+- **Actionable Tips** — provides contextual tips (e.g., suggesting `ollama launch claude` if you have local compute but no cloud API key)
+
 ### Feature Readiness
 Maps tool + credential requirements to devx commands, telling you exactly which features are operational:
 

@@ -76,6 +76,14 @@ This document serves as an organized historical record of all major capabilities
 * **The Problem:** When an AI drops into a repository, it has to guess what `devx` does or blindly run `devx --help` over and over, consuming expensive tokens.
 * **The Solution:** Created official agent manifest files (`.agents/skills/devx/SKILL.md` for standard Antigravity/Gemini agents, `.cursorrules` for Cursor, `CLAUDE.md` for Claude Code, and `.github/copilot-instructions.md` for Copilot). These configuration files ensure any AI immediately drops into a repository natively understanding `devx`'s non-interactive composition, JSON workflows, and numeric error codes without hallucinations.
 
+### 64. Intelligent CLI Agent Integration & Local AI Tool Use (DONE)
+* **The Problem:** Setting up AI coding agents (like Claude Code) to use local LLMs securely and without configuration friction is difficult. Additionally, CLI actions like writing commit messages or reviewing code are often disconnected from the AI agent loop.
+* **The Solution:** Shipped a suite of local-first AI integrations powered by a shared agent execution chain (`ollama launch` -> internal chat API -> graceful degradation).
+  * `devx doctor`: Features a new "AI Landscape" section visually auditing local providers (Ollama, LM Studio), cloud APIs, and installed coding agents, offering actionable configuration tips.
+  * `devx agent init`: Offers a zero-config bridge, automatically configuring detected agents (e.g., Claude Code) to point to local Ollama endpoints securely via `ollama launch <agent> --config`.
+  * `devx agent ship`: Auto-generates conventional commit messages by passing `git diff` to the best available AI backend when the `-m` flag is omitted.
+  * `devx agent review --ai-review`: Executes a local AI-powered code review focusing on bugs, security, and error handling before pushing a review PR.
+
 ---
 
 ## Developer Onboarding Automation
