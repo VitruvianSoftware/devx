@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.41.0](https://github.com/VitruvianSoftware/devx/compare/v0.40.0...v0.41.0) (2026-05-04)
+
+
+### Features
+
+* **agent:** AI-powered commit messages and code review via ollama launch ([9018811](https://github.com/VitruvianSoftware/devx/commit/9018811f63555e32b3e177a7ac4dd0ac6433f53b))
+* **agent:** integrate ollama launch --config into devx agent init ([5f261a0](https://github.com/VitruvianSoftware/devx/commit/5f261a08caaf43456538f7ed3d4a7cb72be3bd43))
+
 ## [0.40.0](https://github.com/VitruvianSoftware/devx/compare/v0.39.1...v0.40.0) (2026-05-04)
 
 
