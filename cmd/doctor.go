@@ -294,6 +294,11 @@ func computeFeatureReadiness(r doctor.Report) []featureReadiness {
 			ready:   (tools["podman"] || tools["docker"] || tools["limactl"] || tools["colima"]) && (tools["aws"] || tools["gcloud"]),
 			missing: joinMissing("podman, docker, lima, or colima", missingList(tools, "aws", "gcloud")),
 		},
+		{
+			command: "devx db synthesize",
+			ready:   (tools["podman"] || tools["docker"]) && (tools["ollama"] || os.Getenv("OPENAI_API_KEY") != ""),
+			missing: "podman or docker, plus Ollama or OPENAI_API_KEY",
+		},
 	}
 }
 

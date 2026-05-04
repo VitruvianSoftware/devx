@@ -10,6 +10,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 psql $DATABASE_URL -f db/migrations/001_initial.sql
 psql $DATABASE_URL -f db/seeds/001_sample_data.sql
+# Or: devx db synthesize postgres --records 100  (AI-powered chaotic test data)
 uvicorn app.main:app --reload
 ```
 

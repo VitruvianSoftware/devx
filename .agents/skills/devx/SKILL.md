@@ -45,6 +45,10 @@ When running a command that fails, `devx` avoids polluting standard error with u
 - `Exit 16 (CodeVMNotFound)`: The VM has been deleted. You must run `devx vm init`.
 - `Exit 22 (CodeHostPortInUse)`: You attempted to run `devx db spawn <engine>`, but the host port is already allocated by another daemon. Try a different port using `-p <port>`.
 - `Exit 41 (CodeNotLoggedIn)`: You attempted to expose a tunnel, but `cloudflared` is not authenticated on this machine. Request that the user run `cloudflared tunnel login`.
+- `Exit 86 (CodeDBSynthNoAI)`: No local LLM or cloud API key found. Start Ollama (`ollama serve`) or export `OPENAI_API_KEY`.
+- `Exit 87 (CodeDBSynthLLMFailed)`: LLM API request failed or timed out during `devx db synthesize`.
+- `Exit 88 (CodeDBSynthUnsupported)`: Engine does not support DDL extraction. Only `postgres` and `mysql` are supported.
+- `Exit 89 (CodeDBSynthSQLFailed)`: Generated SQL failed to execute against the database container.
 
 ## 🗺️ 5. Architectural Awareness (`devx map`)
 
@@ -218,3 +222,31 @@ State replication enforces a "Bring-Your-Own-Bucket" model using S3 or GCS.
 | 83 | Failed to download bundle |
 | 84 | Wrong passphrase or corrupted bundle (decryption failed) |
 | 85 | Checkpoint or snapshot restore failed |
+
+## 🧬 14. AI Synthetic Data Generation (`devx db synthesize`)
+
+Generate realistic, edge-case-heavy synthetic data by extracting the local database schema and sending it to an AI model. The generated SQL is sanitized and piped directly into the running container.
+
+### Commands
+
+- `devx db synthesize postgres`: Generate 100 synthetic records for PostgreSQL via the best available AI provider.
+- `devx db synthesize mysql --records 50`: Generate 50 records for MySQL.
+- `devx db synthesize postgres --model llama3`: Override the default LLM model.
+- `devx db synthesize postgres --dry-run`: Preview the extracted schema and LLM prompt without generating data.
+- `devx db synthesize postgres --json`: Return structured JSON output for programmatic consumption.
+
+### AI Provider Priority
+1. Local Ollama on port 11434 (zero-config)
+2. Local LM Studio on port 1234
+3. `OPENAI_API_KEY` environment variable (cloud fallback, also supports `OPENAI_API_BASE` for custom endpoints)
+
+### Supported Engines
+Only `postgres` and `mysql` support DDL extraction. Running against `redis` or `mongo` will fail with exit code 88.
+
+### Exit Codes
+| Code | Meaning |
+|------|---------|
+| 86 | No local LLM or cloud API key found |
+| 87 | LLM API request failed or timed out |
+| 88 | Engine does not support DDL extraction (mongo/redis) |
+| 89 | Generated SQL failed to execute against the database |

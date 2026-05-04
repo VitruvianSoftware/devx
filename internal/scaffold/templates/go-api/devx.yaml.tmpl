@@ -12,6 +12,8 @@ databases:
     # 'devx db pull postgres' will stream a pre-anonymised production dump here.
     # pull:
     #   command: "gcloud storage cat gs://my-scrubbed-dumps/nightly.sql.gz | gunzip"
+    # Or generate AI-powered synthetic data for edge-case testing:
+    # devx db synthesize postgres --records 100
 
 tunnels:
   - name: api

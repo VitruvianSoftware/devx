@@ -65,6 +65,7 @@ devx/
 │   ├── up.go               # `devx tunnel up` (devx.yaml topology)
 │   └── ...                 # Individual subcommands
 ├── internal/               # Private packages
+│   ├── ai/                 # AI bridge discovery and LLM completion API
 │   ├── authproxy/          # Built-in basic auth reverse proxy
 │   ├── cloudflare/         # Cloudflare tunnel management
 │   ├── config/             # Runtime configuration
@@ -97,9 +98,10 @@ devx/
 ### Adding a New Command
 
 1. Create a new file in `cmd/` (e.g., `cmd/mycommand.go`)
-2. Register it under the appropriate parent command (`vmCmd`, `tunnelCmd`, `configCmd`, or `execCmd`)
-3. Follow the existing command patterns for consistency
+2. Register it under the appropriate parent command (`vmCmd`, `tunnelCmd`, `configCmd`, `execCmd`, `dbCmd`, `stateCmd`, or `clusterMgmtCmd`)
+3. Follow the existing command patterns for consistency (study a sibling command in the same family)
 4. Add tests if the command contains non-trivial logic
+5. Update all 4 agent skill files if the command adds new flags, exit codes, or structured output
 
 ### Adding Internal Packages
 

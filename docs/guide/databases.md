@@ -179,6 +179,54 @@ devx db snapshot rm postgres before-migration
 
 Snapshots respect **`--json`** output for AI agents, and destructive restorations ask for confirmation unless bypassed with `-y`.
 
+### `devx db synthesize`
+
+Generate highly realistic, edge-case-heavy synthetic data by extracting your local database schema and sending it to an AI model. The generated SQL INSERT statements are piped directly into your running container.
+
+```bash
+# Generate 100 synthetic records for PostgreSQL
+devx db synthesize postgres
+
+# Generate 50 records using a specific model
+devx db synthesize mysql --records 50 --model llama3
+
+# Preview the schema and prompt without generating data
+devx db synthesize postgres --dry-run
+```
+
+**Supported engines:** `postgres`, `mysql`
+
+#### AI Provider Priority
+
+`devx` automatically discovers the best available AI provider:
+
+1. **Local Ollama** on port 11434 (zero-config if running)
+2. **Local LM Studio** on port 1234
+3. **OpenAI API** via `OPENAI_API_KEY` environment variable
+
+For users running gemini-cli, claude code, codex, or opencode who already have cloud API keys, export `OPENAI_API_KEY` (or set `OPENAI_API_BASE` for custom/proxy endpoints like LiteLLM).
+
+#### What makes the data "chaotic"?
+
+The AI is instructed to generate intentionally adversarial data:
+- **Unicode**: Japanese, Arabic, emoji, and mixed-script strings
+- **Boundary values**: Empty strings, very long strings (200+ chars), NULL where nullable
+- **Numeric extremes**: MIN/MAX integers, negative values, zero
+- **Temporal diversity**: Dates spanning decades, edge timestamps
+- **Foreign key compliance**: Parent rows are always inserted before child rows
+
+This catches bugs that "perfect" seed data misses — things like truncation errors, encoding issues, and off-by-one date calculations.
+
+#### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--records` | `100` | Number of synthetic records to generate |
+| `--model` | *(auto)* | Target LLM model (overrides provider default) |
+| `--runtime` | `podman` | Container runtime (`podman`, `docker`) |
+
+Supports `--json` for structured output and `--dry-run` to preview the schema and prompt without making an LLM call.
+
 ## Declarative Mode
 
 For projects with multiple services, define your databases in `devx.yaml`:

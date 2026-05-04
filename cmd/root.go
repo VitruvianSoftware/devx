@@ -55,7 +55,7 @@ Configuration Domains:
                   (Discovered recursively upward from the current directory)
 
 Feature Ecosystem:
-  • Local Infrastructure: Podman VMs, ephemeral databases, GCP emulators, and The Nuke button.
+  • Local Infrastructure: Podman VMs, ephemeral databases, AI synthetic data, GCP emulators, and The Nuke button.
   • Kubernetes & Hybrid: Zero-Config k3s, Multi-Node Clusters, and remote Hybrid Bridge.
   • Networking & Edge: Instant Cloudflare Tunnels, Email Catchers, and Webhook TUIs.
   • Orchestration & State: Multi-repo management, Vault secrets syncing, and file syncing.

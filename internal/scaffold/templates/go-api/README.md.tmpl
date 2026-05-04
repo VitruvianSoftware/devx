@@ -46,6 +46,12 @@ NULL handling, pagination, and rendering bugs that an empty database hides.
 psql $DATABASE_URL -f db/seeds/001_sample_data.sql
 ```
 
+Or generate AI-powered chaotic test data (Unicode, extreme lengths, boundary values):
+
+```bash
+devx db synthesize postgres --records 100
+```
+
 ### 5. Start the server
 
 ```bash

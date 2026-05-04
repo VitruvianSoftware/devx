@@ -447,3 +447,11 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** "It doesn't work on my machine." Helping a teammate means trying to manually replicate their database state and environment variables.
 * **The Solution:** Bundles the live memory state (CRIU checkpoints), exported database volumes, and environment metadata into a single AES-256-GCM encrypted, portable `.tar.gz` artifact. A developer runs `devx state share` to get a unique ID, and a teammate runs `devx state attach <ID>` to instantly boot the exact broken environment. Uses a "Bring-Your-Own-Bucket" model supporting S3 and GCS, and gracefully falls back to a "DB-only" mode for runtimes that don't support CRIU.
 * **Key files:** `cmd/state_share.go`, `cmd/state_attach.go`, `internal/state/replication.go`, `internal/state/crypto.go`, `internal/state/relay.go`
+
+### 57. AI-Driven Synthetic Data Generation (`devx db synthesize`)
+* **Priority:** ✅ Shipped
+* **Effort:** Medium
+* **Impact:** Catches edge-case bugs by generating highly realistic, chaotic test data that manual seed scripts miss.
+* **The Problem:** Enterprises lock down production data, and manual seed scripts generate "perfect" data that misses real-world edge cases — weird Unicode names, missing fields, extreme string lengths, boundary numeric values. Developers need adversarial test data but don't have time to hand-craft thousands of chaotic INSERT statements.
+* **The Solution:** `devx db synthesize <engine>` extracts the local database schema via `pg_dump -s` / `mysqldump --no-data`, sends it to an AI model with instructions to generate chaotic, edge-case-heavy INSERT statements, sanitizes the LLM response (stripping any markdown wrappers), and pipes the raw SQL directly into the running container. Supports local LLMs (Ollama on port 11434, LM Studio on port 1234) with zero configuration, and falls back to cloud providers via `OPENAI_API_KEY` for developers who can't run models locally. All generated data is wrapped in a transaction (`BEGIN; ... COMMIT;`) for atomic insertion. Supports `--dry-run` for prompt preview, `--json` for structured output, and `--model` for LLM model override.
+* **Key files:** `cmd/db_synthesize.go`, `internal/database/synthesizer.go`, `internal/ai/completion.go`, `internal/ai/completion_test.go`, `internal/database/synthesizer_test.go`

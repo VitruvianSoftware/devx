@@ -57,6 +57,12 @@ const (
 	CodeStateAttachDownloadFail = 83 // Failed to download bundle
 	CodeStateAttachDecryptFail  = 84 // Wrong passphrase or corrupted bundle
 	CodeStateAttachRestoreFail  = 85 // Checkpoint or snapshot restore failed
+
+	// Synthetic Data Generation Errors (Idea 57)
+	CodeDBSynthNoAI        = 86 // No local LLM or cloud API key found
+	CodeDBSynthLLMFailed   = 87 // LLM API request failed or timed out
+	CodeDBSynthUnsupported = 88 // Engine does not support DDL extraction (mongo/redis)
+	CodeDBSynthSQLFailed   = 89 // Generated SQL failed to execute
 )
 
 // DevxError wraps a standard error with a stable machine-readable exit code.
