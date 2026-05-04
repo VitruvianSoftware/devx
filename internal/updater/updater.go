@@ -130,6 +130,10 @@ func fetchLatest() (tag, htmlURL string, err error) {
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", err
@@ -137,6 +141,9 @@ func fetchLatest() (tag, htmlURL string, err error) {
 	defer func() { _ = resp.Body.Close() }() 
 
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusForbidden {
+			return "", "", fmt.Errorf("GitHub API rate limit exceeded (403). Set GITHUB_TOKEN to increase your limit")
+		}
 		return "", "", fmt.Errorf("GitHub API returned %d", resp.StatusCode)
 	}
 
