@@ -22,11 +22,13 @@ package doctor
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // ToolStatus represents the state of a single prerequisite tool.
@@ -60,11 +62,29 @@ type SystemInfo struct {
 	PMVersion      string `json:"pm_version,omitempty"`
 }
 
+// AIProviderStatus represents the state of a single AI provider.
+type AIProviderStatus struct {
+	Name      string `json:"name"`
+	Type      string `json:"type"`      // "local_llm", "cloud_api", or "coding_agent"
+	Available bool   `json:"available"`
+	Detail    string `json:"detail,omitempty"`
+	Note      string `json:"note,omitempty"`
+}
+
+// AILandscape holds the detected AI providers and coding agents.
+type AILandscape struct {
+	Providers    []AIProviderStatus `json:"providers"`
+	LocalReady   bool               `json:"local_ready"`   // At least one local LLM is running
+	CloudReady   bool               `json:"cloud_ready"`   // At least one cloud API key is set
+	AgentsFound  int                `json:"agents_found"`  // Number of coding agents detected
+}
+
 // Report is the full doctor audit result.
 type Report struct {
 	System      SystemInfo         `json:"system"`
 	Tools       []ToolStatus       `json:"tools"`
 	Credentials []CredentialStatus `json:"credentials"`
+	AI          AILandscape        `json:"ai"`
 }
 
 // toolDef defines a tool to check.
@@ -351,7 +371,167 @@ func RunFullAudit(envFile string) Report {
 		System:      DetectSystem(),
 		Tools:       CheckTools(),
 		Credentials: CheckCredentials(envFile),
+		AI:          CheckAILandscape(),
 	}
+}
+
+// CheckAILandscape probes for available AI providers and coding agents.
+func CheckAILandscape() AILandscape {
+	var providers []AIProviderStatus
+	var localReady, cloudReady bool
+	agentsFound := 0
+
+	// ── Local LLM Servers ──────────────────────────────────────────
+
+	// Ollama (port 11434)
+	if isPortOpen("11434") {
+		model := ""
+		if out, err := exec.Command("ollama", "list").Output(); err == nil {
+			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+			if len(lines) > 1 {
+				model = fmt.Sprintf("%d model(s) loaded", len(lines)-1)
+			}
+		}
+		detail := "running on :11434"
+		if model != "" {
+			detail += ", " + model
+		}
+		providers = append(providers, AIProviderStatus{
+			Name: "Ollama", Type: "local_llm", Available: true,
+			Detail: detail, Note: "Preferred local provider",
+		})
+		localReady = true
+	} else {
+		// Check if ollama binary exists but server isn't running
+		note := "Install: brew install ollama"
+		if _, err := exec.LookPath("ollama"); err == nil {
+			note = "Installed but not running — start with: ollama serve"
+		}
+		providers = append(providers, AIProviderStatus{
+			Name: "Ollama", Type: "local_llm", Available: false,
+			Detail: "not running", Note: note,
+		})
+	}
+
+	// LM Studio (port 1234)
+	if isPortOpen("1234") {
+		providers = append(providers, AIProviderStatus{
+			Name: "LM Studio", Type: "local_llm", Available: true,
+			Detail: "running on :1234",
+		})
+		localReady = true
+	} else {
+		providers = append(providers, AIProviderStatus{
+			Name: "LM Studio", Type: "local_llm", Available: false,
+			Detail: "not running", Note: "Download: https://lmstudio.ai",
+		})
+	}
+
+	// ── Cloud API Keys ──────────────────────────────────────────────
+
+	// OpenAI
+	if key := os.Getenv("OPENAI_API_KEY"); key != "" {
+		detail := "OPENAI_API_KEY set"
+		if base := os.Getenv("OPENAI_API_BASE"); base != "" {
+			detail += fmt.Sprintf(" (custom base: %s)", base)
+		}
+		providers = append(providers, AIProviderStatus{
+			Name: "OpenAI API", Type: "cloud_api", Available: true,
+			Detail: detail, Note: "Cloud fallback for devx db synthesize",
+		})
+		cloudReady = true
+	} else {
+		providers = append(providers, AIProviderStatus{
+			Name: "OpenAI API", Type: "cloud_api", Available: false,
+			Detail: "OPENAI_API_KEY not set",
+			Note:  "Export OPENAI_API_KEY for cloud AI features",
+		})
+	}
+
+	// Anthropic
+	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
+		providers = append(providers, AIProviderStatus{
+			Name: "Anthropic API", Type: "cloud_api", Available: true,
+			Detail: "ANTHROPIC_API_KEY set",
+		})
+		cloudReady = true
+	} else {
+		providers = append(providers, AIProviderStatus{
+			Name: "Anthropic API", Type: "cloud_api", Available: false,
+			Detail: "ANTHROPIC_API_KEY not set",
+		})
+	}
+
+	// Google Gemini
+	geminiAvail := false
+	geminiDetail := "not configured"
+	if key := os.Getenv("GEMINI_API_KEY"); key != "" {
+		geminiAvail = true
+		geminiDetail = "GEMINI_API_KEY set"
+	} else if key := os.Getenv("GOOGLE_API_KEY"); key != "" {
+		geminiAvail = true
+		geminiDetail = "GOOGLE_API_KEY set"
+	}
+	providers = append(providers, AIProviderStatus{
+		Name: "Google Gemini API", Type: "cloud_api", Available: geminiAvail,
+		Detail: geminiDetail,
+	})
+	if geminiAvail {
+		cloudReady = true
+	}
+
+	// ── AI Coding Agents ───────────────────────────────────────────
+
+	agentChecks := []struct {
+		name   string
+		binary string
+		note   string
+	}{
+		{"Gemini CLI", "gemini", "Google's AI coding agent"},
+		{"Claude Code", "claude", "Anthropic's AI coding agent"},
+		{"Codex CLI", "codex", "OpenAI's AI coding agent"},
+		{"OpenCode", "opencode", "Open-source AI coding agent"},
+		{"Cursor", "cursor", "AI-powered IDE"},
+		{"Aider", "aider", "AI pair programming in terminal"},
+	}
+
+	for _, ac := range agentChecks {
+		if path, err := exec.LookPath(ac.binary); err == nil {
+			providers = append(providers, AIProviderStatus{
+				Name: ac.name, Type: "coding_agent", Available: true,
+				Detail: path, Note: ac.note,
+			})
+			agentsFound++
+		}
+	}
+
+	if agentsFound == 0 {
+		providers = append(providers, AIProviderStatus{
+			Name: "AI Coding Agents", Type: "coding_agent", Available: false,
+			Detail: "none detected",
+			Note:  "Install one and run: devx agent init",
+		})
+	}
+
+	return AILandscape{
+		Providers:   providers,
+		LocalReady:  localReady,
+		CloudReady:  cloudReady,
+		AgentsFound: agentsFound,
+	}
+}
+
+// isPortOpen checks if a TCP port is open on localhost with a short timeout.
+func isPortOpen(port string) bool {
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", port), 150*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	if conn != nil {
+		_ = conn.Close()
+		return true
+	}
+	return false
 }
 
 // --- helpers ---

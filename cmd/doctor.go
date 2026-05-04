@@ -156,6 +156,63 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	}
 	fmt.Println()
 
+	// ── AI Landscape ────────────────────────────────────────────────
+	fmt.Println(tui.StyleTitle.Render("  AI Landscape"))
+
+	// Group providers by type for clean rendering
+	localLLMs := make([]doctor.AIProviderStatus, 0)
+	cloudAPIs := make([]doctor.AIProviderStatus, 0)
+	codingAgents := make([]doctor.AIProviderStatus, 0)
+	for _, p := range report.AI.Providers {
+		switch p.Type {
+		case "local_llm":
+			localLLMs = append(localLLMs, p)
+		case "cloud_api":
+			cloudAPIs = append(cloudAPIs, p)
+		case "coding_agent":
+			codingAgents = append(codingAgents, p)
+		}
+	}
+
+	fmt.Println(tui.StyleMuted.Render("  Local LLM Servers:"))
+	for _, p := range localLLMs {
+		printAIRow(p)
+	}
+
+	fmt.Println(tui.StyleMuted.Render("  Cloud API Keys:"))
+	for _, p := range cloudAPIs {
+		printAIRow(p)
+	}
+
+	fmt.Println(tui.StyleMuted.Render("  AI Coding Agents:"))
+	for _, p := range codingAgents {
+		printAIRow(p)
+	}
+
+	// AI summary line
+	if report.AI.LocalReady || report.AI.CloudReady {
+		parts := make([]string, 0)
+		if report.AI.LocalReady {
+			parts = append(parts, "local LLM ready")
+		}
+		if report.AI.CloudReady {
+			parts = append(parts, "cloud API ready")
+		}
+		if report.AI.AgentsFound > 0 {
+			parts = append(parts, fmt.Sprintf("%d coding agent(s)", report.AI.AgentsFound))
+		}
+		fmt.Printf("    %s  %s\n",
+			tui.IconDone,
+			tui.StyleDetailDone.Render("AI features available: "+strings.Join(parts, ", ")),
+		)
+	} else {
+		fmt.Printf("    %s  %s\n",
+			tui.StyleMuted.Render("—"),
+			tui.StyleMuted.Render("No AI providers detected — AI features will use rule-based fallbacks"),
+		)
+	}
+	fmt.Println()
+
 	// ── Summary ─────────────────────────────────────────────────────
 	if missingRequired > 0 {
 		fmt.Println(tui.StyleErrorBox.Render(
@@ -227,6 +284,32 @@ func printCredRow(c doctor.CredentialStatus) {
 			tui.IconFailed,
 			c.Name,
 			tui.StyleDetailError.Render(c.Detail),
+		)
+	}
+}
+
+func printAIRow(p doctor.AIProviderStatus) {
+	if p.Available {
+		note := ""
+		if p.Note != "" {
+			note = tui.StyleMuted.Render(" " + p.Note)
+		}
+		fmt.Printf("    %s  %-22s %s%s\n",
+			tui.IconDone,
+			p.Name,
+			tui.StyleDetailDone.Render(p.Detail),
+			note,
+		)
+	} else {
+		note := ""
+		if p.Note != "" {
+			note = tui.StyleMuted.Render(" — " + p.Note)
+		}
+		fmt.Printf("    %s  %-22s %s%s\n",
+			tui.StyleMuted.Render("—"),
+			p.Name,
+			tui.StyleMuted.Render(p.Detail),
+			note,
 		)
 	}
 }
