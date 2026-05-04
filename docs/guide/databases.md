@@ -179,6 +179,28 @@ devx db snapshot rm postgres before-migration
 
 Snapshots respect **`--json`** output for AI agents, and destructive restorations ask for confirmation unless bypassed with `-y`.
 
+### `devx db ask`
+
+Query your local database using natural language or built-in diagnostics. This eliminates the need to switch context to GUI database tools.
+
+```bash
+# Natural language query (requires AI provider)
+devx db ask postgres "users who signed up this week"
+
+# Built-in diagnostics (no AI needed)
+devx db ask postgres --sizes              # Table sizes and row counts
+devx db ask postgres --recent             # Last 10 rows from each table
+devx db ask postgres --missing-indexes    # Tables without indexes
+devx db ask postgres --nulls users        # Column NULL ratios for a table
+
+# Preview the generated SQL without executing
+devx db ask postgres "orphaned orders" --dry-run
+```
+
+**Safety:** All generated queries run inside a read-only transaction by default (`BEGIN TRANSACTION READ ONLY`). To execute write operations (INSERT/UPDATE/DELETE), you must pass the `--allow-writes` flag, which prompts for confirmation unless bypassed with `-y`.
+
+**Supported engines:** `postgres`, `mysql`
+
 ### `devx db synthesize`
 
 Generate highly realistic, edge-case-heavy synthetic data by extracting your local database schema and sending it to an AI model. The generated SQL INSERT statements are piped directly into your running container.

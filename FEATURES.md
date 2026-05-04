@@ -463,3 +463,26 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Problem:** Enterprises lock down production data, and manual seed scripts generate "perfect" data that misses real-world edge cases — weird Unicode names, missing fields, extreme string lengths, boundary numeric values. Developers need adversarial test data but don't have time to hand-craft thousands of chaotic INSERT statements.
 * **The Solution:** `devx db synthesize <engine>` extracts the local database schema via `pg_dump -s` / `mysqldump --no-data`, sends it to an AI model with instructions to generate chaotic, edge-case-heavy INSERT statements, sanitizes the LLM response (stripping any markdown wrappers), and pipes the raw SQL directly into the running container. Supports local LLMs (Ollama on port 11434, LM Studio on port 1234) with zero configuration, and falls back to cloud providers via `OPENAI_API_KEY` for developers who can't run models locally. All generated data is wrapped in a transaction (`BEGIN; ... COMMIT;`) for atomic insertion. Supports `--dry-run` for prompt preview, `--json` for structured output, and `--model` for LLM model override.
 * **Key files:** `cmd/db_synthesize.go`, `internal/database/synthesizer.go`, `internal/ai/completion.go`, `internal/ai/completion_test.go`, `internal/database/synthesizer_test.go`
+
+### 59. Intelligent Failure Recovery (AI-Enhanced Error Handling) (DONE)
+* **Priority:** ✅ Shipped
+* **Effort:** Medium
+* **Impact:** Eliminates the most common developer frustration — cryptic container failures — across every `devx` command.
+* **The Problem:** When `devx up` or any command fails, developers get a raw error message and an exit code. They then have to manually inspect containers, read logs, check port bindings, and cross-reference environment variables to figure out what went wrong.
+* **The Solution:** Built a two-tier diagnosis engine hooked into the centralized `Execute()` error handler in `cmd/root.go`:
+  * **Without LLM (Tier 1):** A built-in knowledge base of ~16 pattern-matching rules catches common failures (password mismatch, port conflicts, OOMKilled, expired certs, architecture mismatches) and displays an actionable fix command. This works without any AI provider.
+  * **With LLM (Tier 2):** If Tier 1 finds no match and a local AI provider is detected, the engine silently collects runtime context (container states, port bindings, redacted environment variables) and sends it to the AI for a contextual root-cause diagnosis. A 15-second timeout ensures failed AI never blocks the developer.
+  * **Design constraint:** The diagnosis is suppressed in `--json` mode so AI agents don't get free-form text injected into structured output.
+* **Key files:** `internal/ai/diagnose.go`, `internal/ai/diagnose_test.go`, `cmd/root.go`, `internal/devxerr/error.go`
+
+### 60. Natural Language Database Queries (`devx db ask`) (DONE)
+* **Priority:** ✅ Shipped
+* **Effort:** Low
+* **Impact:** Eliminates context-switching to GUI database tools for quick local data inspection.
+* **The Problem:** During development, developers constantly need to check local database state — "did that migration run?", "what does the user record look like?", "are there orphaned rows?" Each time they either write raw SQL, open a GUI tool, or ask their coding agent.
+* **The Solution:** `devx db ask <engine> "<question>"` translates natural language to SQL using the schema already extractable via `pg_dump`/`mysqldump`, executes it against the running container, and displays results as a styled terminal table.
+  * **Without LLM:** Built-in diagnostic queries via `--sizes` (table sizes), `--recent` (last 10 rows), `--missing-indexes` (tables without indexes), and `--nulls <table>` (NULL ratios). These cover the most common workflows without any AI.
+  * **With LLM:** Full natural language → SQL translation. Example: `devx db ask postgres "users who signed up this week but never placed an order"`.
+  * **Safety:** All generated queries run inside a read-only transaction (`BEGIN TRANSACTION READ ONLY`). Mutations are blocked unless `--allow-writes` is explicitly passed with interactive confirmation.
+  * Supports `--dry-run`, `--json`, `--model`, and `--runtime` flags.
+* **Key files:** `cmd/db_ask.go`, `internal/database/query.go`, `internal/database/query_test.go`

@@ -34,28 +34,6 @@ To propose a new feature, copy the template below and add it to the appropriate 
 * **The Solution:** Add a `ModeKubernetes` execution path alongside `ModeNative` and `ModeContainer`. When `--remote` is passed (or when the provider is `cluster`), `devx audit` creates an ephemeral K8s Job using the scanner image, transfers the source tree into the pod via `kubectl cp` or tar-pipe (`tar cf - . | kubectl exec -i <pod> -- tar xf - -C /scan`), streams logs back to the terminal, and cleans up the Job on exit. A shared PVC can optionally cache the Trivy CVE database across runs. **Not recommended for pre-push hooks** due to pod scheduling latency (15-45s) — designed for CI/CD pipelines (`devx agent ship`, GitHub Actions) where the code is already cluster-adjacent.
 * **Key files:** `internal/audit/k8s.go`, `cmd/audit.go`
 
-### 59. Intelligent Failure Recovery (AI-Enhanced Error Handling)
-* **Priority:** 🟢 P1
-* **Effort:** Medium
-* **Impact:** Eliminates the most common developer frustration — cryptic container failures — across every `devx` command.
-* **The Problem:** When `devx up` or any command fails, developers get a raw error message and an exit code. They then have to manually inspect containers, read logs, check port bindings, and cross-reference environment variables to figure out what went wrong. This is the single highest-friction moment in the `devx` workflow.
-* **The Solution:** Bake automatic failure analysis into every `devx` command — not as a separate subcommand, but as a recovery layer that triggers on any non-zero exit. When a command fails, `devx` automatically collects the full runtime context (container inspect, logs, port bindings, env vars, topology from `devx.yaml`) and diagnoses the root cause.
-  * **Without LLM:** Pattern-match the exit code and stderr against a built-in knowledge base of common failures (e.g., "password authentication failed" → check `.env` mismatch, "address already in use" → show `lsof` output for the port). Display the matched rule and suggested fix command.
-  * **With LLM:** Feed the full runtime context graph to the AI for a precise, contextual diagnosis that understands the relationships between services. Example: "Your `api` container can't connect to `db` because the `POSTGRES_PASSWORD` in api's env is `dev123` but the db container was spawned with `devpass` from `.env.local`."
-  * **Design constraint:** The command must never print "Error: no AI provider found." The rule-based fallback is the baseline; the LLM is an enhancement activated via `--explain` or automatically when a provider is detected.
-* **Key files:** `internal/ai/diagnose.go`, `internal/devxerr/recovery.go`, `cmd/up.go` (and other command files for hook integration)
-
-### 60. Natural Language Database Queries (`devx db ask`)
-* **Priority:** 🟢 P1
-* **Effort:** Low (schema extraction infrastructure already exists from Idea 57)
-* **Impact:** Eliminates context-switching to GUI database tools (DBeaver, TablePlus) for quick local data inspection.
-* **The Problem:** During development, developers constantly need to check local database state — "did that migration run?", "what does the user record look like?", "are there orphaned rows?" Each time they either write raw SQL, open a GUI tool, or ask their coding agent to generate a query. All three options require knowing the schema or switching context away from the terminal.
-* **The Solution:** Add `devx db ask <engine> "<question>"` that translates natural language to SQL using the schema already extractable via `pg_dump`/`mysqldump` (infrastructure built for Idea 57), executes it against the running container, and displays results as a formatted terminal table.
-  * **Without LLM:** Provide a library of canned diagnostic queries accessible via named shortcuts: `devx db ask postgres --recent` (last 10 rows from each table), `devx db ask postgres --sizes` (table sizes), `devx db ask postgres --missing-indexes` (tables without indexes), `devx db ask postgres --nulls <table>` (columns with high NULL ratios). These cover the most common "quick check" workflows without any AI.
-  * **With LLM:** Full natural language → SQL translation. Example: `devx db ask postgres "users who signed up this week but never placed an order"`.
-  * **Safety:** All generated queries run inside a read-only transaction (`SET TRANSACTION READ ONLY`). Mutations are blocked unless `--allow-writes` is explicitly passed. `--dry-run` shows the generated SQL without executing.
-* **Key files:** `cmd/db_ask.go`, `internal/database/query.go`, `internal/ai/text2sql.go`
-
 ### 61. Test Generation from Intercepted Traffic (`devx test generate`)
 * **Priority:** 🟡 P2
 * **Effort:** High

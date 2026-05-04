@@ -66,6 +66,7 @@ export default withMermaid(defineConfig({
           { text: 'Native Apps & Logs', link: '/guide/execution' },
           { text: 'PR Preview Sandbox', link: '/guide/preview' },
           { text: 'Diagnostics & State', link: '/guide/state' },
+          { text: 'Failure Recovery', link: '/guide/failure-recovery' },
           { text: 'State Replication', link: '/guide/state-replication' }
         ]
       },

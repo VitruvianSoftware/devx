@@ -63,6 +63,14 @@ const (
 	CodeDBSynthLLMFailed   = 87 // LLM API request failed or timed out
 	CodeDBSynthUnsupported = 88 // Engine does not support DDL extraction (mongo/redis)
 	CodeDBSynthSQLFailed   = 89 // Generated SQL failed to execute
+
+	// Failure Recovery Errors (Idea 59)
+	CodeDiagnosisTimeout = 90 // AI diagnosis timed out
+
+	// Natural Language DB Query Errors (Idea 60)
+	CodeDBAskNoAI        = 91 // No AI provider for natural language query
+	CodeDBAskQueryFailed = 92 // Generated SQL failed to execute
+	CodeDBAskReadOnly    = 93 // Write attempted without --allow-writes
 )
 
 // DevxError wraps a standard error with a stable machine-readable exit code.
