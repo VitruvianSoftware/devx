@@ -88,8 +88,8 @@
 * [ ] `.github/skills/platform-engineer/SKILL.md`
 
 **Distributable templates (source-of-truth shipped to end-user projects via `devx agent ship`):**
-* [ ] `internal/agent/templates/.agent/skills/devx/SKILL.md`
-* [ ] `internal/agent/templates/.agent/skills/platform-engineer/SKILL.md`
+* [ ] `internal/agent/templates/.agents/skills/devx/SKILL.md`
+* [ ] `internal/agent/templates/.agents/skills/platform-engineer/SKILL.md`
 * [ ] `internal/agent/templates/.claude/skills/devx/SKILL.md`
 * [ ] `internal/agent/templates/.claude/skills/platform-engineer/SKILL.md`
 * [ ] `internal/agent/templates/.cursor/skills/devx/SKILL.md`

@@ -34,7 +34,7 @@ var AgentBasePaths = map[string]string{
 	"cursor":      ".cursor/skills",
 	"claude":      ".claude/skills",
 	"copilot":     ".github/skills",
-	"antigravity": ".agent/skills",
+	"antigravity": ".agents/skills",
 }
 
 var AvailableSkills = []struct {
@@ -69,7 +69,7 @@ func Install(targetAgent string, skillName string, force bool) error {
 		return fmt.Errorf("reading embedded template %q: %w", templatePath, err)
 	}
 
-	// Make sure the target directory exists (for things like .github/ or .agent/)
+	// Make sure the target directory exists (for things like .github/ or .agents/)
 	if err := os.MkdirAll(filepath.Dir(relPath), 0755); err != nil {
 		return fmt.Errorf("creating directory for %q: %w", relPath, err)
 	}

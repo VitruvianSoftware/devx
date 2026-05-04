@@ -40,7 +40,7 @@ Which skills should we inject?
 
 | Agent | Skill destination |
 |---|---|
-| Antigravity/Gemini | `.agent/skills/<skill>/SKILL.md` |
+| Antigravity/Gemini | `.agents/skills/<skill>/SKILL.md` |
 | Cursor | `.cursor/skills/<skill>/SKILL.md` |
 | Claude Code | `.claude/skills/<skill>/SKILL.md` |
 | GitHub Copilot | `.github/skills/<skill>/SKILL.md` |
