@@ -114,7 +114,7 @@ func stackDefinitions() []struct {
 		{"go.mod", false, stackInfo{
 			Name:     "Go",
 			TestCmd:  []string{"go", "test", "./..."},
-			LintCmd:  []string{"sh", "-c", "golangci-lint run && addlicense -check -c VitruvianSoftware -l mit -ignore 'docs/**' -ignore 'internal/scaffold/templates/**' ."},
+			LintCmd:  []string{"go", "vet", "./..."},
 			BuildCmd: []string{"go", "build", "./..."},
 		}},
 		{"package.json", false, stackInfo{
