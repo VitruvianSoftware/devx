@@ -27,10 +27,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
-const otlpEndpoint = "http://localhost:4318/v1/traces"
+var otlpEndpoint = "http://localhost:4318/v1/traces"
+
+func init() {
+	if ep := os.Getenv("DEVX_OTLP_ENDPOINT"); ep != "" {
+		otlpEndpoint = ep
+	}
+}
+
+// SetOtlpEndpoint overrides the default or env-configured OTLP endpoint.
+func SetOtlpEndpoint(ep string) {
+	if ep != "" {
+		otlpEndpoint = ep
+	}
+}
+
+func getOtlpEndpoint() string {
+	return otlpEndpoint
+}
 
 // Attribute is a key-value pair attached to an OTel span.
 type Attribute struct {
@@ -99,7 +117,7 @@ func ExportSpan(name string, duration time.Duration, attrs ...Attribute) {
 	}
 
 	client := &http.Client{Timeout: 2 * time.Second}
-	resp, err := client.Post(otlpEndpoint, "application/json", bytes.NewReader(body))
+	resp, err := client.Post(getOtlpEndpoint(), "application/json", bytes.NewReader(body))
 	if err != nil {
 		return // Backend not running — silent no-op
 	}

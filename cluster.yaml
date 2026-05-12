@@ -22,6 +22,12 @@ cluster:
   name: james-cluster
   k3sVersion: "v1.35.3+k3s1"
   kubeconfig: "~/.kube/cluster.yaml"
+  metallb:
+    enabled: true
+    ipRange: 10.44.86.210-10.44.86.215
+  tailscale:
+    enabled: true
+    authKey: "tskey-auth-kF7NzaRTD221CNTRL-zSRtdbEYHRYdxTJH1ChmQYE2ryNquZFG"
 
 nodes:
   - host: james-macbook-pro
@@ -37,21 +43,21 @@ nodes:
     pool: laptop-cp-2
     vm:
       cpus: 8
-      memory: 8GiB
-      disk: 30GiB
+      memory: 10GiB
+      disk: 80GiB
 
   - host: james-mbp32
     role: server
     pool: laptop-cp-3
     vm:
       cpus: 8
-      memory: 8GiB
-      disk: 50GiB
+      memory: 20GiB
+      disk: 80GiB
 
   - host: james-mbp
     role: agent
     pool: laptop-worker-1
     vm:
       cpus: 8
-      memory: 8GiB
-      disk: 30GiB
+      memory: 20GiB
+      disk: 100GiB

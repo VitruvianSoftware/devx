@@ -38,9 +38,23 @@ type Config struct {
 
 // ClusterConfig holds cluster-wide settings.
 type ClusterConfig struct {
-	Name       string `yaml:"name"`
-	K3sVersion string `yaml:"k3sVersion"`
-	Kubeconfig string `yaml:"kubeconfig"`
+	Name       string          `yaml:"name"`
+	K3sVersion string          `yaml:"k3sVersion"`
+	Kubeconfig string          `yaml:"kubeconfig"`
+	MetalLB    MetalLBConfig   `yaml:"metallb"`
+	Tailscale  TailscaleConfig `yaml:"tailscale"`
+}
+
+// TailscaleConfig holds configuration for Tailscale networking.
+type TailscaleConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	AuthKey string `yaml:"authKey"`
+}
+
+// MetalLBConfig holds configuration for the MetalLB load balancer.
+type MetalLBConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	IPRange string `yaml:"ipRange"`
 }
 
 // NodeConfig describes a single node in the cluster.

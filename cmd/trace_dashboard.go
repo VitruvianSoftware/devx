@@ -23,37 +23,34 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 	"github.com/spf13/cobra"
-
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/doctor"
 )
 
-func newClusterDoctorCmd(configFile *string) *cobra.Command {
-	var fix bool
+var traceDashboardCmd = &cobra.Command{
+	Use:   "dashboard",
+	Short: "Provision the devx Build Metrics dashboard to the configured Grafana instance",
+	Long: `Pushes the default devx Build Metrics dashboard to the Grafana URL
+configured in devx.yaml or the DEVX_GRAFANA_URL environment variable.
 
-	cmd := &cobra.Command{
-		Use:   "doctor",
-		Short: "Run pre-flight checks and health diagnostics",
-		Long: `Doctor verifies that all prerequisites are met on each configured host
-and, if a cluster is running, checks its health. Checks include:
+This is useful if you are using an external Grafana instance (like one
+running in your cluster) instead of the local one spawned by 'devx trace spawn'.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Attempt to load config to populate telemetry endpoints
+		// This will set the grafana URL globally if configured in devx.yaml
+		_, _ = resolveConfig("devx.yaml", "")
 
-  - SSH connectivity to all hosts
-  - Homebrew installation
-  - Lima installation and version
-  - socket_vmnet installation and service status
-  - VM provisioning state
-  - Network bridging and cross-VM connectivity
-  - K3s health, node readiness, and etcd quorum`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.Load(*configFile)
-			if err != nil {
-				return fmt.Errorf("loading config: %w", err)
-			}
-			return doctor.Run(cmd.Context(), cfg, fix)
-		},
-	}
+		fmt.Println("🚀 Provisioning devx Build Metrics dashboard...")
+		
+		if err := telemetry.ProvisionDashboard(); err != nil {
+			return fmt.Errorf("failed to provision dashboard: %w", err)
+		}
 
-	cmd.Flags().BoolVar(&fix, "fix", false, "Attempt to automatically fix detected issues")
-	return cmd
+		fmt.Println("✅ Dashboard successfully provisioned to Grafana!")
+		return nil
+	},
+}
+
+func init() {
+	traceCmd.AddCommand(traceDashboardCmd)
 }

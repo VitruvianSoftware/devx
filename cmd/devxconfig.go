@@ -28,6 +28,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 )
 
 // ─── Schema Types ─────────────────────────────────────────────────────────────
@@ -150,6 +151,7 @@ type DevxConfigProfile struct {
 	Services  []DevxConfigService  `yaml:"services"`
 	Mocks     []DevxConfigMock     `yaml:"mocks"`
 	Bridge    *DevxConfigBridge    `yaml:"bridge"` // Idea 46.1: override bridge config per profile
+	Telemetry *DevxConfigTelemetry `yaml:"telemetry"`
 }
 
 // DevxConfigPipelineStage defines a single pipeline step (test, lint, build, verify).
@@ -233,6 +235,12 @@ type DevxConfigState struct {
 	Relay string `yaml:"relay"` // Upload destination: s3://... or gs://...
 }
 
+// DevxConfigTelemetry configures telemetry endpoints.
+type DevxConfigTelemetry struct {
+	GrafanaURL   string `yaml:"grafana_url"`
+	OtlpEndpoint string `yaml:"otlp_endpoint"`
+}
+
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
 	Name          string                              `yaml:"name"`            // Project name
@@ -249,6 +257,7 @@ type DevxConfig struct {
 	CustomActions map[string]DevxConfigCustomAction   `yaml:"customActions"`   // Named tasks (scaffolded for Idea 45.3)
 	Bridge        *DevxConfigBridge                   `yaml:"bridge"`          // Hybrid edge-to-local routing (Idea 46.1)
 	State         *DevxConfigState                    `yaml:"state"`           // State replication settings (Idea 56)
+	Telemetry     *DevxConfigTelemetry                `yaml:"telemetry"`       // Telemetry export endpoints
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────
@@ -317,6 +326,15 @@ func resolveConfig(yamlPath, profile string) (*DevxConfig, error) {
 
 	if err := validateBridgeServices(cfg); err != nil {
 		return nil, err
+	}
+
+	if cfg.Telemetry != nil {
+		if cfg.Telemetry.GrafanaURL != "" {
+			telemetry.SetGrafanaURL(cfg.Telemetry.GrafanaURL)
+		}
+		if cfg.Telemetry.OtlpEndpoint != "" {
+			telemetry.SetOtlpEndpoint(cfg.Telemetry.OtlpEndpoint)
+		}
 	}
 
 	return cfg, nil
@@ -619,6 +637,19 @@ func mergeProfile(cfg *DevxConfig, profile DevxConfigProfile) {
 		}
 		if !found {
 			cfg.Mocks = append(cfg.Mocks, pm)
+		}
+	}
+
+	// Merge telemetry
+	if profile.Telemetry != nil {
+		if cfg.Telemetry == nil {
+			cfg.Telemetry = &DevxConfigTelemetry{}
+		}
+		if profile.Telemetry.GrafanaURL != "" {
+			cfg.Telemetry.GrafanaURL = profile.Telemetry.GrafanaURL
+		}
+		if profile.Telemetry.OtlpEndpoint != "" {
+			cfg.Telemetry.OtlpEndpoint = profile.Telemetry.OtlpEndpoint
 		}
 	}
 }

@@ -106,6 +106,31 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 		return fmt.Errorf("VM provisioning failed: %w\n\nRecovery: re-run 'cluster init' to retry", err)
 	}
 
+	// Phase 1.5: Configure Tailscale networking if enabled.
+	if cfg.Cluster.Tailscale.Enabled && cfg.Cluster.Tailscale.AuthKey != "" {
+		fmt.Println("\n🔒 Phase 1.5: Installing and configuring Tailscale (parallel)...")
+		g, gctx = errgroup.WithContext(ctx)
+		for _, node := range cfg.Nodes {
+			node := node
+			g.Go(func() error {
+				runner := util.NewRunner(node)
+				k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
+				tsIP, err := k3sMgr.InstallTailscale(gctx, cfg.Cluster.Tailscale.AuthKey)
+				if err != nil {
+					return fmt.Errorf("[%s] tailscale setup failed: %w", node.Host, err)
+				}
+				mu.Lock()
+				ipMap[node.Host] = tsIP
+				mu.Unlock()
+				fmt.Printf("  [%s] Tailscale ready (IP: %s)\n", node.Host, tsIP)
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			return fmt.Errorf("tailscale provisioning failed: %w", err)
+		}
+	}
+
 	// Phase 2: Validate cross-VM network connectivity.
 	fmt.Println("\n🌐 Phase 2: Validating network connectivity...")
 	if err := validateNetwork(ctx, cfg, ipMap); err != nil {
@@ -124,7 +149,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	initRunner := util.NewRunner(initNode)
 	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
-	if err := initK3s.InitCluster(ctx, ipMap[initNode.Host], initNode.Pool, cfg.Cluster.K3sVersion, serverIPs); err != nil {
+	if err := initK3s.InitCluster(ctx, ipMap[initNode.Host], initNode.Pool, cfg.Cluster.K3sVersion, serverIPs, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled); err != nil {
 		return fmt.Errorf("[%s] initializing K3s: %w\n\nRecovery: re-run 'cluster init' to retry", initNode.Host, err)
 	}
 
@@ -148,7 +173,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 			runner := util.NewRunner(node)
 			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
-			if err := k3sMgr.JoinServer(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{ipMap[node.Host]}); err != nil {
+			if err := k3sMgr.JoinServer(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{ipMap[node.Host]}, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as server: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
 			}
 
@@ -167,7 +192,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 			runner := util.NewRunner(node)
 			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
-			if err := k3sMgr.JoinAgent(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion); err != nil {
+			if err := k3sMgr.JoinAgent(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as agent: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
 			}
 			slog.Info("node joined as agent", "host", node.Host)
@@ -180,8 +205,16 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 		return err
 	}
 
-	// Phase 7: Final validation.
-	fmt.Println("\n✅ Phase 7: Validating cluster...")
+	// Phase 7: Deploy MetalLB if enabled.
+	if cfg.Cluster.MetalLB.Enabled && cfg.Cluster.MetalLB.IPRange != "" {
+		fmt.Println("\n🛜 Phase 7: Deploying MetalLB...")
+		if err := initK3s.DeployMetalLB(ctx, cfg.Cluster.MetalLB.IPRange); err != nil {
+			return fmt.Errorf("deploying metallb: %w", err)
+		}
+	}
+
+	// Phase 8: Final validation.
+	fmt.Println("\n✅ Phase 8: Validating cluster...")
 	out, err := initK3s.GetNodeStatus(ctx)
 	if err != nil {
 		return fmt.Errorf("[%s] getting node status: %w", initNode.Host, err)
@@ -263,13 +296,21 @@ func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 			return fmt.Errorf("[%s] getting IP: %w", node.Host, err)
 		}
 
+		if cfg.Cluster.Tailscale.Enabled && cfg.Cluster.Tailscale.AuthKey != "" {
+			tsIP, err := k3sMgr.InstallTailscale(ctx, cfg.Cluster.Tailscale.AuthKey)
+			if err != nil {
+				return fmt.Errorf("[%s] installing tailscale: %w", node.Host, err)
+			}
+			nodeIP = tsIP
+		}
+
 		switch node.Role {
 		case "server":
-			if err := k3sMgr.JoinServer(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{nodeIP}); err != nil {
+			if err := k3sMgr.JoinServer(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{nodeIP}, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as server: %w", node.Host, err)
 			}
 		case "agent":
-			if err := k3sMgr.JoinAgent(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion); err != nil {
+			if err := k3sMgr.JoinAgent(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as agent: %w", node.Host, err)
 			}
 		}

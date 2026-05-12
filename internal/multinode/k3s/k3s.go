@@ -24,6 +24,7 @@ package k3s
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -62,8 +63,34 @@ func (m *Manager) IsInstalled(ctx context.Context) (bool, error) {
 	return strings.TrimSpace(out) == "yes", nil
 }
 
+// InstallTailscale installs Tailscale, brings it up with the provided auth key, and returns the Tailscale IP.
+func (m *Manager) InstallTailscale(ctx context.Context, authKey string) (string, error) {
+	slog.Info("installing Tailscale", "host", m.runner.Host)
+	fmt.Printf("  [%s] Installing and configuring Tailscale...\n", m.runner.Host)
+
+	// Install Tailscale
+	script := "curl -fsSL https://tailscale.com/install.sh | sh"
+	if _, err := m.runner.LimaShellSudo(ctx, m.vmName, script); err != nil {
+		return "", fmt.Errorf("[%s] installing tailscale: %w", m.runner.Host, err)
+	}
+
+	// Bring up Tailscale
+	upCmd := fmt.Sprintf("tailscale up --authkey=%s --accept-routes", authKey)
+	if _, err := m.runner.LimaShellSudo(ctx, m.vmName, upCmd); err != nil {
+		return "", fmt.Errorf("[%s] starting tailscale: %w", m.runner.Host, err)
+	}
+
+	// Get the Tailscale IPv4 address
+	ip, err := m.runner.LimaShellSudo(ctx, m.vmName, "tailscale ip -4")
+	if err != nil {
+		return "", fmt.Errorf("[%s] getting tailscale ip: %w", m.runner.Host, err)
+	}
+
+	return strings.TrimSpace(ip), nil
+}
+
 // InitCluster bootstraps the first control plane node with --cluster-init.
-func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion string, tlsSANs []string) error {
+func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -87,9 +114,19 @@ func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion stri
 		versionEnv = fmt.Sprintf("INSTALL_K3S_VERSION=%q ", k3sVersion)
 	}
 
+	extraArgs := ""
+	if disableServiceLB {
+		extraArgs += " --disable servicelb"
+	}
+	if useTailscale {
+		extraArgs += " --flannel-iface=tailscale0"
+	} else {
+		extraArgs += " --flannel-iface=lima0"
+	}
+
 	script := fmt.Sprintf(
-		`curl -sfL https://get.k3s.io | %sINSTALL_K3S_EXEC="server" sh -s - --cluster-init --node-name=%s --node-ip=%s --advertise-address=%s%s --flannel-iface=lima0 --node-label=pool=%s`,
-		versionEnv, m.runner.Host, nodeIP, nodeIP, sanFlags, pool,
+		`curl -sfL https://get.k3s.io | %sINSTALL_K3S_EXEC="server" sh -s - --cluster-init --node-name=%s --node-ip=%s --advertise-address=%s%s%s --node-label=pool=%s`,
+		versionEnv, m.runner.Host, nodeIP, nodeIP, sanFlags, extraArgs, pool,
 	)
 
 	slog.Debug("K3s install script", "host", m.runner.Host, "script", script)
@@ -97,8 +134,55 @@ func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion stri
 	return err
 }
 
+// DeployMetalLB installs MetalLB and configures the IPAddressPool and L2Advertisement.
+func (m *Manager) DeployMetalLB(ctx context.Context, ipRange string) error {
+	slog.Info("deploying metallb", "host", m.runner.Host, "ip_range", ipRange)
+	fmt.Printf("  [%s] Applying MetalLB manifests...\n", m.runner.Host)
+
+	// Install MetalLB
+	_, err := m.runner.LimaShellSudo(ctx, m.vmName, "k3s kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml")
+	if err != nil {
+		return fmt.Errorf("applying metallb manifests: %w", err)
+	}
+
+	fmt.Printf("  [%s] Waiting for MetalLB controller to be ready...\n", m.runner.Host)
+	// Give it a moment to create the pods
+	time.Sleep(5 * time.Second)
+	_, err = m.runner.LimaShellSudo(ctx, m.vmName, "k3s kubectl wait --namespace metallb-system --for=condition=ready pod --selector=component=controller --timeout=90s")
+	if err != nil {
+		slog.Warn("timeout waiting for metallb pods, continuing anyway", "error", err)
+	}
+
+	fmt.Printf("  [%s] Configuring MetalLB IP pool (%s)...\n", m.runner.Host, ipRange)
+	configManifest := fmt.Sprintf(`apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default-pool
+  namespace: metallb-system
+spec:
+  addresses:
+  - %s
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default-l2
+  namespace: metallb-system
+`, ipRange)
+
+	// Write the manifest to a temp file in the VM and apply it
+	encoded := base64.StdEncoding.EncodeToString([]byte(configManifest))
+	cmd := fmt.Sprintf("echo '%s' | base64 -d | k3s kubectl apply -f -", encoded)
+	_, err = m.runner.LimaShellSudo(ctx, m.vmName, cmd)
+	if err != nil {
+		return fmt.Errorf("applying metallb config: %w", err)
+	}
+
+	return nil
+}
+
 // JoinServer joins a server node to an existing HA cluster.
-func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, tlsSANs []string) error {
+func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -122,11 +206,21 @@ func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool
 		versionEnv = fmt.Sprintf("INSTALL_K3S_VERSION=%q ", k3sVersion)
 	}
 
+	extraArgs := ""
+	if disableServiceLB {
+		extraArgs += " --disable servicelb"
+	}
+	if useTailscale {
+		extraArgs += " --flannel-iface=tailscale0"
+	} else {
+		extraArgs += " --flannel-iface=lima0"
+	}
+
 	// Install K3s binary and create systemd service without starting it,
 	// because the join may need multiple retries as etcd stabilizes.
 	script := fmt.Sprintf(
-		`curl -sfL https://get.k3s.io | %sINSTALL_K3S_SKIP_START=true K3S_TOKEN=%q INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s --flannel-iface=lima0 --node-label=pool=%s`,
-		versionEnv, token, serverURL, m.runner.Host, nodeIP, nodeIP, sanFlags, pool,
+		`curl -sfL https://get.k3s.io | %sINSTALL_K3S_SKIP_START=true K3S_TOKEN=%q INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s --node-label=pool=%s`,
+		versionEnv, token, serverURL, m.runner.Host, nodeIP, nodeIP, sanFlags, extraArgs, pool,
 	)
 
 	slog.Debug("K3s join script", "host", m.runner.Host)
@@ -175,7 +269,7 @@ func (m *Manager) waitForJoin(ctx context.Context, timeout time.Duration) error 
 }
 
 // JoinAgent joins a worker node to the cluster.
-func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string) error {
+func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, useTailscale bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -194,9 +288,16 @@ func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool,
 		versionEnv = fmt.Sprintf("INSTALL_K3S_VERSION=%q ", k3sVersion)
 	}
 
+	extraArgs := ""
+	if useTailscale {
+		extraArgs += " --flannel-iface=tailscale0"
+	} else {
+		extraArgs += " --flannel-iface=lima0"
+	}
+
 	script := fmt.Sprintf(
-		`curl -sfL https://get.k3s.io | %sK3S_TOKEN=%q K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s --flannel-iface=lima0 --node-label=pool=%s`,
-		versionEnv, token, serverURL, m.runner.Host, nodeIP, pool,
+		`curl -sfL https://get.k3s.io | %sK3S_TOKEN=%q K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s --node-label=pool=%s`,
+		versionEnv, token, serverURL, m.runner.Host, nodeIP, extraArgs, pool,
 	)
 
 	slog.Debug("K3s agent join script", "host", m.runner.Host)

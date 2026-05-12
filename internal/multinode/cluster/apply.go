@@ -24,7 +24,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/multinode/config"
@@ -62,25 +61,15 @@ func Apply(ctx context.Context, cfg *config.Config, dryRun bool) error {
 		// Use jq on the limactl list --json output. (Fallback to string extraction if jq isn't present,
 		// but since we are executing on the remote, it's easier to use a simple awk/grep or just python).
 		// Wait, Lima provides limactl list --json. We can extract cpus and memory natively in go!
-		out, err := runner.RunShell(ctx, fmt.Sprintf("limactl list %s --json", node.GetVMName()))
+		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl list %s --json", node.GetVMName()))
 		if err != nil {
 			return fmt.Errorf("[%s] fetching lima properties: %w", node.Host, err)
 		}
 
-		// Quick string matching since limactl list --json has deterministic keys:
-		// "cpus":8, "memory":8589934592 or "memory":"8GiB" depending on version.
-		expectedCPUs := fmt.Sprintf(`"cpus":%d`, node.VM.CPUs)
-		
-		// If CPU matches, we skip for now (we can do robust checking, but this is a simple heuristic).
-		if strings.Contains(out, expectedCPUs) {
-			slog.Debug("node resources match configuration", "host", node.Host)
-			continue
-		}
-
-		slog.Info("node hardware config differs from requested config", "host", node.Host, "cpus", node.VM.CPUs, "memory", node.VM.Memory)
+		slog.Info("node hardware config differs from requested config", "host", node.Host, "cpus", node.VM.CPUs, "memory", node.VM.Memory, "disk", node.VM.Disk)
 		fmt.Printf("\n🔄 Applying update to %s...\n", node.Host)
 		if dryRun {
-			fmt.Printf("  [DRY RUN] Would drain %s, stop VM, update CPUs/Memory to %d/%s, and restart.\n", node.Host, node.VM.CPUs, node.VM.Memory)
+			fmt.Printf("  [DRY RUN] Would drain %s, stop VM, update CPUs/Memory/Disk to %d/%s/%s, and restart.\n", node.Host, node.VM.CPUs, node.VM.Memory, node.VM.Disk)
 			continue
 		}
 
@@ -99,16 +88,21 @@ func Apply(ctx context.Context, cfg *config.Config, dryRun bool) error {
 
 		// Step 3: Apply the new limits to lima.yaml.
 		// We use standard sed. By modifying lima.yaml directly we avoid touching unmanaged nested settings.
-		fmt.Printf("  [%s] Applying new hardware limits (CPU=%d, Memory=%s)...\n", node.Host, node.VM.CPUs, node.VM.Memory)
-		sedCmd := fmt.Sprintf("sed -i.bak -e 's/^cpus: .*/cpus: %d/' -e 's/^memory: .*/memory: \"%s\"/' ~/.lima/%s/lima.yaml",
-			node.VM.CPUs, node.VM.Memory, node.GetVMName())
+		fmt.Printf("  [%s] Applying new hardware limits (CPU=%d, Memory=%s, Disk=%s)...\n", node.Host, node.VM.CPUs, node.VM.Memory, node.VM.Disk)
+		sedCmd := fmt.Sprintf("sed -i.bak -e 's/^cpus: .*/cpus: %d/' -e 's/^memory: .*/memory: \"%s\"/' -e 's/^disk: .*/disk: \"%s\"/' ~/.lima/%s/lima.yaml",
+			node.VM.CPUs, node.VM.Memory, node.VM.Disk, node.GetVMName())
 		_, err = runner.RunShell(ctx, sedCmd)
 		if err != nil {
 			return fmt.Errorf("[%s] updating lima.yaml: %w", node.Host, err)
 		}
-
-		// Step 4: Start the VM.
-		fmt.Printf("  [%s] Restarting VM...\n", node.Host)
+// Step 3.5: Resize disk using limactl disk resize if needed
+fmt.Printf("  [%s] Resizing VM disk...\n", node.Host)
+_, err = runner.RunShell(ctx, fmt.Sprintf("limactl disk resize %s --size %s", node.GetVMName(), node.VM.Disk))
+if err != nil {
+	// Don't fail the whole update just because disk resize failed (might not be supported on all versions)
+	slog.Warn("disk resize failed", "host", node.Host, "error", err)
+}
+		// Step 4: Start the VM.		fmt.Printf("  [%s] Restarting VM...\n", node.Host)
 		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl start %s", node.GetVMName()))
 		if err != nil {
 			return fmt.Errorf("[%s] starting VM: %w", node.Host, err)

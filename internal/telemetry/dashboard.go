@@ -25,10 +25,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
-const grafanaAPI = "http://localhost:3000/api/dashboards/db"
+var (
+	grafanaAPI      = "http://localhost:3000/api/dashboards/db"
+	prometheusUID   = "Prometheus-Data"
+	tempoUID        = "Tempo"
+)
+
+func init() {
+	if url := os.Getenv("DEVX_GRAFANA_URL"); url != "" {
+		grafanaAPI = fmt.Sprintf("%s/api/dashboards/db", url)
+	}
+	if uid := os.Getenv("DEVX_GRAFANA_PROMETHEUS_UID"); uid != "" {
+		prometheusUID = uid
+	}
+	if uid := os.Getenv("DEVX_GRAFANA_TEMPO_UID"); uid != "" {
+		tempoUID = uid
+	}
+}
+
+// SetGrafanaURL overrides the default or env-configured Grafana URL.
+func SetGrafanaURL(url string) {
+	if url != "" {
+		grafanaAPI = fmt.Sprintf("%s/api/dashboards/db", url)
+	}
+}
+
+func getGrafanaAPI() string {
+	return grafanaAPI
+}
 
 // ProvisionDashboard auto-installs the "devx Build Metrics" dashboard into a
 // running Grafana instance. Fire-and-forget: warns on error but never fatals.
@@ -44,7 +72,7 @@ func ProvisionDashboard() error {
 		return fmt.Errorf("marshalling dashboard: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", grafanaAPI, bytes.NewReader(body))
+	req, err := http.NewRequest("POST", getGrafanaAPI(), bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("creating request: %w", err)
 	}
@@ -146,11 +174,11 @@ func promStatPanel(title string, x, y, w, h int, query, reducer, color, unit str
 		},
 		"datasource": map[string]string{
 			"type": "prometheus",
-			"uid":  "prometheus",
+			"uid":  prometheusUID,
 		},
 		"targets": []map[string]interface{}{
 			{
-				"datasource": map[string]string{"type": "prometheus", "uid": "prometheus"},
+				"datasource": map[string]string{"type": "prometheus", "uid": prometheusUID},
 				"expr":       query,
 				"refId":      "A",
 				"instant":    true,
@@ -182,11 +210,11 @@ func promTimeSeriesPanel(title string, x, y, w, h int, query, unit string) map[s
 		},
 		"datasource": map[string]string{
 			"type": "prometheus",
-			"uid":  "prometheus",
+			"uid":  prometheusUID,
 		},
 		"targets": []map[string]interface{}{
 			{
-				"datasource": map[string]string{"type": "prometheus", "uid": "prometheus"},
+				"datasource": map[string]string{"type": "prometheus", "uid": prometheusUID},
 				"expr":       query,
 				"refId":      "A",
 			},
@@ -210,7 +238,7 @@ func promBarGaugePanel(title string, x, y, w, h int, targets []promTarget) map[s
 	queryTargets := make([]map[string]interface{}, 0, len(targets))
 	for _, t := range targets {
 		queryTargets = append(queryTargets, map[string]interface{}{
-			"datasource":   map[string]string{"type": "prometheus", "uid": "prometheus"},
+			"datasource":   map[string]string{"type": "prometheus", "uid": prometheusUID},
 			"expr":         t.Query,
 			"legendFormat": t.Legend,
 			"refId":        t.RefID,
@@ -226,7 +254,7 @@ func promBarGaugePanel(title string, x, y, w, h int, targets []promTarget) map[s
 		},
 		"datasource": map[string]string{
 			"type": "prometheus",
-			"uid":  "prometheus",
+			"uid":  prometheusUID,
 		},
 		"targets": queryTargets,
 		"fieldConfig": map[string]interface{}{
@@ -257,14 +285,14 @@ func tablePanel(title string, x, y, w, h int, query string) map[string]interface
 		},
 		"datasource": map[string]string{
 			"type": "tempo",
-			"uid":  "tempo",
+			"uid":  tempoUID,
 		},
 		"targets": []map[string]interface{}{
 			{
-				"datasource": map[string]string{"type": "tempo", "uid": "tempo"},
+				"datasource": map[string]string{"type": "tempo", "uid": tempoUID},
 				"queryType":  "traceql",
 				"query":      query,
-				"tableType":  "spans",
+				"tableType":  "traces",
 				"limit":      20,
 			},
 		},
@@ -286,14 +314,14 @@ func tablePanelWithSelect(title string, x, y, w, h int, query string) map[string
 		},
 		"datasource": map[string]string{
 			"type": "tempo",
-			"uid":  "tempo",
+			"uid":  tempoUID,
 		},
 		"targets": []map[string]interface{}{
 			{
-				"datasource": map[string]string{"type": "tempo", "uid": "tempo"},
+				"datasource": map[string]string{"type": "tempo", "uid": tempoUID},
 				"queryType":  "traceql",
 				"query":      query,
-				"tableType":  "spans",
+				"tableType":  "traces",
 				"limit":      50,
 			},
 		},
