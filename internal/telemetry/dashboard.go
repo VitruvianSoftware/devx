@@ -182,6 +182,14 @@ func dashboardJSON() map[string]interface{} {
 				`{resource.service.name="devx" && name="devx_run"}`),
 			tablePanelWithSelect("Top Slowest Tests", 12, 32, 12, 8,
 				`{resource.service.name="devx" && name=~"go_test:.*"} | select(span.devx.test.name, span.devx.test.package, span.devx.test.status)`),
+
+			// ── Row 7: Version tracking ───────────────────────────────
+			promTimeSeriesPanel("Activity by Version", 0, 40, 12, 8,
+				`sum by (service_version) (rate(traces_spanmetrics_calls_total{service="devx"}[5m]))`,
+				"cps"),
+			promBarGaugePanel("Version Distribution", 12, 40, 12, 8, []promTarget{
+				{Query: `sum by (service_version) (traces_spanmetrics_calls_total{service="devx"})`, Legend: "{{service_version}}", RefID: "A"},
+			}),
 		},
 	}
 }

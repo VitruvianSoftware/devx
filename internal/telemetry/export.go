@@ -32,6 +32,7 @@ import (
 )
 
 var otlpEndpoint = "http://localhost:4318/v1/traces"
+var serviceVersion = "dev"
 
 func init() {
 	if ep := os.Getenv("DEVX_OTLP_ENDPOINT"); ep != "" {
@@ -43,6 +44,14 @@ func init() {
 func SetOtlpEndpoint(ep string) {
 	if ep != "" {
 		otlpEndpoint = ep
+	}
+}
+
+// SetServiceVersion sets the version string included in every OTel span.
+// Call this once from main/cmd with the build-time version.
+func SetServiceVersion(v string) {
+	if v != "" {
+		serviceVersion = v
 	}
 }
 
@@ -83,6 +92,7 @@ func ExportSpan(name string, duration time.Duration, attrs ...Attribute) {
 				"resource": map[string]interface{}{
 					"attributes": []map[string]interface{}{
 						otelStringAttr("service.name", "devx"),
+						otelStringAttr("service.version", serviceVersion),
 					},
 				},
 				"scopeSpans": []map[string]interface{}{
@@ -193,6 +203,7 @@ func BuildOTLPPayload(name string, duration time.Duration, attrs ...Attribute) (
 				"resource": map[string]interface{}{
 					"attributes": []map[string]interface{}{
 						otelStringAttr("service.name", "devx"),
+						otelStringAttr("service.version", serviceVersion),
 					},
 				},
 				"scopeSpans": []map[string]interface{}{

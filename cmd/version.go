@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"runtime/debug"
 
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 	"github.com/VitruvianSoftware/devx/internal/updater"
 	"github.com/spf13/cobra"
 )
@@ -40,6 +41,7 @@ func init() {
 			version = info.Main.Version
 		}
 	}
+	telemetry.SetServiceVersion(version)
 }
 
 var versionCmd = &cobra.Command{
