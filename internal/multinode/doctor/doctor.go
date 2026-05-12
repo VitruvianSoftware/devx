@@ -196,8 +196,8 @@ func checkBridgedIP(ctx context.Context, mgr *lima.Manager, runner *remote.Runne
 	if err != nil {
 		if fix {
 			fmt.Printf("  [%s] 🔧 Auto-fixing Bridged IP (restarting VM to fetch DHCP lease)...\n", host)
-			runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl stop %s", vmName))
-			runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
+			_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl stop %s", vmName))
+			_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
 			ip, err = mgr.GetBridgedIP(ctx)
 			if err == nil {
 				return CheckResult{Name: "Bridged IP", Host: host, Passed: true, Message: fmt.Sprintf("%s (fixed)", ip)}
