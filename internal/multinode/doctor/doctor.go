@@ -160,8 +160,8 @@ func checkSocketVmnet(ctx context.Context, runner *remote.Runner, host string, f
 		if fix {
 			fmt.Printf("  [%s] 🔧 Auto-fixing socket_vmnet (restarting daemon)...\n", host)
 			// Try to restart via homebrew services on macOS
-			runner.RunShell(ctx, "sudo launchctl stop homebrew.mxcl.socket_vmnet 2>/dev/null || true")
-			runner.RunShell(ctx, "sudo launchctl start homebrew.mxcl.socket_vmnet")
+			_, _ = runner.RunShell(ctx, "sudo launchctl stop homebrew.mxcl.socket_vmnet 2>/dev/null || true")
+			_, _ = runner.RunShell(ctx, "sudo launchctl start homebrew.mxcl.socket_vmnet")
 			
 			out, err = runner.RunShell(ctx, cmd)
 			if err == nil {
@@ -181,7 +181,7 @@ func checkVM(ctx context.Context, mgr *lima.Manager, runner *remote.Runner, vmNa
 	passed := status == lima.VMStatusRunning
 	if !passed && fix {
 		fmt.Printf("  [%s] 🔧 Auto-fixing VM (starting VM)...\n", host)
-		runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
+		_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
 		status, _ = mgr.Status(ctx)
 		passed = status == lima.VMStatusRunning
 		if passed {
@@ -196,8 +196,8 @@ func checkBridgedIP(ctx context.Context, mgr *lima.Manager, runner *remote.Runne
 	if err != nil {
 		if fix {
 			fmt.Printf("  [%s] 🔧 Auto-fixing Bridged IP (restarting VM to fetch DHCP lease)...\n", host)
-			runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl stop %s", vmName))
-			runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
+			_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl stop %s", vmName))
+			_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
 			ip, err = mgr.GetBridgedIP(ctx)
 			if err == nil {
 				return CheckResult{Name: "Bridged IP", Host: host, Passed: true, Message: fmt.Sprintf("%s (fixed)", ip)}
@@ -228,7 +228,7 @@ func checkK3s(ctx context.Context, mgr *k3s.Manager, runner *remote.Runner, vmNa
 	
 	if !active && fix {
 		fmt.Printf("  [%s] 🔧 Auto-fixing K3s (restarting %s)...\n", host, serviceName)
-		runner.LimaShellSudo(ctx, vmName, fmt.Sprintf("systemctl restart %s", serviceName))
+		_, _ = runner.LimaShellSudo(ctx, vmName, fmt.Sprintf("systemctl restart %s", serviceName))
 		out, err = runner.LimaShellSudo(ctx, vmName, fmt.Sprintf("systemctl is-active %s 2>/dev/null", serviceName))
 		if err == nil && strings.TrimSpace(out) == "active" {
 			return CheckResult{Name: "K3s", Host: host, Passed: true, Message: "installed & active (fixed)"}
@@ -263,7 +263,7 @@ func checkClusterHealth(ctx context.Context, mgr *k3s.Manager, runner *remote.Ru
 		fmt.Printf("  [%s] 🔧 Auto-fixing Cluster Health (uncordoning nodes)...\n", host)
 		// Try to uncordon all nodes to see if it fixes SchedulingDisabled
 		for _, n := range cfg.Nodes {
-			runner.LimaShellSudo(ctx, vmName, fmt.Sprintf("k3s kubectl uncordon %s 2>/dev/null || true", n.Host))
+			_, _ = runner.LimaShellSudo(ctx, vmName, fmt.Sprintf("k3s kubectl uncordon %s 2>/dev/null || true", n.Host))
 		}
 		out, err = mgr.GetNodeStatus(ctx)
 		if err == nil && !strings.Contains(out, "NotReady") && !strings.Contains(out, "SchedulingDisabled") {
