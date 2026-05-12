@@ -115,46 +115,73 @@ func dashboardJSON() map[string]interface{} {
 		},
 		"panels": []interface{}{
 			// ── Row 1: Overview stats (Prometheus) ────────────────────
-			promStatPanel("Total Builds", 0, 0, 6, 4,
+			promStatPanel("Total Builds", 0, 0, 4, 4,
 				`sum(traces_spanmetrics_calls_total{service="devx", span_name=~"devx_run|agent_ship_build"})`,
 				"lastNotNull", "#79C0FF", "short"),
-			promStatPanel("Total Preflights", 6, 0, 6, 4,
+			promStatPanel("Total Preflights", 4, 0, 4, 4,
 				`sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_preflight"})`,
 				"lastNotNull", "#A5D6FF", "short"),
-			promStatPanel("Avg Build Time", 12, 0, 6, 4,
+			promStatPanel("Avg Build Time", 8, 0, 4, 4,
 				`sum(traces_spanmetrics_latency_sum{service="devx", span_name=~"devx_run|agent_ship_build"}) / sum(traces_spanmetrics_latency_count{service="devx", span_name=~"devx_run|agent_ship_build"})`,
 				"lastNotNull", "#7EE787", "s"),
-			promStatPanel("Total Tests", 18, 0, 6, 4,
+			promStatPanel("Total Tests", 12, 0, 4, 4,
 				`sum(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"})`,
 				"lastNotNull", "#FFA657", "short"),
+			promStatPanel("CLI Error Rate", 16, 0, 4, 4,
+				`sum(traces_spanmetrics_calls_total{service="devx", status_code="STATUS_CODE_ERROR"}) / sum(traces_spanmetrics_calls_total{service="devx"}) * 100`,
+				"lastNotNull", "#F85149", "percent"),
+			promStatPanel("Env Bootstrap P95", 20, 0, 4, 4,
+				`histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service="devx", span_name="up_startup"}[1h])) by (le))`,
+				"lastNotNull", "#D2A8FF", "s"),
 
-			// ── Row 2: Build duration over time + Recent commands ─────
+			// ── Row 2: Build duration + Error rate over time ──────────
 			promTimeSeriesPanel("Build Duration Over Time", 0, 4, 12, 8,
 				`sum by (span_name) (rate(traces_spanmetrics_latency_sum{service="devx", span_name=~"devx_run|agent_ship_build"}[5m])) / sum by (span_name) (rate(traces_spanmetrics_latency_count{service="devx", span_name=~"devx_run|agent_ship_build"}[5m]))`,
 				"s"),
-			tablePanel("Recent Commands (devx run)", 12, 4, 12, 8,
-				`{resource.service.name="devx" && name="devx_run"}`),
+			promTimeSeriesPanel("Error Rate Over Time", 12, 4, 12, 8,
+				`sum(rate(traces_spanmetrics_calls_total{service="devx", status_code="STATUS_CODE_ERROR"}[5m])) / sum(rate(traces_spanmetrics_calls_total{service="devx"}[5m])) * 100`,
+				"percent"),
 
-			// ── Row 3: Span counts by type (Prometheus bar gauge) ─────
+			// ── Row 3: Activity breakdowns ────────────────────────────
 			promBarGaugePanel("Build & Run Activity", 0, 12, 8, 6, []promTarget{
 				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="devx_run"})`, Legend: "devx run", RefID: "A"},
-				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="devx_action"})`, Legend: "devx action", RefID: "D"},
-				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_build"})`, Legend: "agent ship build", RefID: "B"},
-				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_preflight"})`, Legend: "agent ship preflight", RefID: "C"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="devx_action"})`, Legend: "devx action", RefID: "B"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_build"})`, Legend: "agent ship build", RefID: "C"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_preflight"})`, Legend: "agent ship preflight", RefID: "D"},
 				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="up_startup"})`, Legend: "devx up startup", RefID: "E"},
 			}),
 			promBarGaugePanel("Test Activity", 8, 12, 8, 6, []promTarget{
-				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"})`, Legend: "go_test spans", RefID: "A"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"})`, Legend: "total tests", RefID: "A"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*", status_code="STATUS_CODE_UNSET"})`, Legend: "passed", RefID: "B"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*", status_code="STATUS_CODE_ERROR"})`, Legend: "failed", RefID: "C"},
 			}),
 			promTimeSeriesPanel("Test Execution Rate", 16, 12, 8, 6,
 				`sum(rate(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"}[5m]))`,
 				"cps"),
 
-			// ── Row 4: Recent Preflights & Test Details (Tempo tables) ──
-			tablePanel("Recent Agent Ship Preflights", 0, 18, 12, 8,
+			// ── Row 4: Preflight health + Env bootstrap latency ───────
+			promBarGaugePanel("Preflight Success Rate", 0, 18, 8, 6, []promTarget{
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_preflight", status_code!="STATUS_CODE_ERROR"})`, Legend: "passed", RefID: "A"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_preflight", status_code="STATUS_CODE_ERROR"})`, Legend: "failed", RefID: "B"},
+			}),
+			promTimeSeriesPanel("Environment Bootstrap Latency", 8, 18, 8, 6,
+				`histogram_quantile(0.95, sum(rate(traces_spanmetrics_latency_bucket{service="devx", span_name="up_startup"}[5m])) by (le))`,
+				"s"),
+			promTimeSeriesPanel("Test Failure Rate", 16, 18, 8, 6,
+				`sum(rate(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*", status_code="STATUS_CODE_ERROR"}[5m])) / sum(rate(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"}[5m])) * 100`,
+				"percent"),
+
+			// ── Row 5: Recent traces (Tempo tables) ───────────────────
+			tablePanel("Recent Agent Ship Preflights", 0, 24, 12, 8,
 				`{resource.service.name="devx" && name="agent_ship_preflight"}`),
-			tablePanelWithSelect("Test Details", 12, 18, 12, 8,
+			tablePanelWithSelect("Test Details", 12, 24, 12, 8,
 				`{resource.service.name="devx" && name=~"go_test:.*"} | select(span.devx.test.name, span.devx.test.status, span.devx.test.package)`),
+
+			// ── Row 6: Drill-down tables ──────────────────────────────
+			tablePanel("Recent Commands (devx run)", 0, 32, 12, 8,
+				`{resource.service.name="devx" && name="devx_run"}`),
+			tablePanelWithSelect("Top Slowest Tests", 12, 32, 12, 8,
+				`{resource.service.name="devx" && name=~"go_test:.*"} | select(span.devx.test.name, span.devx.test.package, span.devx.test.status)`),
 		},
 	}
 }
