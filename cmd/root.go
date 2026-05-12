@@ -29,6 +29,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/ai"
 	"github.com/VitruvianSoftware/devx/internal/devxerr"
 	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/devx/internal/telemetry"
 	"github.com/VitruvianSoftware/devx/internal/updater"
 	"github.com/spf13/cobra"
 )
@@ -113,8 +114,10 @@ func Execute() {
 			}
 		}
 
+		telemetry.Flush()
 		os.Exit(exitCode)
 	}
+	telemetry.Flush()
 }
 
 func init() {
