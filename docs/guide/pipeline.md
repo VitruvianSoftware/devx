@@ -14,8 +14,28 @@ By default, `devx agent ship` **auto-detects** your stack from marker files:
 | `package.json` | Node/JS/TS | `npm test` | `npm run lint` | `npm run build` |
 | `Cargo.toml` | Rust | `cargo test` | `cargo clippy` | `cargo build` |
 | `pyproject.toml` | Python | `pytest` | `ruff check .` | — |
+| `pom.xml` | Java/Maven | `mvn test` | `mvn checkstyle:check` | `mvn package -DskipTests` |
+| `build.gradle` | Java/Gradle | `./gradlew test` | `./gradlew check` | `./gradlew build -x test` |
+| `build.gradle.kts` | Kotlin/Gradle | `./gradlew test` | `./gradlew check` | `./gradlew build -x test` |
+| `*.csproj` / `*.sln` | .NET | `dotnet test` | `dotnet format --verify-no-changes` | `dotnet build` |
 
 This works out of the box with no configuration. However, when you need custom commands — or your project uses a non-standard build system — you can define explicit pipeline stages.
+
+::: tip MULTI-STACK DETECTION
+`devx` detects **all** matching stacks in your repository. When no explicit pipeline is configured, it runs the primary (highest-precedence) stack. Use `DetectAllStacks` programmatically or define an explicit `pipeline:` block for full control in monorepo setups.
+:::
+
+### Unknown Stack Warning
+
+If `devx` cannot detect any recognized stack **and** no `pipeline:` block is defined, it will emit a visible warning instead of silently passing:
+
+```
+⚠ WARN  no recognized stack detected (go.mod, package.json, ...) and no
+        pipeline: block in devx.yaml — pre-flight checks were skipped
+Tip: add a pipeline: block to devx.yaml to define custom checks for your stack.
+```
+
+This ensures developers always know when their pre-flight checks aren't running.
 
 ## Explicit Pipeline
 
@@ -36,6 +56,25 @@ pipeline:
 ::: warning EXPLICIT WINS
 When a `pipeline:` block is present, auto-detection is **completely bypassed**. If you only define `build:` and `lint:`, there will be no test step — `devx` will not attempt to auto-detect a test command.
 :::
+
+### Achieving CI Parity
+
+The default auto-detected commands (e.g., `go vet` for Go) are intentionally **universal** — they work in any project without extra tooling. If your CI pipeline runs stricter checks (like `golangci-lint` or `addlicense`), define them explicitly to shift those checks left:
+
+```yaml
+# devx.yaml — CI-parity for a Go project with strict linting
+pipeline:
+  test:
+    command: ["go", "test", "-race", "./..."]
+  lint:
+    commands:
+      - ["golangci-lint", "run"]
+      - ["addlicense", "-check", "-c", "YourOrg", "-l", "mit", "."]
+  build:
+    command: ["go", "build", "./..."]
+```
+
+This way, `devx agent ship` catches the same errors locally that your CI would catch on GitHub, drastically shortening the feedback loop.
 
 ### Multi-Command Stages
 
@@ -89,6 +128,56 @@ pipeline:
 ::: warning FAIL-FAST
 If a `before:` hook fails, the stage's main commands and `after:` hooks are **skipped entirely**. If a main command fails, `after:` hooks are skipped. This prevents cascading side effects.
 :::
+
+## Language-Specific Examples
+
+### Java (Maven)
+
+```yaml
+pipeline:
+  test:
+    command: ["mvn", "test"]
+  lint:
+    command: ["mvn", "checkstyle:check"]
+  build:
+    command: ["mvn", "package", "-DskipTests"]
+```
+
+### Java/Kotlin (Gradle)
+
+```yaml
+pipeline:
+  test:
+    command: ["./gradlew", "test"]
+  lint:
+    command: ["./gradlew", "check"]
+  build:
+    command: ["./gradlew", "build", "-x", "test"]
+```
+
+### .NET
+
+```yaml
+pipeline:
+  test:
+    command: ["dotnet", "test"]
+  lint:
+    command: ["dotnet", "format", "--verify-no-changes"]
+  build:
+    command: ["dotnet", "build"]
+```
+
+### Python
+
+```yaml
+pipeline:
+  test:
+    command: ["pytest", "-v", "--cov=app"]
+  lint:
+    commands:
+      - ["ruff", "check", "."]
+      - ["mypy", "app/"]
+```
 
 ## Custom Actions (`devx action`)
 
@@ -181,3 +270,7 @@ devx agent ship -m "feat: add new feature"
     ℹ  using devx.yaml pipeline config
     ✓ PASS  all local checks passed (pipeline)
 ```
+
+### Version-Aware Telemetry
+
+All pre-flight spans are enriched with `service.version` attributes, enabling version-specific dashboards in Grafana. The SDLC-aligned dashboard layout tracks telemetry across five phases: **Setup → Dev → Test → Ship → Health**.

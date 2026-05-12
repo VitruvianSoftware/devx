@@ -22,6 +22,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -146,16 +147,29 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		result.PreFlight = pfResult
 
 		if err != nil {
-			result.ExitCode = ship.ExitPreFlightFail
-			result.Phase = "pre-flight"
-			result.Message = err.Error()
-			if !outputJSON {
-				fmt.Printf("    %s  %s\n\n", shipStyleFail.Render("✗ FAIL"), err.Error())
+			if errors.Is(err, ship.ErrNoStack) {
+				// Warn but don't fail — allow the developer to proceed
+				if !outputJSON {
+					fmt.Printf("    %s  %s\n",
+						shipStyleBlocking.Render("⚠ WARN"),
+						err.Error(),
+					)
+					fmt.Printf("    %s\n",
+						shipStyleMuted.Render("Tip: add a pipeline: block to devx.yaml to define custom checks for your stack."),
+					)
+				}
+			} else {
+				result.ExitCode = ship.ExitPreFlightFail
+				result.Phase = "pre-flight"
+				result.Message = err.Error()
+				if !outputJSON {
+					fmt.Printf("    %s  %s\n\n", shipStyleFail.Render("✗ FAIL"), err.Error())
+				}
+				return exitWithResult(result)
 			}
-			return exitWithResult(result)
 		}
 
-		if !outputJSON {
+		if !outputJSON && err == nil {
 			fmt.Printf("    %s  %s (%s)\n",
 				shipStylePass.Render("✓ PASS"),
 				"all local checks passed",

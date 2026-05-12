@@ -27,6 +27,7 @@ package ship
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -37,6 +38,10 @@ import (
 
 	"github.com/VitruvianSoftware/devx/internal/telemetry"
 )
+
+// ErrNoStack is returned when no stack is detected and no explicit pipeline exists.
+// Callers should surface this as a warning to the developer.
+var ErrNoStack = errors.New("no recognized stack detected (go.mod, package.json, Cargo.toml, pyproject.toml, pom.xml, build.gradle, *.csproj) and no pipeline: block in devx.yaml — pre-flight checks were skipped")
 
 // ExitCodes for deterministic agent error handling.
 const (
@@ -94,44 +99,110 @@ type stackInfo struct {
 	BuildCmd []string
 }
 
-// DetectStack profiles the repository by looking for marker files.
-func DetectStack(dir string) *stackInfo {
-	checks := []struct {
+// stackDefinitions returns all supported stack detection rules.
+// The order determines precedence when multiple markers are found.
+func stackDefinitions() []struct {
+	marker  string
+	glob    bool // if true, use filepath.Glob instead of os.Stat
+	stack   stackInfo
+} {
+	return []struct {
 		marker string
+		glob   bool
 		stack  stackInfo
 	}{
-		{"go.mod", stackInfo{
+		{"go.mod", false, stackInfo{
 			Name:     "Go",
 			TestCmd:  []string{"go", "test", "./..."},
 			LintCmd:  []string{"sh", "-c", "golangci-lint run && addlicense -check -c VitruvianSoftware -l mit -ignore 'docs/**' -ignore 'internal/scaffold/templates/**' ."},
 			BuildCmd: []string{"go", "build", "./..."},
 		}},
-		{"package.json", stackInfo{
+		{"package.json", false, stackInfo{
 			Name:     "Node/JS/TS",
 			TestCmd:  []string{"npm", "test"},
 			LintCmd:  []string{"npm", "run", "lint"},
 			BuildCmd: []string{"npm", "run", "build"},
 		}},
-		{"Cargo.toml", stackInfo{
+		{"Cargo.toml", false, stackInfo{
 			Name:     "Rust",
 			TestCmd:  []string{"cargo", "test"},
 			LintCmd:  []string{"cargo", "clippy"},
 			BuildCmd: []string{"cargo", "build"},
 		}},
-		{"pyproject.toml", stackInfo{
+		{"pyproject.toml", false, stackInfo{
 			Name:     "Python",
 			TestCmd:  []string{"pytest"},
 			LintCmd:  []string{"ruff", "check", "."},
 			BuildCmd: nil,
 		}},
+		{"pom.xml", false, stackInfo{
+			Name:     "Java/Maven",
+			TestCmd:  []string{"mvn", "test"},
+			LintCmd:  []string{"mvn", "checkstyle:check"},
+			BuildCmd: []string{"mvn", "package", "-DskipTests"},
+		}},
+		{"build.gradle", false, stackInfo{
+			Name:     "Java/Gradle",
+			TestCmd:  []string{"./gradlew", "test"},
+			LintCmd:  []string{"./gradlew", "check"},
+			BuildCmd: []string{"./gradlew", "build", "-x", "test"},
+		}},
+		{"build.gradle.kts", false, stackInfo{
+			Name:     "Kotlin/Gradle",
+			TestCmd:  []string{"./gradlew", "test"},
+			LintCmd:  []string{"./gradlew", "check"},
+			BuildCmd: []string{"./gradlew", "build", "-x", "test"},
+		}},
+		{"*.csproj", true, stackInfo{
+			Name:     ".NET",
+			TestCmd:  []string{"dotnet", "test"},
+			LintCmd:  []string{"dotnet", "format", "--verify-no-changes"},
+			BuildCmd: []string{"dotnet", "build"},
+		}},
+		{"*.sln", true, stackInfo{
+			Name:     ".NET",
+			TestCmd:  []string{"dotnet", "test"},
+			LintCmd:  []string{"dotnet", "format", "--verify-no-changes"},
+			BuildCmd: []string{"dotnet", "build"},
+		}},
 	}
+}
 
-	for _, c := range checks {
-		if _, err := os.Stat(filepath.Join(dir, c.marker)); err == nil {
-			return &c.stack
+// DetectStack profiles the repository by looking for marker files.
+// Returns the first matching stack (highest precedence).
+func DetectStack(dir string) *stackInfo {
+	stacks := DetectAllStacks(dir)
+	if len(stacks) == 0 {
+		return nil
+	}
+	return stacks[0]
+}
+
+// DetectAllStacks returns all matching stacks for the given directory.
+// This enables multi-stack monorepo support.
+func DetectAllStacks(dir string) []*stackInfo {
+	var matched []*stackInfo
+	seen := make(map[string]bool)
+
+	for _, c := range stackDefinitions() {
+		if seen[c.stack.Name] {
+			continue
+		}
+		var found bool
+		if c.glob {
+			matches, _ := filepath.Glob(filepath.Join(dir, c.marker))
+			found = len(matches) > 0
+		} else {
+			_, err := os.Stat(filepath.Join(dir, c.marker))
+			found = err == nil
+		}
+		if found {
+			s := c.stack // copy
+			matched = append(matched, &s)
+			seen[c.stack.Name] = true
 		}
 	}
-	return nil
+	return matched
 }
 
 // PipelineStage defines a single pipeline step with support for multi-command
@@ -186,9 +257,22 @@ func runStageWithHooks(dir string, stage *PipelineStage, name string, verbose bo
 }
 
 // runExplicitPipeline executes pipeline stages from devx.yaml config.
+// Order: Lint → Test → Build → Verify (lint first to catch cheap issues
+// before test side-effects can pollute the filesystem).
 func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*PreFlightResult, error) {
 	preflightStart := time.Now()
 	result := &PreFlightResult{Stack: "pipeline"}
+
+	// Lint (runs first — cheap, no side effects)
+	if pipeline.Lint != nil && len(pipeline.Lint.Cmds) > 0 {
+		if err := runStageWithHooks(dir, pipeline.Lint, "lint", verbose); err != nil {
+			return result, err
+		}
+		result.LintPass = true
+	} else {
+		result.LintSkipped = true
+		result.LintPass = true
+	}
 
 	// Test
 	if pipeline.Test != nil && len(pipeline.Test.Cmds) > 0 {
@@ -199,17 +283,6 @@ func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*P
 	} else {
 		result.TestSkipped = true
 		result.TestPass = true
-	}
-
-	// Lint
-	if pipeline.Lint != nil && len(pipeline.Lint.Cmds) > 0 {
-		if err := runStageWithHooks(dir, pipeline.Lint, "lint", verbose); err != nil {
-			return result, err
-		}
-		result.LintPass = true
-	} else {
-		result.LintSkipped = true
-		result.LintPass = true
 	}
 
 	// Build
@@ -256,7 +329,7 @@ func runAutoDetectedPipeline(dir string, verbose bool) (*PreFlightResult, error)
 
 	stack := DetectStack(dir)
 	if stack == nil {
-		return &PreFlightResult{Stack: "unknown"}, nil
+		return &PreFlightResult{Stack: "unknown"}, ErrNoStack
 	}
 
 	result := &PreFlightResult{Stack: stack.Name}
