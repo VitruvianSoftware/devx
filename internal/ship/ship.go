@@ -103,7 +103,7 @@ func DetectStack(dir string) *stackInfo {
 		{"go.mod", stackInfo{
 			Name:     "Go",
 			TestCmd:  []string{"go", "test", "./..."},
-			LintCmd:  []string{"go", "vet", "./..."},
+			LintCmd:  []string{"sh", "-c", "golangci-lint run && addlicense -check -c VitruvianSoftware -l mit -ignore 'docs/**' -ignore 'internal/scaffold/templates/**' ."},
 			BuildCmd: []string{"go", "build", "./..."},
 		}},
 		{"package.json", stackInfo{
