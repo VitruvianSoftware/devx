@@ -18,3 +18,14 @@ databases:
 tunnels:
   - name: api
     port: 8080
+
+# Uncomment to customize local pre-flight checks (devx agent ship):
+# pipeline:
+#   test:
+#     command: ["go", "test", "-race", "./..."]
+#   lint:
+#     commands:
+#       - ["golangci-lint", "run"]
+#       - ["addlicense", "-check", "-c", "YourOrg", "-l", "mit", "."]
+#   build:
+#     command: ["go", "build", "./..."]

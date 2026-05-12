@@ -9,3 +9,15 @@ name: {{.ProjectName}}
 # tunnels:
 #   - name: web
 #     port: 3000
+
+# Uncomment to customize local pre-flight checks (devx agent ship):
+# Without this block, devx auto-detects your stack from marker files.
+# pipeline:
+#   test:
+#     command: ["go", "test", "./..."]
+#   lint:
+#     command: ["golangci-lint", "run"]
+#   build:
+#     command: ["go", "build", "./..."]
+#   verify:
+#     command: ["./scripts/integration-test.sh"]

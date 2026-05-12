@@ -7,3 +7,10 @@ databases:
 tunnels:
   - name: api
     port: 8000
+
+# Uncomment to customize local pre-flight checks (devx agent ship):
+# pipeline:
+#   test:
+#     command: ["pytest", "-v", "--cov=app"]
+#   lint:
+#     command: ["ruff", "check", "."]
