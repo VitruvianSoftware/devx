@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.44.0](https://github.com/VitruvianSoftware/devx/compare/v0.43.1...v0.44.0) (2026-05-12)
+
+
+### Features
+
+* **ship:** extensible pipeline with multi-stack detection and CI-parity config ([c0e734f](https://github.com/VitruvianSoftware/devx/commit/c0e734fab505f0bb8154773f53199dfbce2c53df))
+* **ship:** shift left github CI linting parity to local pre-flight checks ([#175](https://github.com/VitruvianSoftware/devx/issues/175)) ([17ffb77](https://github.com/VitruvianSoftware/devx/commit/17ffb77c1d14ea89514ead4458b212bed47c1186))
+* **telemetry:** add CLI error rate, env bootstrap latency, preflight success, and test failure panels ([c20a417](https://github.com/VitruvianSoftware/devx/commit/c20a417eb09aa8933afb9b2b1650bb4701764d50))
+* **telemetry:** add service.version to OTel spans and version tracking dashboard panels ([8ce14ff](https://github.com/VitruvianSoftware/devx/commit/8ce14ff470f720ee88d17669ee27c66e9c2b394c))
+
+
+### Bug Fixes
+
+* **telemetry:** correct go_test exact match queries to regex and add missing devx_action/up_startup panels ([8e8be63](https://github.com/VitruvianSoftware/devx/commit/8e8be63552f701e01e7e5d7f4c726a4f940a1f62))
+
 ## [0.43.1](https://github.com/VitruvianSoftware/devx/compare/v0.43.0...v0.43.1) (2026-05-12)
 
 
