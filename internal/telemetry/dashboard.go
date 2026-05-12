@@ -125,7 +125,7 @@ func dashboardJSON() map[string]interface{} {
 				`sum(traces_spanmetrics_latency_sum{service="devx", span_name=~"devx_run|agent_ship_build"}) / sum(traces_spanmetrics_latency_count{service="devx", span_name=~"devx_run|agent_ship_build"})`,
 				"lastNotNull", "#7EE787", "s"),
 			promStatPanel("Total Tests", 18, 0, 6, 4,
-				`sum(traces_spanmetrics_calls_total{service="devx", span_name="go_test"})`,
+				`sum(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"})`,
 				"lastNotNull", "#FFA657", "short"),
 
 			// ── Row 2: Build duration over time + Recent commands ─────
@@ -138,21 +138,23 @@ func dashboardJSON() map[string]interface{} {
 			// ── Row 3: Span counts by type (Prometheus bar gauge) ─────
 			promBarGaugePanel("Build & Run Activity", 0, 12, 8, 6, []promTarget{
 				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="devx_run"})`, Legend: "devx run", RefID: "A"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="devx_action"})`, Legend: "devx action", RefID: "D"},
 				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_build"})`, Legend: "agent ship build", RefID: "B"},
 				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="agent_ship_preflight"})`, Legend: "agent ship preflight", RefID: "C"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="up_startup"})`, Legend: "devx up startup", RefID: "E"},
 			}),
 			promBarGaugePanel("Test Activity", 8, 12, 8, 6, []promTarget{
-				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name="go_test"})`, Legend: "go_test spans", RefID: "A"},
+				{Query: `sum(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"})`, Legend: "go_test spans", RefID: "A"},
 			}),
 			promTimeSeriesPanel("Test Execution Rate", 16, 12, 8, 6,
-				`sum(rate(traces_spanmetrics_calls_total{service="devx", span_name="go_test"}[5m]))`,
+				`sum(rate(traces_spanmetrics_calls_total{service="devx", span_name=~"go_test:.*"}[5m]))`,
 				"cps"),
 
 			// ── Row 4: Recent Preflights & Test Details (Tempo tables) ──
 			tablePanel("Recent Agent Ship Preflights", 0, 18, 12, 8,
 				`{resource.service.name="devx" && name="agent_ship_preflight"}`),
 			tablePanelWithSelect("Test Details", 12, 18, 12, 8,
-				`{resource.service.name="devx" && name="go_test"} | select(span.devx.test.name, span.devx.test.status, span.devx.test.package)`),
+				`{resource.service.name="devx" && name=~"go_test:.*"} | select(span.devx.test.name, span.devx.test.status, span.devx.test.package)`),
 		},
 	}
 }
