@@ -6,6 +6,20 @@
 
 ## Zero-Config Default
 
+The pipeline enforces a strict sequential execution order (`Lint -> Test -> Build -> Verify`) to ensure that cheap pre-flight checks fail fast before side-effect prone or slow operations begin.
+
+```mermaid
+flowchart LR
+    A[Lint] --> B[Test]
+    B --> C[Build]
+    C --> D[Verify]
+    
+    style A fill:#f3f4f6,stroke:#374151
+    style B fill:#dbeafe,stroke:#1d4ed8
+    style C fill:#dcfce7,stroke:#15803d
+    style D fill:#fef9c3,stroke:#a16207
+```
+
 By default, `devx agent ship` **auto-detects** your stack from marker files:
 
 | Marker File | Stack | Test | Lint | Build |

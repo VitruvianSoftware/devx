@@ -81,16 +81,18 @@ Tailscale provides zero-trust access to internal services:
 
 ```
 devx
-├── vm          # VM lifecycle (init, status, teardown, resize, ssh)
-├── tunnel      # Cloudflare tunnel management (expose, unexpose, list)
-├── db          # Database provisioning (spawn, list, rm)
-├── sites       # GitHub Pages + Cloudflare DNS (init, verify, status)
-├── agent       # AI agent skill configuration
-├── shell       # Devcontainer-based isolated shells
-├── config      # Credential and configuration management
-├── exec        # Raw passthrough to infrastructure tools
-├── bridge      # Hybrid edge-to-local K8s routing
-└── up          # Declarative provisioning from devx.yaml
+├── Local Infrastructure
+│   ├── vm, db, cloud, nuke
+├── Kubernetes & Hybrid
+│   ├── k8s, cluster, bridge
+├── Networking & Edge
+│   ├── tunnel, mail, webhook
+├── Orchestration & State
+│   ├── up, action, run, preview, scaffold, shell, logs, map, sync, state, config, exec
+├── Testing & Telemetry
+│   ├── test, mock, trace, stats, audit, doctor
+└── Pipelines & CI/CD
+    ├── agent, ci, sites
 ```
 
 Each subcommand group is self-contained in `cmd/` and communicates with backend services through packages in `internal/`:
