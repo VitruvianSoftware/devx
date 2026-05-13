@@ -174,9 +174,23 @@ func TestDetectStack_DotNet_Sln(t *testing.T) {
 	}
 }
 
-func TestDetectStack_Bazel(t *testing.T) {
+func TestDetectStack_BazelWorkspace(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "WORKSPACE"), []byte("workspace(name = \"my_workspace\")"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	stack := DetectStack(dir)
+	if stack == nil {
+		t.Fatal("expected Bazel stack, got nil")
+	}
+	if stack.Name != "Bazel" {
+		t.Errorf("expected name 'Bazel', got %q", stack.Name)
+	}
+}
+
+func TestDetectStack_BazelModule(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "MODULE.bazel"), []byte("module(name = \"my_module\")"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -424,6 +438,7 @@ func TestStackDefinitions_ContainsAllSupportedStacks(t *testing.T) {
 		"Java/Gradle":   false,
 		"Kotlin/Gradle": false,
 		".NET":          false,
+		"Bazel":         false,
 	}
 
 	for _, d := range defs {
