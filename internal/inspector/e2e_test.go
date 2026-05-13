@@ -48,7 +48,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 			w.WriteHeader(404)
 		}
 	}))
-	defer func() { app.Close() }() 
+	defer func() { app.Close() }()
 
 	// Start inspector proxy pointing at the app
 	ch := make(chan CapturedExchange, 32)
@@ -62,7 +62,7 @@ func TestE2E_FullInspectorFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() { _ = proxy.Close() }() 
+	defer func() { _ = proxy.Close() }()
 
 	proxyBase := fmt.Sprintf("http://localhost:%d", port)
 

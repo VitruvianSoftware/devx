@@ -174,10 +174,10 @@ func runCannedQuery(runtime, engineName, queryName string) error {
 	if DryRun {
 		if outputJSON {
 			b, _ := json.MarshalIndent(map[string]interface{}{
-				"engine":   engineName,
-				"query":    queryName,
-				"sql":      sql,
-				"dry_run":  true,
+				"engine":  engineName,
+				"query":   queryName,
+				"sql":     sql,
+				"dry_run": true,
 			}, "", "  ")
 			fmt.Println(string(b))
 		} else {
@@ -216,11 +216,11 @@ func runCannedQueryWithArg(runtime, engineName, queryName, arg string) error {
 	if DryRun {
 		if outputJSON {
 			b, _ := json.MarshalIndent(map[string]interface{}{
-				"engine":   engineName,
-				"query":    queryName,
-				"table":    safeName,
-				"sql":      sql,
-				"dry_run":  true,
+				"engine":  engineName,
+				"query":   queryName,
+				"table":   safeName,
+				"sql":     sql,
+				"dry_run": true,
 			}, "", "  ")
 			fmt.Println(string(b))
 		} else {

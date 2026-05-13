@@ -121,4 +121,3 @@ func init() {
 	vmDaemonCmd.Flags().IntVarP(&sleepTimeout, "interval", "i", 60, "Interval in seconds to poll container states")
 	vmCmd.AddCommand(vmDaemonCmd)
 }
-

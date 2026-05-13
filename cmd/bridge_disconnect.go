@@ -66,8 +66,8 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 	if DryRun {
 		if outputJSON {
 			type dryRunOutput struct {
-				DryRun     bool                  `json:"dry_run"`
-				Entries    []bridge.SessionEntry  `json:"entries_to_disconnect"`
+				DryRun     bool                    `json:"dry_run"`
+				Entries    []bridge.SessionEntry   `json:"entries_to_disconnect"`
 				Intercepts []bridge.InterceptEntry `json:"intercepts_to_disconnect"`
 			}
 			out := dryRunOutput{
@@ -172,9 +172,9 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 
 	if outputJSON {
 		type disconnectOutput struct {
-			Disconnected    bool `json:"disconnected"`
-			BridgeCount     int  `json:"bridge_count"`
-			InterceptCount  int  `json:"intercept_count"`
+			Disconnected   bool `json:"disconnected"`
+			BridgeCount    int  `json:"bridge_count"`
+			InterceptCount int  `json:"intercept_count"`
 		}
 		enc, _ := json.MarshalIndent(disconnectOutput{
 			Disconnected:   true,

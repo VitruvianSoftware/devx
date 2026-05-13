@@ -111,7 +111,7 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 
 	go func() {
 		defer wg.Done()
-		defer func() { _ = pipeReader.Close() }() 
+		defer func() { _ = pipeReader.Close() }()
 
 		scanner := bufio.NewScanner(pipeReader)
 		for scanner.Scan() {

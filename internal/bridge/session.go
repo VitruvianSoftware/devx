@@ -46,7 +46,7 @@ type InterceptEntry struct {
 	Namespace        string            `json:"namespace"`
 	TargetPort       int               `json:"target_port"`
 	LocalPort        int               `json:"local_port"`
-	Mode             string            `json:"mode"`              // "steal" or "mirror"
+	Mode             string            `json:"mode"` // "steal" or "mirror"
 	AgentPod         string            `json:"agent_pod"`
 	SessionID        string            `json:"session_id"`
 	OriginalSelector map[string]string `json:"original_selector"` // for restore on teardown

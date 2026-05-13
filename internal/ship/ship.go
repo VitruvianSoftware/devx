@@ -45,45 +45,45 @@ var ErrNoStack = errors.New("no recognized stack detected (go.mod, package.json,
 
 // ExitCodes for deterministic agent error handling.
 const (
-	ExitOK             = 0
-	ExitPreFlightFail  = 50
-	ExitPushFail       = 51
-	ExitPRFail         = 52
-	ExitCIFail         = 53
-	ExitCITimeout      = 54
-	ExitDocCheckFail   = 55
-	ExitNothingToShip  = 56
+	ExitOK            = 0
+	ExitPreFlightFail = 50
+	ExitPushFail      = 51
+	ExitPRFail        = 52
+	ExitCIFail        = 53
+	ExitCITimeout     = 54
+	ExitDocCheckFail  = 55
+	ExitNothingToShip = 56
 )
 
 // Result is the machine-readable output of a ship operation.
 type Result struct {
-	Success     bool         `json:"success"`
-	ExitCode    int          `json:"exit_code"`
-	Phase       string       `json:"phase"`
-	Message     string       `json:"message"`
-	PRURL       string       `json:"pr_url,omitempty"`
-	CIRunID     string       `json:"ci_run_id,omitempty"`
-	CIStatus    string       `json:"ci_status,omitempty"`
-	FailureLogs []string     `json:"failure_logs,omitempty"`
+	Success     bool             `json:"success"`
+	ExitCode    int              `json:"exit_code"`
+	Phase       string           `json:"phase"`
+	Message     string           `json:"message"`
+	PRURL       string           `json:"pr_url,omitempty"`
+	CIRunID     string           `json:"ci_run_id,omitempty"`
+	CIStatus    string           `json:"ci_status,omitempty"`
+	FailureLogs []string         `json:"failure_logs,omitempty"`
 	PreFlight   *PreFlightResult `json:"pre_flight,omitempty"`
 }
 
 // PreFlightResult holds the outcome of each local pre-flight step.
 type PreFlightResult struct {
-	Stack    string `json:"stack"`
-	TestPass bool   `json:"test_pass"`
-	LintPass bool   `json:"lint_pass"`
-	BuildPass bool  `json:"build_pass"`
-	TestSkipped bool `json:"test_skipped,omitempty"`
-	LintSkipped bool `json:"lint_skipped,omitempty"`
-	BuildSkipped bool `json:"build_skipped,omitempty"`
+	Stack        string `json:"stack"`
+	TestPass     bool   `json:"test_pass"`
+	LintPass     bool   `json:"lint_pass"`
+	BuildPass    bool   `json:"build_pass"`
+	TestSkipped  bool   `json:"test_skipped,omitempty"`
+	LintSkipped  bool   `json:"lint_skipped,omitempty"`
+	BuildSkipped bool   `json:"build_skipped,omitempty"`
 }
 
 // Options configures a ship run.
 type Options struct {
 	CommitMsg      string
-	Branch         string  // target branch (default: current)
-	BaseBranch     string  // base branch for PR (default: main)
+	Branch         string // target branch (default: current)
+	BaseBranch     string // base branch for PR (default: main)
 	Verbose        bool
 	JSON           bool
 	NonInteractive bool
@@ -102,9 +102,9 @@ type stackInfo struct {
 // stackDefinitions returns all supported stack detection rules.
 // The order determines precedence when multiple markers are found.
 func stackDefinitions() []struct {
-	marker  string
-	glob    bool // if true, use filepath.Glob instead of os.Stat
-	stack   stackInfo
+	marker string
+	glob   bool // if true, use filepath.Glob instead of os.Stat
+	stack  stackInfo
 } {
 	return []struct {
 		marker string
@@ -164,6 +164,24 @@ func stackDefinitions() []struct {
 			TestCmd:  []string{"dotnet", "test"},
 			LintCmd:  []string{"dotnet", "format", "--verify-no-changes"},
 			BuildCmd: []string{"dotnet", "build"},
+		}},
+		{"MODULE.bazel", false, stackInfo{
+			Name:     "Bazel",
+			TestCmd:  []string{"bazel", "test", "//..."},
+			LintCmd:  nil,
+			BuildCmd: []string{"bazel", "build", "//..."},
+		}},
+		{"WORKSPACE", false, stackInfo{
+			Name:     "Bazel",
+			TestCmd:  []string{"bazel", "test", "//..."},
+			LintCmd:  nil,
+			BuildCmd: []string{"bazel", "build", "//..."},
+		}},
+		{"WORKSPACE.bazel", false, stackInfo{
+			Name:     "Bazel",
+			TestCmd:  []string{"bazel", "test", "//..."},
+			LintCmd:  nil,
+			BuildCmd: []string{"bazel", "build", "//..."},
 		}},
 	}
 }
@@ -470,7 +488,7 @@ func WatchPRChecks(dir, prURL, branch string, timeout time.Duration) (runID, con
 
 	cmd := exec.CommandContext(ctx, "gh", "pr", "checks", prURL, "--watch", "--fail-fast")
 	cmd.Dir = dir
-	
+
 	// We don't want stdout to pollute our deterministic output, so we run silently
 	err = cmd.Run()
 
@@ -491,7 +509,7 @@ func WatchPRChecks(dir, prURL, branch string, timeout time.Duration) (runID, con
 		"-L", "10",
 		"--json", "databaseId,status,conclusion,workflowName",
 	})
-	
+
 	if listErr == nil {
 		var runs []struct {
 			DatabaseID   int64  `json:"databaseId"`
@@ -504,7 +522,7 @@ func WatchPRChecks(dir, prURL, branch string, timeout time.Duration) (runID, con
 				if run.Conclusion == "failure" && run.WorkflowName == "CI" {
 					runID = fmt.Sprintf("%d", run.DatabaseID)
 					conclusion = run.Conclusion
-					
+
 					// Fetch failure logs
 					logOut, logErr := runCmdOutput(dir, []string{
 						"gh", "run", "view", runID, "--log-failed",

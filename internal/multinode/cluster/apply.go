@@ -95,13 +95,13 @@ func Apply(ctx context.Context, cfg *config.Config, dryRun bool) error {
 		if err != nil {
 			return fmt.Errorf("[%s] updating lima.yaml: %w", node.Host, err)
 		}
-// Step 3.5: Resize disk using limactl disk resize if needed
-fmt.Printf("  [%s] Resizing VM disk...\n", node.Host)
-_, err = runner.RunShell(ctx, fmt.Sprintf("limactl disk resize %s --size %s", node.GetVMName(), node.VM.Disk))
-if err != nil {
-	// Don't fail the whole update just because disk resize failed (might not be supported on all versions)
-	slog.Warn("disk resize failed", "host", node.Host, "error", err)
-}
+		// Step 3.5: Resize disk using limactl disk resize if needed
+		fmt.Printf("  [%s] Resizing VM disk...\n", node.Host)
+		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl disk resize %s --size %s", node.GetVMName(), node.VM.Disk))
+		if err != nil {
+			// Don't fail the whole update just because disk resize failed (might not be supported on all versions)
+			slog.Warn("disk resize failed", "host", node.Host, "error", err)
+		}
 		// Step 4: Start the VM.		fmt.Printf("  [%s] Restarting VM...\n", node.Host)
 		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl start %s", node.GetVMName()))
 		if err != nil {

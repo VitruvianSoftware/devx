@@ -19,5 +19,7 @@
 // SOFTWARE.
 
 package cmd
+
 import "github.com/spf13/cobra"
+
 func GetRootCmd() *cobra.Command { return rootCmd }

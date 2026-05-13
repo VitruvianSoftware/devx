@@ -25,8 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 )
 
 func newClusterStatusCmd(configFile *string) *cobra.Command {

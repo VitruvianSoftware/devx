@@ -204,6 +204,7 @@ func (m *Manager) Destroy(ctx context.Context) error {
 	_, err = m.runner.Run(ctx, fmt.Sprintf("limactl stop %s --force 2>/dev/null; limactl delete %s --force", m.vmName, m.vmName))
 	return err
 }
+
 // detectSocketPath finds the actual socket_vmnet socket on the remote host.
 // The path varies by Homebrew installation: /opt/homebrew/var/run/ on ARM64,
 // /usr/local/var/run/ on Intel.
@@ -233,4 +234,3 @@ func (m *Manager) detectSocketPath(ctx context.Context) (string, error) {
 
 	return "", fmt.Errorf("[%s] could not find socket_vmnet socket — ensure socket_vmnet is installed and running", m.runner.Host)
 }
-

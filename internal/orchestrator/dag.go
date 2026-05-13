@@ -118,14 +118,14 @@ type Node struct {
 	Type        NodeType
 	DependsOn   []string // names of nodes this depends on
 	Healthcheck HealthcheckConfig
-	Port        int    // resolved port (after conflict resolution)
+	Port        int // resolved port (after conflict resolution)
 	Runtime     Runtime
 	Command     []string
 	Env         map[string]string
 	Dir         string // Working directory for host process execution (set by include resolver for multirepo)
 
 	// Bridge-specific fields (Idea 46.3)
-	BridgeMode   BridgeMode       // for RuntimeBridge nodes
+	BridgeMode   BridgeMode        // for RuntimeBridge nodes
 	BridgeConfig *BridgeNodeConfig // bridge-specific parameters
 
 	// Runtime state
@@ -273,7 +273,7 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			go func(n *Node) {
 				defer wg.Done()
 
-			if n.Type == NodeService {
+				if n.Type == NodeService {
 					switch n.Runtime {
 					case RuntimeBridge:
 						if err := startBridgeNode(ctx, n); err != nil {

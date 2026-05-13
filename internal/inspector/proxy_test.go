@@ -43,7 +43,7 @@ func TestProxy_CapturesGET(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"ok":true}`))
 	}))
-	defer func() { target.Close() }() 
+	defer func() { target.Close() }()
 
 	var captured []CapturedExchange
 	var mu sync.Mutex
@@ -60,7 +60,7 @@ func TestProxy_CapturesGET(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() { _ = proxy.Close() }() 
+	defer func() { _ = proxy.Close() }()
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/api/health", port))
 	if err != nil {
@@ -110,7 +110,7 @@ func TestProxy_CapturesPOSTWithBody(t *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write(body) // Echo back
 	}))
-	defer func() { target.Close() }() 
+	defer func() { target.Close() }()
 
 	var captured []CapturedExchange
 	var mu sync.Mutex
@@ -127,7 +127,7 @@ func TestProxy_CapturesPOSTWithBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() { _ = proxy.Close() }() 
+	defer func() { _ = proxy.Close() }()
 
 	reqBody := `{"event":"push","ref":"refs/heads/main"}`
 	resp, err := http.Post(
@@ -175,7 +175,7 @@ func TestProxy_CapturesUpstreamError(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("internal error"))
 	}))
-	defer func() { target.Close() }() 
+	defer func() { target.Close() }()
 
 	var captured []CapturedExchange
 	var mu sync.Mutex
@@ -192,7 +192,7 @@ func TestProxy_CapturesUpstreamError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() { _ = proxy.Close() }() 
+	defer func() { _ = proxy.Close() }()
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/fail", port))
 	if err != nil {
@@ -222,7 +222,7 @@ func TestProxy_ConnectionRefused(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() { _ = proxy.Close() }() 
+	defer func() { _ = proxy.Close() }()
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/down", port))
 	if err != nil {
@@ -254,7 +254,7 @@ func TestProxy_Replay(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	}))
-	defer func() { target.Close() }() 
+	defer func() { target.Close() }()
 
 	proxy, err := NewProxy(targetPort(target), func(ex CapturedExchange) {})
 	if err != nil {
@@ -264,7 +264,7 @@ func TestProxy_Replay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() { _ = proxy.Close() }() 
+	defer func() { _ = proxy.Close() }()
 
 	// Initial request
 	resp, err := http.Post(
@@ -316,7 +316,7 @@ func TestProxy_Clear(t *testing.T) {
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
-	defer func() { target.Close() }() 
+	defer func() { target.Close() }()
 
 	proxy, err := NewProxy(targetPort(target), func(ex CapturedExchange) {})
 	if err != nil {
@@ -326,7 +326,7 @@ func TestProxy_Clear(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() { _ = proxy.Close() }() 
+	defer func() { _ = proxy.Close() }()
 
 	// Send 3 requests
 	for i := 0; i < 3; i++ {

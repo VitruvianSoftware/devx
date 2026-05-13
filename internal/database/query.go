@@ -32,8 +32,8 @@ import (
 
 // CannedQuery defines a pre-built diagnostic query.
 type CannedQuery struct {
-	Name        string // Short name for the query (e.g., "sizes")
-	Description string // Human-readable description
+	Name        string            // Short name for the query (e.g., "sizes")
+	Description string            // Human-readable description
 	SQL         map[string]string // Engine-specific SQL (keyed by engine name)
 }
 

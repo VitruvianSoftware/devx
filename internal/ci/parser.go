@@ -48,23 +48,23 @@ type Workflow struct {
 
 // Job represents a single job within a workflow.
 type Job struct {
-	Name            string            `yaml:"name"`
-	RunsOn          string            `yaml:"runs-on"`
-	Needs           StringOrSlice     `yaml:"needs"`
-	If              string            `yaml:"if"`
-	Env             map[string]string `yaml:"env"`
-	Strategy        Strategy          `yaml:"strategy"`
+	Name            string             `yaml:"name"`
+	RunsOn          string             `yaml:"runs-on"`
+	Needs           StringOrSlice      `yaml:"needs"`
+	If              string             `yaml:"if"`
+	Env             map[string]string  `yaml:"env"`
+	Strategy        Strategy           `yaml:"strategy"`
 	Services        map[string]Service `yaml:"services"`
-	Steps           []Step            `yaml:"steps"`
-	TimeoutMinutes  int               `yaml:"timeout-minutes"`
-	ContinueOnError bool              `yaml:"continue-on-error"`
+	Steps           []Step             `yaml:"steps"`
+	TimeoutMinutes  int                `yaml:"timeout-minutes"`
+	ContinueOnError bool               `yaml:"continue-on-error"`
 }
 
 // Strategy holds the matrix strategy for a job.
 type Strategy struct {
-	Matrix    MatrixDef `yaml:"matrix"`
-	FailFast  *bool     `yaml:"fail-fast"`
-	MaxParallel int     `yaml:"max-parallel"`
+	Matrix      MatrixDef `yaml:"matrix"`
+	FailFast    *bool     `yaml:"fail-fast"`
+	MaxParallel int       `yaml:"max-parallel"`
 }
 
 // MatrixDef holds the matrix definition including include/exclude.

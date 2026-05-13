@@ -30,8 +30,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 )
 
 func newClusterInitCmd(configFile *string) *cobra.Command {
@@ -59,7 +59,6 @@ This command is idempotent: it will skip any steps that have already been comple
 			})
 		},
 	}
-
 
 	cmd.Flags().BoolVar(&autoInstall, "auto-install", false, "automatically install missing prerequisites")
 	cmd.Flags().DurationVar(&timeout, "timeout", 30*time.Minute, "maximum time for the entire operation")

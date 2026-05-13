@@ -44,9 +44,9 @@ var scaffoldDescription string
 var scaffoldForce bool
 
 var scaffoldCmd = &cobra.Command{
-	Use:   "scaffold [template] [project-name]",
+	Use:     "scaffold [template] [project-name]",
 	GroupID: "orchestration",
-	Short: "Generate a new project from a pre-wired template",
+	Short:   "Generate a new project from a pre-wired template",
 	Long: `Scaffold a new repository from a built-in devx template.
 
 Templates include a devx.yaml topology, Dockerfile, CI pipeline,

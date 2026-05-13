@@ -41,9 +41,9 @@ import (
 var actionList bool
 
 var actionCmd = &cobra.Command{
-	Use:   "action [name]",
+	Use:     "action [name]",
 	GroupID: "orchestration",
-	Short: "Run a named custom action defined in devx.yaml",
+	Short:   "Run a named custom action defined in devx.yaml",
 	Long: `Execute on-demand tasks declared under 'customActions:' in devx.yaml.
 
 Custom actions group multiple sequential commands under a single name,
@@ -168,7 +168,7 @@ func runAction(_ *cobra.Command, args []string) error {
 	if logErr != nil {
 		fmt.Printf("Warning: Could not open log file: %v\n", logErr)
 	} else {
-		defer func() { _ = logFile.Close() }() 
+		defer func() { _ = logFile.Close() }()
 	}
 
 	var outWriter, errWriter io.Writer
@@ -229,7 +229,7 @@ func runAction(_ *cobra.Command, args []string) error {
 				exitCode = 1
 			}
 			signal.Stop(sigChan)
-			
+
 			// Always record the failure span before breaking
 			cmdDuration := time.Since(cmdStart)
 			telemetry.RecordEvent("devx_run", cmdDuration,

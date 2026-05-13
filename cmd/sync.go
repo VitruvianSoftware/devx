@@ -23,9 +23,9 @@ package cmd
 import "github.com/spf13/cobra"
 
 var syncCmd = &cobra.Command{
-	Use:   "sync",
+	Use:     "sync",
 	GroupID: "orchestration",
-	Short: "Manage intelligent file synchronization into containers",
+	Short:   "Manage intelligent file synchronization into containers",
 	Long: `Bypass slow VirtioFS volume mounts by syncing file changes directly
 into running containers via Mutagen. Changes propagate in milliseconds.
 

@@ -62,7 +62,7 @@ func Build(templatePath, tunnelToken, tunnelID, hostname, cfDomain, runtime stri
 	if err != nil {
 		return "", fmt.Errorf("creating temp Butane file: %w", err)
 	}
-	defer func() { _ = os.Remove(buFile.Name()) }()  // clean up input after compilation
+	defer func() { _ = os.Remove(buFile.Name()) }() // clean up input after compilation
 
 	if _, err := buFile.WriteString(populated); err != nil {
 		_ = buFile.Close()

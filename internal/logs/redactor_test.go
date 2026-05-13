@@ -67,8 +67,8 @@ func TestRedactor_LongestFirstPreventsPartialMatch(t *testing.T) {
 
 func TestRedactor_SkipsShortValues(t *testing.T) {
 	r := NewSecretRedactorFromPairs([]string{
-		"FLAG=on",   // too short (<= 3)
-		"NUM=42",    // too short
+		"FLAG=on", // too short (<= 3)
+		"NUM=42",  // too short
 		"TOKEN=abcdef",
 	})
 

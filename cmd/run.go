@@ -39,9 +39,9 @@ import (
 var runName string
 
 var runCmd = &cobra.Command{
-	Use:   "run -- [command...]",
+	Use:     "run -- [command...]",
 	GroupID: "orchestration",
-	Short: "Run a command with telemetry, secret injection, and log routing",
+	Short:   "Run a command with telemetry, secret injection, and log routing",
 	Long: `Wraps an arbitrary host command with devx telemetry and log routing.
 Timing, exit code, and command metadata are recorded locally and exported
 as OTel spans to any running trace backend.
@@ -79,7 +79,7 @@ Global flags are parsed before '--':
 		if err != nil {
 			fmt.Printf("Warning: Could not open log file: %v\n", err)
 		} else {
-			defer func() { _ = logFile.Close() }() 
+			defer func() { _ = logFile.Close() }()
 		}
 
 		if !outputJSON {

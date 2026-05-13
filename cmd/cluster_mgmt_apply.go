@@ -32,7 +32,6 @@ import (
 
 func newClusterApplyCmd(configFile *string) *cobra.Command {
 
-
 	cmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply configuration changes iteratively with zero downtime",
@@ -54,7 +53,6 @@ It rolls out backend alterations like CPU and Memory changes node-by-node by:
 			return cluster.Apply(ctx, cfg, DryRun)
 		},
 	}
-
 
 	return cmd
 }

@@ -23,9 +23,9 @@ package cmd
 import "github.com/spf13/cobra"
 
 var mockCmd = &cobra.Command{
-	Use:   "mock",
+	Use:     "mock",
 	GroupID: "telemetry",
-	Short: "Manage local OpenAPI mock servers powered by Stoplight Prism",
+	Short:   "Manage local OpenAPI mock servers powered by Stoplight Prism",
 	Long: `Spin up intelligent OpenAPI mock servers that simulate 3rd-party APIs
 (Stripe, Twilio, internal services) locally based on remote OpenAPI specs.
 

@@ -23,9 +23,9 @@ package cmd
 import "github.com/spf13/cobra"
 
 var mailCmd = &cobra.Command{
-	Use:   "mail",
+	Use:     "mail",
 	GroupID: "network",
-	Short: "Manage local email capture and inspection services",
+	Short:   "Manage local email capture and inspection services",
 	Long: `Spin up a local SMTP catch-all server for testing transactional emails
 without risk of sending to real users.
 

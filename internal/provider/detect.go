@@ -164,7 +164,9 @@ func (e *MultipleProvidersError) Error() string {
 
 // resolveVMName returns the Lima VM instance name by mirroring the same
 // config cascade used by ensureVMRunning() in cmd/vm_autoresume.go:
-//   USER env var → config.New(user, "", "", "") → DevHostname.
+//
+//	USER env var → config.New(user, "", "", "") → DevHostname.
+//
 // Falls back to "default" if nothing resolves.
 func resolveVMName() string {
 	user := os.Getenv("USER")

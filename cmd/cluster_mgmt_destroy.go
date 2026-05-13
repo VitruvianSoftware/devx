@@ -26,8 +26,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 )
 
 func newClusterDestroyCmd(configFile *string) *cobra.Command {
@@ -47,7 +47,6 @@ and removes the exported kubeconfig. Use -y/--non-interactive to skip confirmati
 			return cluster.Destroy(ctx, cfg, NonInteractive, DryRun)
 		},
 	}
-
 
 	cmd.Flags().DurationVar(&timeout, "timeout", 15*time.Minute, "maximum time for the entire operation")
 

@@ -23,10 +23,10 @@ package cmd
 import "github.com/spf13/cobra"
 
 var dbCmd = &cobra.Command{
-	Use:   "db",
+	Use:     "db",
 	GroupID: "infra",
-	Short: "Manage local development databases",
-	Long:  `Provision, list, and remove local databases with persistent volumes.`,
+	Short:   "Manage local development databases",
+	Long:    `Provision, list, and remove local databases with persistent volumes.`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return ensureVMRunning()
 	},

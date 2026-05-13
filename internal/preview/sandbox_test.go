@@ -31,10 +31,10 @@ import (
 
 func TestNew_DerivedNames(t *testing.T) {
 	tests := []struct {
-		prNumber       int
-		wantProject    string
-		wantBranch     string
-		wantWorktree   string
+		prNumber     int
+		wantProject  string
+		wantBranch   string
+		wantWorktree string
 	}{
 		{42, "pr-42", "devx-pr-42", filepath.Join(os.TempDir(), "devx-preview-42")},
 		{1, "pr-1", "devx-pr-1", filepath.Join(os.TempDir(), "devx-preview-1")},

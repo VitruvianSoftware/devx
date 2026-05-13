@@ -30,9 +30,9 @@ import (
 )
 
 var (
-	grafanaAPI      = "http://localhost:3000/api/dashboards/db"
-	prometheusUID   = "Prometheus-Data"
-	tempoUID        = "Tempo"
+	grafanaAPI    = "http://localhost:3000/api/dashboards/db"
+	prometheusUID = "Prometheus-Data"
+	tempoUID      = "Tempo"
 )
 
 func init() {
@@ -84,7 +84,7 @@ func ProvisionDashboard() error {
 	if err != nil {
 		return fmt.Errorf("posting dashboard: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }() 
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("grafana API returned %d", resp.StatusCode)

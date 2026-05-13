@@ -25,9 +25,9 @@ import (
 )
 
 var ciCmd = &cobra.Command{
-	Use:   "ci",
+	Use:     "ci",
 	GroupID: "ci",
-	Short: "Local CI pipeline emulation",
+	Short:   "Local CI pipeline emulation",
 	Long: `Execute GitHub Actions workflows locally inside isolated containers.
 
 devx ci run parses .github/workflows/ and executes run: shell blocks

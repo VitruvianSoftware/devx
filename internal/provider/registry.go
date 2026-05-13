@@ -56,4 +56,3 @@ func GetProvider(name string) (*Provider, error) {
 	}
 	return &Provider{VM: vm, Runtime: rt}, nil
 }
-

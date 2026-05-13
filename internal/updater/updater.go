@@ -138,7 +138,7 @@ func fetchLatest() (tag, htmlURL string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	defer func() { _ = resp.Body.Close() }() 
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusForbidden {

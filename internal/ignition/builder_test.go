@@ -68,7 +68,7 @@ func TestBuild_SubstitutesVariables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
-	defer func() { _ = os.Remove(ignPath) }() 
+	defer func() { _ = os.Remove(ignPath) }()
 
 	data, err := os.ReadFile(ignPath)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestBuild_WritesToTempFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error: %v", err)
 	}
-	defer func() { _ = os.Remove(ignPath) }() 
+	defer func() { _ = os.Remove(ignPath) }()
 
 	// Should be a real file in the OS temp directory
 	if !strings.HasPrefix(ignPath, os.TempDir()) {

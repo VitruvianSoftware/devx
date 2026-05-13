@@ -26,8 +26,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 )
 
 func newClusterJoinCmd(configFile *string) *cobra.Command {
@@ -47,7 +47,6 @@ It detects which nodes are missing and provisions only those.`,
 			return cluster.Join(ctx, cfg, DryRun)
 		},
 	}
-
 
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "maximum time for the entire operation")
 

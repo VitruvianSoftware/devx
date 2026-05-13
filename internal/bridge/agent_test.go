@@ -34,9 +34,9 @@ func TestGenerateAgentManifest_ContainsNamedPorts(t *testing.T) {
 			{Name: "metrics", Port: 9090, TargetPort: "9090", Protocol: "TCP"},
 		},
 		OriginalSelector: map[string]string{"app": "payments"},
-		AgentImage:        AgentImageDefault,
-		SessionID:         "abc12345",
-		Deadline:          14400,
+		AgentImage:       AgentImageDefault,
+		SessionID:        "abc12345",
+		Deadline:         14400,
 	}
 
 	manifest := generateAgentManifest(cfg)
@@ -64,9 +64,9 @@ func TestGenerateAgentManifest_ContainsControlAndHealthPorts(t *testing.T) {
 			{Port: 5678, Protocol: "TCP"},
 		},
 		OriginalSelector: map[string]string{"app": "echo"},
-		AgentImage:        AgentImageDefault,
-		SessionID:         "test1234",
-		Deadline:          14400,
+		AgentImage:       AgentImageDefault,
+		SessionID:        "test1234",
+		Deadline:         14400,
 	}
 
 	manifest := generateAgentManifest(cfg)
@@ -87,9 +87,9 @@ func TestGenerateAgentManifest_ContainsServiceAccount(t *testing.T) {
 			{Port: 5678, Protocol: "TCP"},
 		},
 		OriginalSelector: map[string]string{"app": "echo"},
-		AgentImage:        AgentImageDefault,
-		SessionID:         "sa-test",
-		Deadline:          14400,
+		AgentImage:       AgentImageDefault,
+		SessionID:        "sa-test",
+		Deadline:         14400,
 	}
 
 	manifest := generateAgentManifest(cfg)
@@ -163,9 +163,9 @@ func TestGenerateAgentManifest_PortArgs(t *testing.T) {
 			{Name: "grpc", Port: 9090, Protocol: "TCP"},
 		},
 		OriginalSelector: map[string]string{"app": "test"},
-		AgentImage:        AgentImageDefault,
-		SessionID:         "ports-test",
-		Deadline:          14400,
+		AgentImage:       AgentImageDefault,
+		SessionID:        "ports-test",
+		Deadline:         14400,
 	}
 
 	manifest := generateAgentManifest(cfg)

@@ -25,9 +25,9 @@ import (
 )
 
 var traceCmd = &cobra.Command{
-	Use:   "trace",
+	Use:     "trace",
 	GroupID: "telemetry",
-	Short: "Manage local distributed tracing and observability backends",
+	Short:   "Manage local distributed tracing and observability backends",
 	Long: `Instantly spin up a local OpenTelemetry-compatible tracing backend for
 shift-left observability. 'devx shell' will automatically discover a running
 backend and inject OTEL_EXPORTER_OTLP_ENDPOINT into your dev container,

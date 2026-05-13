@@ -53,14 +53,14 @@ type StepResult struct {
 
 // ExecuteConfig holds configuration for a CI execution run.
 type ExecuteConfig struct {
-	Workflow    *Workflow
-	Runtime     string            // "podman" or "docker"
-	Image       string            // container image override (empty = auto-detect)
-	JobFilter   []string          // run only these jobs (empty = all)
-	Secrets     map[string]string // secrets from devx Vault
-	DryRun      bool
-	JSONOutput  bool
-	ProjectDir  string
+	Workflow   *Workflow
+	Runtime    string            // "podman" or "docker"
+	Image      string            // container image override (empty = auto-detect)
+	JobFilter  []string          // run only these jobs (empty = all)
+	Secrets    map[string]string // secrets from devx Vault
+	DryRun     bool
+	JSONOutput bool
+	ProjectDir string
 }
 
 // Execute runs the parsed workflow according to the execution plan.
@@ -206,7 +206,7 @@ func executeJob(cfg ExecuteConfig, ej ExpandedJob, image string, outputMu *sync.
 
 	cmd := exec.Command(cfg.Runtime, createArgs...)
 	out, err := cmd.CombinedOutput()
-	
+
 	// If Google Cloud docker credential helper fails, intercept and trigger interactive recovery
 	if err != nil && !cfg.JSONOutput {
 		if devxerr.RecoverGcloudAuth(string(out)) {

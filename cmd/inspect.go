@@ -73,7 +73,7 @@ This is a free, open-source replacement for ngrok's paid web inspector.`,
 		if err != nil {
 			return fmt.Errorf("failed to start inspector proxy: %w", err)
 		}
-		defer func() { _ = proxy.Close() }() 
+		defer func() { _ = proxy.Close() }()
 
 		tunnelURL := ""
 

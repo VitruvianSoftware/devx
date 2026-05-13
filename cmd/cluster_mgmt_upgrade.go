@@ -26,8 +26,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 )
 
 func newClusterUpgradeCmd(configFile *string) *cobra.Command {
@@ -49,7 +49,6 @@ uncordoned after, with a health check between each node.`,
 			return cluster.Upgrade(ctx, cfg, DryRun)
 		},
 	}
-
 
 	cmd.Flags().DurationVar(&timeout, "timeout", 45*time.Minute, "maximum time for the entire operation")
 

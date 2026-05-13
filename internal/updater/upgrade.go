@@ -144,7 +144,7 @@ func downloadBytes(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }() 
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("HTTP %d fetching %s", resp.StatusCode, url)
 	}
@@ -175,7 +175,7 @@ func extractBinary(tarGzBytes []byte, binaryName string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("not a valid gzip archive: %w", err)
 	}
-	defer func() { _ = gr.Close() }() 
+	defer func() { _ = gr.Close() }()
 
 	tr := tar.NewReader(gr)
 	for {

@@ -31,8 +31,8 @@ type AgentMode string
 
 const (
 	AgentModeOllamaLaunch AgentMode = "ollama_launch" // Full agentic via ollama launch
-	AgentModeChatAPI      AgentMode = "chat_api"       // Simple chat completion via internal/ai
-	AgentModeNone         AgentMode = "none"            // No AI available
+	AgentModeChatAPI      AgentMode = "chat_api"      // Simple chat completion via internal/ai
+	AgentModeNone         AgentMode = "none"          // No AI available
 )
 
 // AgentResult holds the output of an AI-assisted operation.
@@ -82,12 +82,12 @@ func tryOllamaLaunch(prompt string) (*AgentResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list ollama models")
 	}
-	
+
 	lines := strings.Split(strings.TrimSpace(string(listOut)), "\n")
 	if len(lines) < 2 {
 		return nil, fmt.Errorf("no ollama models found (run ollama pull first)")
 	}
-	
+
 	fields := strings.Fields(lines[1])
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("invalid ollama list output")

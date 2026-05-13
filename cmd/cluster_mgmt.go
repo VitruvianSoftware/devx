@@ -27,9 +27,9 @@ import (
 var clusterConfigFile string
 
 var clusterMgmtCmd = &cobra.Command{
-	Use:   "cluster",
+	Use:     "cluster",
 	GroupID: "k8s",
-	Short: "Provision and manage multi-node K8s clusters across macOS machines",
+	Short:   "Provision and manage multi-node K8s clusters across macOS machines",
 	Long: `cluster is a CLI tool for provisioning and managing Kubernetes clusters
 across multiple macOS machines using Lima VZ and K3s.
 

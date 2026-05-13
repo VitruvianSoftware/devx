@@ -41,7 +41,7 @@ running in your cluster) instead of the local one spawned by 'devx trace spawn'.
 		_, _ = resolveConfig("devx.yaml", "")
 
 		fmt.Println("🚀 Provisioning devx Build Metrics dashboard...")
-		
+
 		if err := telemetry.ProvisionDashboard(); err != nil {
 			return fmt.Errorf("failed to provision dashboard: %w", err)
 		}

@@ -39,13 +39,13 @@ import (
 
 // Sandbox holds all state for an isolated PR preview environment.
 type Sandbox struct {
-	PRNumber     int
-	BranchName   string
-	WorktreeDir  string
-	ProjectName  string // namespace prefix for containers (e.g., "pr-42")
-	TunnelName   string // derived from project name
-	LocalBranch  string // local tracking branch (e.g., "devx-pr-42")
-	errors       []string
+	PRNumber    int
+	BranchName  string
+	WorktreeDir string
+	ProjectName string // namespace prefix for containers (e.g., "pr-42")
+	TunnelName  string // derived from project name
+	LocalBranch string // local tracking branch (e.g., "devx-pr-42")
+	errors      []string
 }
 
 // New creates a Sandbox with all derived names computed from the PR number.
@@ -296,11 +296,11 @@ func (s *Sandbox) DryRun() string {
 // JSON returns a structured representation for --json output.
 func (s *Sandbox) JSON() ([]byte, error) {
 	data := map[string]interface{}{
-		"pr_number":    s.PRNumber,
-		"project_name": s.ProjectName,
-		"local_branch": s.LocalBranch,
-		"worktree_dir": s.WorktreeDir,
-		"db_prefix":    fmt.Sprintf("devx-db-%s", s.ProjectName),
+		"pr_number":     s.PRNumber,
+		"project_name":  s.ProjectName,
+		"local_branch":  s.LocalBranch,
+		"worktree_dir":  s.WorktreeDir,
+		"db_prefix":     fmt.Sprintf("devx-db-%s", s.ProjectName),
 		"volume_prefix": fmt.Sprintf("devx-data-%s", s.ProjectName),
 	}
 	return json.MarshalIndent(data, "", "  ")

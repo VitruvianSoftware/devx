@@ -327,10 +327,10 @@ func parseBridgeTarget(raw, defaultNS string) (bridgeTarget, error) {
 func printBridgeDryRun(forwards []*bridge.PortForward, kubeconfig, kubeCtx, kubectlVer string) error {
 	if outputJSON {
 		type dryRunOutput struct {
-			DryRun     bool               `json:"dry_run"`
-			Kubectl    string             `json:"kubectl"`
-			Kubeconfig string             `json:"kubeconfig"`
-			Context    string             `json:"context"`
+			DryRun     bool                  `json:"dry_run"`
+			Kubectl    string                `json:"kubectl"`
+			Kubeconfig string                `json:"kubeconfig"`
+			Context    string                `json:"context"`
 			Forwards   []bridge.SessionEntry `json:"forwards"`
 		}
 		out := dryRunOutput{

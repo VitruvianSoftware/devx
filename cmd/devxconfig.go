@@ -113,7 +113,7 @@ type DevxConfigTunnel struct {
 // DevxConfigServiceBridgeTarget defines an inline bridge connect target on a service (Idea 46.3).
 type DevxConfigServiceBridgeTarget struct {
 	Service   string `yaml:"service"`    // K8s service name
-	Namespace string `yaml:"namespace"` // Override namespace (default: bridge.namespace)
+	Namespace string `yaml:"namespace"`  // Override namespace (default: bridge.namespace)
 	Port      int    `yaml:"port"`       // Remote service port
 	LocalPort int    `yaml:"local_port"` // Local port to bind (0 = auto)
 }
@@ -121,7 +121,7 @@ type DevxConfigServiceBridgeTarget struct {
 // DevxConfigServiceBridgeIntercept defines an inline bridge intercept on a service (Idea 46.3).
 type DevxConfigServiceBridgeIntercept struct {
 	Service   string `yaml:"service"`    // K8s service to intercept
-	Namespace string `yaml:"namespace"` // Override namespace (default: bridge.namespace)
+	Namespace string `yaml:"namespace"`  // Override namespace (default: bridge.namespace)
 	Port      int    `yaml:"port"`       // Remote service port
 	LocalPort int    `yaml:"local_port"` // Local port to route traffic to
 	Mode      string `yaml:"mode"`       // "steal" or "mirror" (required)
@@ -130,16 +130,16 @@ type DevxConfigServiceBridgeIntercept struct {
 // DevxConfigService defines a developer application in devx.yaml.
 type DevxConfigService struct {
 	Name            string                            `yaml:"name"`
-	Runtime         string                            `yaml:"runtime"`                      // "host" (default), "container", "kubernetes", "cloud", "bridge"
-	Command         []string                          `yaml:"command"`                      // e.g. ["npm", "run", "dev"]
-	DependsOn       []DevxConfigDependsOn             `yaml:"depends_on"`                   // services/databases that must be healthy first
+	Runtime         string                            `yaml:"runtime"`    // "host" (default), "container", "kubernetes", "cloud", "bridge"
+	Command         []string                          `yaml:"command"`    // e.g. ["npm", "run", "dev"]
+	DependsOn       []DevxConfigDependsOn             `yaml:"depends_on"` // services/databases that must be healthy first
 	Healthcheck     DevxConfigHealthcheck             `yaml:"healthcheck"`
 	Port            int                               `yaml:"port"`
-	Env             map[string]string                 `yaml:"env"`                          // extra env vars
-	Sync            []DevxConfigSync                  `yaml:"sync,omitempty"`               // file sync mappings into containers
-	BridgeTarget    *DevxConfigServiceBridgeTarget    `yaml:"bridge_target,omitempty"`       // Idea 46.3: inline outbound bridge
-	BridgeIntercept *DevxConfigServiceBridgeIntercept `yaml:"bridge_intercept,omitempty"`    // Idea 46.3: inline intercept
-	Dir             string                            `yaml:"-"`                            // Internal: working directory (set by include resolver)
+	Env             map[string]string                 `yaml:"env"`                        // extra env vars
+	Sync            []DevxConfigSync                  `yaml:"sync,omitempty"`             // file sync mappings into containers
+	BridgeTarget    *DevxConfigServiceBridgeTarget    `yaml:"bridge_target,omitempty"`    // Idea 46.3: inline outbound bridge
+	BridgeIntercept *DevxConfigServiceBridgeIntercept `yaml:"bridge_intercept,omitempty"` // Idea 46.3: inline intercept
+	Dir             string                            `yaml:"-"`                          // Internal: working directory (set by include resolver)
 }
 
 // DevxConfigProfile defines a named overlay that merges additively onto the base config.
@@ -204,7 +204,7 @@ func (ca *DevxConfigCustomAction) Cmds() [][]string {
 // DevxConfigBridgeTarget defines a remote K8s service to bridge locally (Idea 46.1).
 type DevxConfigBridgeTarget struct {
 	Service   string `yaml:"service"`    // K8s service name (e.g., "payments-api")
-	Namespace string `yaml:"namespace"` // K8s namespace (default: from bridge.namespace)
+	Namespace string `yaml:"namespace"`  // K8s namespace (default: from bridge.namespace)
 	Port      int    `yaml:"port"`       // Remote service port to forward
 	LocalPort int    `yaml:"local_port"` // Local port to bind (0 = auto)
 }
@@ -222,12 +222,12 @@ type DevxConfigBridgeIntercept struct {
 // Enables developers to connect their local environment to remote K8s services
 // via kubectl port-forward, following the "Client-Driven Architecture" principle.
 type DevxConfigBridge struct {
-	Kubeconfig string                      `yaml:"kubeconfig"`   // Path to kubeconfig (default: ~/.kube/config)
-	Context    string                      `yaml:"context"`      // Kube context to use
-	Namespace  string                      `yaml:"namespace"`    // Default namespace for targets
-	AgentImage string                      `yaml:"agent_image"`  // Override agent container image (Idea 46.2)
-	Targets    []DevxConfigBridgeTarget    `yaml:"targets"`      // Outbound: remote services to bridge (46.1)
-	Intercepts []DevxConfigBridgeIntercept `yaml:"intercepts"`   // Inbound: traffic intercept targets (46.2)
+	Kubeconfig string                      `yaml:"kubeconfig"`  // Path to kubeconfig (default: ~/.kube/config)
+	Context    string                      `yaml:"context"`     // Kube context to use
+	Namespace  string                      `yaml:"namespace"`   // Default namespace for targets
+	AgentImage string                      `yaml:"agent_image"` // Override agent container image (Idea 46.2)
+	Targets    []DevxConfigBridgeTarget    `yaml:"targets"`     // Outbound: remote services to bridge (46.1)
+	Intercepts []DevxConfigBridgeIntercept `yaml:"intercepts"`  // Inbound: traffic intercept targets (46.2)
 }
 
 // DevxConfigState defines state sharing/replication settings.
@@ -243,21 +243,21 @@ type DevxConfigTelemetry struct {
 
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
-	Name          string                              `yaml:"name"`            // Project name
-	Domain        string                              `yaml:"domain"`          // Custom domain (BYOD)
-	Env           []string                            `yaml:"env"`             // Vault sources for secret injection
-	Include       []DevxConfigInclude                 `yaml:"include"`         // External devx.yaml files to compose (Idea 44)
-	Tunnels       []DevxConfigTunnel                  `yaml:"tunnels"`         // List of ports to expose
-	Databases     []DevxConfigDatabase                `yaml:"databases"`       // List of databases to provision
-	Services      []DevxConfigService                 `yaml:"services"`        // List of applications to orchestrate
-	Test          DevxConfigTest                      `yaml:"test"`            // Test configuration
-	Mocks         []DevxConfigMock                    `yaml:"mocks"`           // List of OpenAPI mock servers to provision
-	Profiles      map[string]DevxConfigProfile        `yaml:"profiles"`        // Named environment overlays
-	Pipeline      *DevxConfigPipeline                 `yaml:"pipeline"`        // Explicit pipeline stages (Idea 45.2)
-	CustomActions map[string]DevxConfigCustomAction   `yaml:"customActions"`   // Named tasks (scaffolded for Idea 45.3)
-	Bridge        *DevxConfigBridge                   `yaml:"bridge"`          // Hybrid edge-to-local routing (Idea 46.1)
-	State         *DevxConfigState                    `yaml:"state"`           // State replication settings (Idea 56)
-	Telemetry     *DevxConfigTelemetry                `yaml:"telemetry"`       // Telemetry export endpoints
+	Name          string                            `yaml:"name"`          // Project name
+	Domain        string                            `yaml:"domain"`        // Custom domain (BYOD)
+	Env           []string                          `yaml:"env"`           // Vault sources for secret injection
+	Include       []DevxConfigInclude               `yaml:"include"`       // External devx.yaml files to compose (Idea 44)
+	Tunnels       []DevxConfigTunnel                `yaml:"tunnels"`       // List of ports to expose
+	Databases     []DevxConfigDatabase              `yaml:"databases"`     // List of databases to provision
+	Services      []DevxConfigService               `yaml:"services"`      // List of applications to orchestrate
+	Test          DevxConfigTest                    `yaml:"test"`          // Test configuration
+	Mocks         []DevxConfigMock                  `yaml:"mocks"`         // List of OpenAPI mock servers to provision
+	Profiles      map[string]DevxConfigProfile      `yaml:"profiles"`      // Named environment overlays
+	Pipeline      *DevxConfigPipeline               `yaml:"pipeline"`      // Explicit pipeline stages (Idea 45.2)
+	CustomActions map[string]DevxConfigCustomAction `yaml:"customActions"` // Named tasks (scaffolded for Idea 45.3)
+	Bridge        *DevxConfigBridge                 `yaml:"bridge"`        // Hybrid edge-to-local routing (Idea 46.1)
+	State         *DevxConfigState                  `yaml:"state"`         // State replication settings (Idea 56)
+	Telemetry     *DevxConfigTelemetry              `yaml:"telemetry"`     // Telemetry export endpoints
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────

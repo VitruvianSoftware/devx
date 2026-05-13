@@ -35,9 +35,9 @@ import (
 )
 
 var sitesCmd = &cobra.Command{
-	Use:   "sites",
+	Use:     "sites",
 	GroupID: "ci",
-	Short: "Manage documentation and static site hosting",
+	Short:   "Manage documentation and static site hosting",
 	Long: `Commands for initializing and managing GitHub Pages deployments
 with automatic Cloudflare DNS configuration.`,
 	RunE: func(cmd *cobra.Command, args []string) error {

@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
 	"github.com/VitruvianSoftware/devx/internal/telemetry"
@@ -38,9 +38,9 @@ import (
 var statsClear bool
 
 var statsCmd = &cobra.Command{
-	Use:   "stats",
+	Use:     "stats",
 	GroupID: "telemetry",
-	Short: "Display local devx performance metrics (P50/P90/P99 latency)",
+	Short:   "Display local devx performance metrics (P50/P90/P99 latency)",
 	Long: `Reads the local metrics log at ~/.devx/metrics.json and displays
 percentile latency for each recorded event type.
 

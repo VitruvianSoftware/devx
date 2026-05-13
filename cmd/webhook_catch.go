@@ -43,9 +43,9 @@ var webhookExpose bool
 var webhookRuntime string
 
 var webhookCmd = &cobra.Command{
-	Use:   "webhook",
+	Use:     "webhook",
 	GroupID: "network",
-	Short: "Local webhook tools",
+	Short:   "Local webhook tools",
 }
 
 var webhookCatchCmd = &cobra.Command{

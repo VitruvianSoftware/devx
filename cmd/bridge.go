@@ -25,9 +25,9 @@ import (
 )
 
 var bridgeCmd = &cobra.Command{
-	Use:   "bridge",
+	Use:     "bridge",
 	GroupID: "k8s",
-	Short: "Connect your local environment to a remote Kubernetes cluster",
+	Short:   "Connect your local environment to a remote Kubernetes cluster",
 	Long: `Hybrid edge-to-local routing (Idea 46) — connect your local dev
 environment to remote Kubernetes services via kubectl port-forward,
 and intercept inbound cluster traffic for live local debugging.

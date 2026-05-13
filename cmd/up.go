@@ -44,15 +44,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
 var upDomain string
 var upProfile string
 
 var upCmd = &cobra.Command{
-	Use:   "up",
+	Use:     "up",
 	GroupID: "orchestration",
-	Short: "Provision databases and expose ports defined in devx.yaml.",
-	Args:  cobra.NoArgs,
+	Short:   "Provision databases and expose ports defined in devx.yaml.",
+	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := ensureVMRunning(); err != nil {
 			return err
@@ -423,7 +422,6 @@ func mustGetwd() string {
 	}
 	return d
 }
-
 
 func init() {
 	upCmd.Flags().StringVar(&upDomain, "domain", "", "Custom Cloudflare domain (BYOD) to override setting in devx.yaml")

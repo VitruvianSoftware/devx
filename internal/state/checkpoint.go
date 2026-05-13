@@ -88,7 +88,7 @@ func CreateCheckpoint(providerName, name string, rt provider.ContainerRuntime) e
 		go func(containerId string) {
 			defer wg.Done()
 			archivePath := filepath.Join(targetDir, containerId+".tar.gz")
-			
+
 			// Command: podman container checkpoint <container> --export <archive> --keep
 			// Using --keep so we can resume the original container or at least retain volumes properly
 			cmd := exec.Command("podman", "container", "checkpoint", containerId, "-e", archivePath, "--keep")

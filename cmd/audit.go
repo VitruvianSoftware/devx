@@ -38,9 +38,9 @@ var auditOnlySecrets bool
 var auditOnlyVulns bool
 
 var auditCmd = &cobra.Command{
-	Use:   "audit",
+	Use:     "audit",
 	GroupID: "telemetry",
-	Short: "Scan for leaked secrets and dependency vulnerabilities before pushing",
+	Short:   "Scan for leaked secrets and dependency vulnerabilities before pushing",
 	Long: `Runs two security scans against the current project directory:
 
   secrets  — Gitleaks: detect hardcoded API keys, tokens, credentials in source

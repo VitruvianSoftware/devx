@@ -37,9 +37,9 @@ import (
 )
 
 var shellCmd = &cobra.Command{
-	Use:   "shell",
+	Use:     "shell",
 	GroupID: "orchestration",
-	Short: "Launch an isolated dev shell from devcontainer.json",
+	Short:   "Launch an isolated dev shell from devcontainer.json",
 	Long: `Reads the devcontainer.json from your project, pulls the container image,
 mounts your workspace, applies environment variables, and drops you into
 an interactive shell with all your project's tooling pre-configured.

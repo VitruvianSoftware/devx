@@ -70,11 +70,11 @@ type PortForward struct {
 	cmd        *exec.Cmd
 	cancel     context.CancelFunc
 
-	mu       sync.RWMutex
-	state    PortForwardState
-	lastErr  error
-	retries  int
-	stateC   chan PortForwardState
+	mu      sync.RWMutex
+	state   PortForwardState
+	lastErr error
+	retries int
+	stateC  chan PortForwardState
 }
 
 const maxRetries = 3

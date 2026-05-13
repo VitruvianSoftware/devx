@@ -57,7 +57,7 @@ func RecordEvent(event string, duration time.Duration, attrs ...Attribute) {
 	if err != nil {
 		return
 	}
-	defer func() { _ = f.Close() }() 
+	defer func() { _ = f.Close() }()
 
 	// Acquire exclusive lock
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {

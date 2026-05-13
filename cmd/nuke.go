@@ -34,9 +34,9 @@ import (
 var nukeRuntime string
 
 var nukeCmd = &cobra.Command{
-	Use:   "nuke",
+	Use:     "nuke",
 	GroupID: "infra",
-	Short: "Hard reset: purge caches, builds, and devx resources for this project",
+	Short:   "Hard reset: purge caches, builds, and devx resources for this project",
 	Long: `Scans the current project directory for language-specific caches, build
 artefacts, and devx-managed containers/volumes.
 

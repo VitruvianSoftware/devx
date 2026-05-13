@@ -32,9 +32,9 @@ import (
 
 // logsCmd represents the unified terminal log multiplexer command
 var logsCmd = &cobra.Command{
-	Use:   "logs",
+	Use:     "logs",
 	GroupID: "orchestration",
-	Short: "Unified TUI log multiplexer for containers and native host processes via BubbleTea",
+	Short:   "Unified TUI log multiplexer for containers and native host processes via BubbleTea",
 	Long: `Discovers all running containers in the devx VM AND native host processes launched via 'devx run'.
 Multiplexes their stdout/stderr into a single unified stream, color-codes them by service name, 
 and allows advanced interactive filtering/searching across the entire local stack.`,

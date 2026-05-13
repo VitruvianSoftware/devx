@@ -25,9 +25,9 @@ import (
 )
 
 var stateCmd = &cobra.Command{
-	Use:   "state",
+	Use:     "state",
 	GroupID: "orchestration",
-	Short: "Manage topological state (diagnostic dumps, checkpoints, and restores)",
+	Short:   "Manage topological state (diagnostic dumps, checkpoints, and restores)",
 	Long: `The state command hierarchy manages the macro state of the entire devx environment.
 	
 You can generate full diagnostic dumps, checkpoint/restore the system snapshot using CRIU,

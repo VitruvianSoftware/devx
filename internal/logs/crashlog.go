@@ -68,7 +68,7 @@ func TailHostCrashLogs(serviceName string, lines int) {
 		_, _ = fmt.Fprintf(os.Stderr, "  (could not retrieve logs for %s: %v)\n", serviceName, err)
 		return
 	}
-	defer func() { _ = f.Close() }() 
+	defer func() { _ = f.Close() }()
 
 	// Read all lines, then take last N
 	var allLines []string

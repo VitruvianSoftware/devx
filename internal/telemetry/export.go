@@ -131,7 +131,7 @@ func ExportSpan(name string, duration time.Duration, attrs ...Attribute) {
 	if err != nil {
 		return // Backend not running — silent no-op
 	}
-	defer func() { _ = resp.Body.Close() }() 
+	defer func() { _ = resp.Body.Close() }()
 }
 
 // randomHex generates n random bytes and returns as hex string.

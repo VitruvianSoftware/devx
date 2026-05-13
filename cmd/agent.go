@@ -32,9 +32,9 @@ import (
 )
 
 var agentCmd = &cobra.Command{
-	Use:   "agent",
+	Use:     "agent",
 	GroupID: "ci",
-	Short: "Manage AI Agent configuration for your project",
+	Short:   "Manage AI Agent configuration for your project",
 }
 
 var (
@@ -209,4 +209,3 @@ func init() {
 	agentCmd.AddCommand(agentInitCmd)
 	rootCmd.AddCommand(agentCmd)
 }
-

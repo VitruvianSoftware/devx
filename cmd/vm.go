@@ -36,9 +36,9 @@ import (
 var vmProviderFlag string
 
 var vmCmd = &cobra.Command{
-	Use:   "vm",
+	Use:     "vm",
 	GroupID: "infra",
-	Short: "Manage the local development VM",
+	Short:   "Manage the local development VM",
 	Long: `Commands for provisioning, inspecting, and managing your local dev environment.
 Supports multiple backends via --provider (podman, docker, orbstack, lima, colima).
 Use --provider=auto to auto-detect, or set a default in ~/.devx/config.yaml.`,
@@ -179,4 +179,3 @@ func init() {
 	vmCmd.PersistentFlags().StringVar(&vmProviderFlag, "provider", "",
 		"Virtualization backend to use (podman, docker, orbstack, lima, colima, auto)")
 }
-

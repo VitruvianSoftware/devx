@@ -132,7 +132,7 @@ var stateAttachCmd = &cobra.Command{
 			fmt.Printf("Containers: %d\n", len(manifest.Containers))
 			fmt.Printf("Databases: %d\n", len(manifest.Databases))
 			fmt.Printf("WARNING: This will overwrite your current environment state.\n\n")
-			
+
 			fmt.Printf("Proceed with attach? [y/N]: ")
 			var confirm string
 			fmt.Scanln(&confirm) //nolint:errcheck
@@ -157,7 +157,7 @@ var stateAttachCmd = &cobra.Command{
 				dst := filepath.Join(cpDir, c)
 				_ = os.Rename(src, dst)
 			}
-			
+
 			if err := state.RestoreCheckpoint(prov.VM.Name(), manifest.CheckpointName, rt); err != nil {
 				return &devxerr.DevxError{
 					ExitCode: devxerr.CodeStateAttachRestoreFail,
@@ -171,13 +171,13 @@ var stateAttachCmd = &cobra.Command{
 		for _, db := range manifest.Databases {
 			srcTar := filepath.Join(extractDir, "databases", fmt.Sprintf("%s_%s.tar", db.Engine, db.Name))
 			srcJson := filepath.Join(extractDir, "databases", fmt.Sprintf("%s_%s.json", db.Engine, db.Name))
-			
+
 			dstDir := filepath.Join(database.SnapshotDir(), db.Engine)
 			_ = os.MkdirAll(dstDir, 0755)
-			
+
 			_ = os.Rename(srcTar, filepath.Join(dstDir, db.Name+".tar"))
 			_ = os.Rename(srcJson, filepath.Join(dstDir, db.Name+".json"))
-			
+
 			if err := database.RestoreSnapshot(rt, db.Engine, db.Name); err != nil {
 				return &devxerr.DevxError{
 					ExitCode: devxerr.CodeStateAttachRestoreFail,

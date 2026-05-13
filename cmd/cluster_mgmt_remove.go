@@ -26,8 +26,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 	"github.com/VitruvianSoftware/devx/internal/multinode/cluster"
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 )
 
 func newClusterRemoveCmd(configFile *string) *cobra.Command {
@@ -48,7 +48,6 @@ destroys the Lima VM on the target host.`,
 			return cluster.Remove(ctx, cfg, args[0], DryRun)
 		},
 	}
-
 
 	cmd.Flags().DurationVar(&timeout, "timeout", 10*time.Minute, "maximum time for the entire operation")
 

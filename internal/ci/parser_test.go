@@ -231,12 +231,12 @@ func TestConditionEvaluation(t *testing.T) {
 		condition string
 		expected  bool
 	}{
-		{"", true},                                  // empty = always run
-		{"${{ matrix.goos == 'darwin' }}", true},    // equality match
-		{"${{ matrix.goos == 'linux' }}", false},    // equality mismatch
-		{"${{ matrix.goos != 'linux' }}", true},     // inequality match
-		{"${{ matrix.goos != 'darwin' }}", false},   // inequality mismatch
-		{"contains(github.ref, 'main')", true},      // complex → fail-open
+		{"", true},                                // empty = always run
+		{"${{ matrix.goos == 'darwin' }}", true},  // equality match
+		{"${{ matrix.goos == 'linux' }}", false},  // equality mismatch
+		{"${{ matrix.goos != 'linux' }}", true},   // inequality match
+		{"${{ matrix.goos != 'darwin' }}", false}, // inequality mismatch
+		{"contains(github.ref, 'main')", true},    // complex → fail-open
 	}
 
 	for _, tt := range tests {

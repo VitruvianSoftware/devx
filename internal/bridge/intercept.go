@@ -41,7 +41,7 @@ type ServicePortSpec struct {
 type ServiceInfo struct {
 	Name           string            `json:"name"`
 	Namespace      string            `json:"namespace"`
-	Type           string            `json:"type"`               // ClusterIP, NodePort, etc.
+	Type           string            `json:"type"` // ClusterIP, NodePort, etc.
 	Selector       map[string]string `json:"selector"`
 	Ports          []ServicePortSpec `json:"ports"`
 	HasMeshSidecar bool              `json:"has_mesh_sidecar"`

@@ -65,7 +65,7 @@ type SystemInfo struct {
 // AIProviderStatus represents the state of a single AI provider.
 type AIProviderStatus struct {
 	Name      string `json:"name"`
-	Type      string `json:"type"`      // "local_llm", "cloud_api", or "coding_agent"
+	Type      string `json:"type"` // "local_llm", "cloud_api", or "coding_agent"
 	Available bool   `json:"available"`
 	Detail    string `json:"detail,omitempty"`
 	Note      string `json:"note,omitempty"`
@@ -73,10 +73,10 @@ type AIProviderStatus struct {
 
 // AILandscape holds the detected AI providers and coding agents.
 type AILandscape struct {
-	Providers    []AIProviderStatus `json:"providers"`
-	LocalReady   bool               `json:"local_ready"`   // At least one local LLM is running
-	CloudReady   bool               `json:"cloud_ready"`   // At least one cloud API key is set
-	AgentsFound  int                `json:"agents_found"`  // Number of coding agents detected
+	Providers   []AIProviderStatus `json:"providers"`
+	LocalReady  bool               `json:"local_ready"`  // At least one local LLM is running
+	CloudReady  bool               `json:"cloud_ready"`  // At least one cloud API key is set
+	AgentsFound int                `json:"agents_found"` // Number of coding agents detected
 }
 
 // Report is the full doctor audit result.
@@ -435,7 +435,7 @@ func CheckAILandscape() AILandscape {
 		providers = append(providers, AIProviderStatus{
 			Name: "OpenAI API", Type: "cloud_api", Available: false,
 			Detail: "OPENAI_API_KEY not set",
-			Note:  "Export OPENAI_API_KEY for cloud AI features",
+			Note:   "Export OPENAI_API_KEY for cloud AI features",
 		})
 	}
 
@@ -500,7 +500,7 @@ func CheckAILandscape() AILandscape {
 		providers = append(providers, AIProviderStatus{
 			Name: "AI Coding Agents", Type: "coding_agent", Available: false,
 			Detail: "none detected",
-			Note:  "Install one and run: devx agent init",
+			Note:   "Install one and run: devx agent init",
 		})
 	}
 

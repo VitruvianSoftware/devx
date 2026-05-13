@@ -162,7 +162,7 @@ func checkSocketVmnet(ctx context.Context, runner *remote.Runner, host string, f
 			// Try to restart via homebrew services on macOS
 			_, _ = runner.RunShell(ctx, "sudo launchctl stop homebrew.mxcl.socket_vmnet 2>/dev/null || true")
 			_, _ = runner.RunShell(ctx, "sudo launchctl start homebrew.mxcl.socket_vmnet")
-			
+
 			out, err = runner.RunShell(ctx, cmd)
 			if err == nil {
 				return CheckResult{Name: "socket_vmnet", Host: host, Passed: true, Message: fmt.Sprintf("running at %s (fixed)", strings.TrimSpace(out))}
@@ -216,16 +216,16 @@ func checkK3s(ctx context.Context, mgr *k3s.Manager, runner *remote.Runner, vmNa
 	if !installed {
 		return CheckResult{Name: "K3s", Host: host, Passed: false, Message: "not installed"}
 	}
-	
+
 	// Check if active
 	serviceName := "k3s"
 	if role == "agent" {
 		serviceName = "k3s-agent"
 	}
-	
+
 	out, err := runner.LimaShellSudo(ctx, vmName, fmt.Sprintf("systemctl is-active %s 2>/dev/null", serviceName))
 	active := err == nil && strings.TrimSpace(out) == "active"
-	
+
 	if !active && fix {
 		fmt.Printf("  [%s] 🔧 Auto-fixing K3s (restarting %s)...\n", host, serviceName)
 		_, _ = runner.LimaShellSudo(ctx, vmName, fmt.Sprintf("systemctl restart %s", serviceName))
@@ -235,11 +235,11 @@ func checkK3s(ctx context.Context, mgr *k3s.Manager, runner *remote.Runner, vmNa
 		}
 		return CheckResult{Name: "K3s", Host: host, Passed: false, Message: "installed but inactive (fix failed)"}
 	}
-	
+
 	if !active {
 		return CheckResult{Name: "K3s", Host: host, Passed: false, Message: "installed but inactive"}
 	}
-	
+
 	return CheckResult{Name: "K3s", Host: host, Passed: true, Message: "installed & active"}
 }
 
@@ -257,7 +257,7 @@ func checkClusterHealth(ctx context.Context, mgr *k3s.Manager, runner *remote.Ru
 	if err != nil {
 		return CheckResult{Name: "Cluster Health", Host: host, Passed: false, Message: "API server not reachable"}
 	}
-	
+
 	passed := !strings.Contains(out, "NotReady") && !strings.Contains(out, "SchedulingDisabled")
 	if !passed && fix {
 		fmt.Printf("  [%s] 🔧 Auto-fixing Cluster Health (uncordoning nodes)...\n", host)
@@ -270,7 +270,7 @@ func checkClusterHealth(ctx context.Context, mgr *k3s.Manager, runner *remote.Ru
 			return CheckResult{Name: "Cluster Health", Host: host, Passed: true, Message: "all nodes Ready (fixed)"}
 		}
 	}
-	
+
 	if strings.Contains(out, "NotReady") {
 		return CheckResult{Name: "Cluster Health", Host: host, Passed: false, Message: "some nodes are NotReady"}
 	}
@@ -284,7 +284,7 @@ func collectBridgedIPs(ctx context.Context, cfg *config.Config) map[string]strin
 	ips := make(map[string]string)
 	for _, node := range cfg.Nodes {
 		runner := util.NewRunner(node)
-		
+
 		// Prefer Tailscale IP if it's installed
 		out, err := runner.LimaShell(ctx, node.GetVMName(), "tailscale ip -4 2>/dev/null")
 		tsIP := strings.TrimSpace(out)

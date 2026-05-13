@@ -36,9 +36,9 @@ import (
 )
 
 var doctorCmd = &cobra.Command{
-	Use:   "doctor",
+	Use:     "doctor",
 	GroupID: "telemetry",
-	Short: "Check that all prerequisites are installed and configured",
+	Short:   "Check that all prerequisites are installed and configured",
 	Long: `Audits your development environment for required CLI tools, credentials,
 and authentication sessions. Reports what's installed, what's missing,
 and how to fix any gaps.

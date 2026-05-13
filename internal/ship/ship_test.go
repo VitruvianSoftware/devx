@@ -174,6 +174,20 @@ func TestDetectStack_DotNet_Sln(t *testing.T) {
 	}
 }
 
+func TestDetectStack_Bazel(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "WORKSPACE"), []byte("workspace(name = \"my_workspace\")"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	stack := DetectStack(dir)
+	if stack == nil {
+		t.Fatal("expected Bazel stack, got nil")
+	}
+	if stack.Name != "Bazel" {
+		t.Errorf("expected name 'Bazel', got %q", stack.Name)
+	}
+}
+
 func TestDetectStack_UnknownReturnsNil(t *testing.T) {
 	dir := t.TempDir()
 	// Empty directory — no marker files
@@ -402,14 +416,14 @@ func TestStackDefinitions_ContainsAllSupportedStacks(t *testing.T) {
 	defs := stackDefinitions()
 
 	expected := map[string]bool{
-		"Go":             false,
-		"Node/JS/TS":     false,
-		"Rust":           false,
-		"Python":         false,
-		"Java/Maven":     false,
-		"Java/Gradle":    false,
-		"Kotlin/Gradle":  false,
-		".NET":           false,
+		"Go":            false,
+		"Node/JS/TS":    false,
+		"Rust":          false,
+		"Python":        false,
+		"Java/Maven":    false,
+		"Java/Gradle":   false,
+		"Kotlin/Gradle": false,
+		".NET":          false,
 	}
 
 	for _, d := range defs {

@@ -37,14 +37,14 @@ import (
 )
 
 var (
-	interceptPort      int
-	interceptLocalPort int
-	interceptSteal     bool
-	interceptMirror    bool
-	interceptAgentImg  string
+	interceptPort       int
+	interceptLocalPort  int
+	interceptSteal      bool
+	interceptMirror     bool
+	interceptAgentImg   string
 	interceptKubeconfig string
-	interceptContext   string
-	interceptNamespace string
+	interceptContext    string
+	interceptNamespace  string
 )
 
 var bridgeInterceptCmd = &cobra.Command{
@@ -408,17 +408,17 @@ func removeInterceptFromSession(sessionID string) {
 func printInterceptDryRun(info *bridge.ServiceInfo, kubeconfig, kubeCtx, kubectlVer string, targetPort, localPort int, agentImage, sessionID string) error {
 	if outputJSON {
 		type dryRunOutput struct {
-			DryRun     bool                `json:"dry_run"`
-			Kubectl    string              `json:"kubectl"`
-			Kubeconfig string              `json:"kubeconfig"`
-			Context    string              `json:"context"`
-			Service    string              `json:"service"`
-			Namespace  string              `json:"namespace"`
-			Mode       string              `json:"mode"`
-			TargetPort int                 `json:"target_port"`
-			LocalPort  int                 `json:"local_port"`
-			AgentImage string              `json:"agent_image"`
-			SessionID  string              `json:"session_id"`
+			DryRun     bool                     `json:"dry_run"`
+			Kubectl    string                   `json:"kubectl"`
+			Kubeconfig string                   `json:"kubeconfig"`
+			Context    string                   `json:"context"`
+			Service    string                   `json:"service"`
+			Namespace  string                   `json:"namespace"`
+			Mode       string                   `json:"mode"`
+			TargetPort int                      `json:"target_port"`
+			LocalPort  int                      `json:"local_port"`
+			AgentImage string                   `json:"agent_image"`
+			SessionID  string                   `json:"session_id"`
 			Ports      []bridge.ServicePortSpec `json:"ports"`
 		}
 		out := dryRunOutput{
