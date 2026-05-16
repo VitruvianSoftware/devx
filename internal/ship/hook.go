@@ -27,6 +27,45 @@ import (
 	"path/filepath"
 )
 
+// PreCommitHookContent is the shell script installed into .git/hooks/pre-commit.
+// It prevents direct commits to protected trunk branches and forces developers
+// to work on feature branches.
+// Humans can bypass with: git commit --no-verify
+const PreCommitHookContent = `#!/bin/sh
+# ═══════════════════════════════════════════════════════════════════════════
+# devx pre-commit hook — Protected Branch Guardrail
+# ═══════════════════════════════════════════════════════════════════════════
+# This hook is installed by 'devx audit install-hooks' or
+# 'devx agent ship --install-hook'.
+#
+# It prevents accidental commits to protected trunk branches
+# (main, master, develop, development, dev), ensuring developers
+# always work on feature branches.
+#
+# Bypass (if you know what you're doing): git commit --no-verify
+# ═══════════════════════════════════════════════════════════════════════════
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+case "$BRANCH" in
+  main|master|develop|development|dev)
+    echo ""
+    echo "╭──────────────────────────────────────────────────────────────────╮"
+    echo "│  ❌ Direct commits to '${BRANCH}' are blocked by devx.           │"
+    echo "│                                                                  │"
+    echo "│  Please create a feature branch first:                           │"
+    echo "│    git checkout -b <your-feature-branch>                         │"
+    echo "│                                                                  │"
+    echo "│  Bypass (not recommended): git commit --no-verify                │"
+    echo "╰──────────────────────────────────────────────────────────────────╯"
+    echo ""
+    exit 1
+    ;;
+esac
+
+exit 0
+`
+
 // PrePushHookContent is the shell script installed into .git/hooks/pre-push.
 // It runs devx audit (secrets + vulnerability scanning) first, then blocks
 // all git push attempts and directs agents to use devx agent ship.
@@ -66,6 +105,33 @@ echo ""
 exit 1
 `
 
+// InstallPreCommitHook writes the pre-commit hook into .git/hooks/.
+// If any devx-managed hook already exists, it will be safely overwritten.
+// If a non-devx hook exists, it returns an error to avoid clobbering.
+func InstallPreCommitHook(repoDir string) error {
+	hookDir := filepath.Join(repoDir, ".git", "hooks")
+	hookPath := filepath.Join(hookDir, "pre-commit")
+
+	// Ensure hooks directory exists
+	if err := os.MkdirAll(hookDir, 0o755); err != nil {
+		return fmt.Errorf("creating hooks directory: %w", err)
+	}
+
+	// Check for existing non-devx hook
+	if data, err := os.ReadFile(hookPath); err == nil {
+		content := string(data)
+		if content != "" && !isDevxHook(content) {
+			return fmt.Errorf("existing non-devx pre-commit hook found at %s — refusing to overwrite. Remove it manually or merge the hooks", hookPath)
+		}
+	}
+
+	if err := os.WriteFile(hookPath, []byte(PreCommitHookContent), 0o755); err != nil {
+		return fmt.Errorf("writing pre-commit hook: %w", err)
+	}
+
+	return nil
+}
+
 // InstallPrePushHook writes the pre-push hook into .git/hooks/.
 // If any devx-managed hook already exists, it will be safely overwritten.
 // If a non-devx hook exists, it returns an error to avoid clobbering.
@@ -93,6 +159,16 @@ func InstallPrePushHook(repoDir string) error {
 	return nil
 }
 
+// IsPreCommitHookInstalled checks if a devx pre-commit hook is present.
+func IsPreCommitHookInstalled(repoDir string) bool {
+	hookPath := filepath.Join(repoDir, ".git", "hooks", "pre-commit")
+	data, err := os.ReadFile(hookPath)
+	if err != nil {
+		return false
+	}
+	return isDevxHook(string(data))
+}
+
 // IsPrePushHookInstalled checks if a devx pre-push hook is present.
 func IsPrePushHookInstalled(repoDir string) bool {
 	hookPath := filepath.Join(repoDir, ".git", "hooks", "pre-push")
@@ -107,7 +183,9 @@ func isDevxHook(content string) bool {
 	return len(content) > 0 && containsAny(content,
 		"devx agent ship",
 		"devx pre-push hook",
+		"devx pre-commit hook",
 		"Agentic Pipeline Guardrail",
+		"Protected Branch Guardrail",
 		"devx audit",
 		"Installed by devx",
 	)

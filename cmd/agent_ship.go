@@ -322,9 +322,22 @@ func exitWithResult(r *ship.Result) error {
 func installShipHook() error {
 	cwd, _ := os.Getwd()
 
+	// ── Install pre-commit hook (branch protection) ──────────────────────
+	if err := ship.InstallPreCommitHook(cwd); err != nil {
+		if !strings.Contains(err.Error(), "non-devx") {
+			// Silently skip if already installed, but report non-devx conflicts
+		} else {
+			fmt.Printf("  %s  pre-commit: %s\n", shipStyleFail.Render("✗"), err.Error())
+		}
+	} else {
+		fmt.Printf("  %s  Installed devx pre-commit hook at .git/hooks/pre-commit\n", tui.IconDone)
+		fmt.Printf("  %s\n", shipStyleMuted.Render("Direct commits to main/master are now blocked."))
+	}
+
+	// ── Install pre-push hook (agentic guardrail) ────────────────────────
 	if err := ship.InstallPrePushHook(cwd); err != nil {
 		if strings.Contains(err.Error(), "non-devx") {
-			fmt.Printf("  %s  %s\n", shipStyleFail.Render("✗"), err.Error())
+			fmt.Printf("  %s  pre-push: %s\n", shipStyleFail.Render("✗"), err.Error())
 			return nil
 		}
 		return err
