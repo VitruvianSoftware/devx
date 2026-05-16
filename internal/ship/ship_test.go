@@ -522,6 +522,87 @@ func TestIsPrePushHookInstalled_ReturnsFalseWhenAbsent(t *testing.T) {
 	}
 }
 
+// ── Pre-Commit Hook Tests ────────────────────────────────────────────────────
+
+func TestInstallPreCommitHook_NewRepo(t *testing.T) {
+	dir := t.TempDir()
+	gitDir := filepath.Join(dir, ".git", "hooks")
+	if err := os.MkdirAll(gitDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := InstallPreCommitHook(dir); err != nil {
+		t.Fatalf("failed to install hook: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(gitDir, "pre-commit"))
+	if err != nil {
+		t.Fatalf("hook not written: %v", err)
+	}
+	if !isDevxHook(string(data)) {
+		t.Error("installed hook should be recognized as devx hook")
+	}
+}
+
+func TestInstallPreCommitHook_RejectsNonDevxHook(t *testing.T) {
+	dir := t.TempDir()
+	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\necho custom hook"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := InstallPreCommitHook(dir)
+	if err == nil {
+		t.Fatal("expected error when non-devx hook exists")
+	}
+}
+
+func TestIsPreCommitHookInstalled_DetectsDevxHook(t *testing.T) {
+	dir := t.TempDir()
+	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(hookPath, []byte(PreCommitHookContent), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	if !IsPreCommitHookInstalled(dir) {
+		t.Error("expected devx pre-commit hook to be detected")
+	}
+}
+
+func TestIsPreCommitHookInstalled_ReturnsFalseWhenAbsent(t *testing.T) {
+	dir := t.TempDir()
+	if IsPreCommitHookInstalled(dir) {
+		t.Error("expected false when no hook exists")
+	}
+}
+
+func TestInstallPreCommitHook_OverwritesExistingDevxHook(t *testing.T) {
+	dir := t.TempDir()
+	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Write an old devx hook
+	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\n# devx pre-commit hook (old version)"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := InstallPreCommitHook(dir); err != nil {
+		t.Fatalf("should overwrite existing devx hook: %v", err)
+	}
+
+	data, _ := os.ReadFile(hookPath)
+	if string(data) != PreCommitHookContent {
+		t.Error("hook content should be updated to latest version")
+	}
+}
+
 // ── HasStagedChanges / CurrentBranch Tests ───────────────────────────────────
 
 func TestHasStagedChanges_FalseInNonGitDir(t *testing.T) {

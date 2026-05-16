@@ -192,15 +192,31 @@ func runAuditVulns(_ *cobra.Command, _ []string) error {
 
 func runAuditInstallHooks(_ *cobra.Command, _ []string) error {
 	cwd, _ := os.Getwd()
+
+	// ── Install pre-commit hook (branch protection) ──────────────────────
+	if err := audit.InstallPreCommitHook(cwd); err != nil {
+		if strings.Contains(err.Error(), "already installed") {
+			fmt.Printf("%s pre-commit hook already installed.\n", tui.IconDone)
+		} else {
+			fmt.Printf("  %s  pre-commit: %s\n", auditStyleFail.Render("✗"), err.Error())
+		}
+	} else {
+		fmt.Printf("%s Installed git pre-commit hook at .git/hooks/pre-commit\n", tui.IconDone)
+		fmt.Printf("  %s\n", auditStyleMuted.Render("Direct commits to main/master are now blocked."))
+	}
+
+	// ── Install pre-push hook (security audit) ──────────────────────────
 	if err := audit.InstallPrePushHook(cwd); err != nil {
 		if strings.Contains(err.Error(), "already installed") {
 			fmt.Printf("%s pre-push hook already installed.\n", tui.IconDone)
-			return nil
+		} else {
+			fmt.Printf("  %s  pre-push: %s\n", auditStyleFail.Render("✗"), err.Error())
 		}
-		return err
+	} else {
+		fmt.Printf("%s Installed git pre-push hook at .git/hooks/pre-push\n", tui.IconDone)
+		fmt.Printf("  %s\n", auditStyleMuted.Render("devx audit will now run automatically before every git push."))
 	}
-	fmt.Printf("%s Installed git pre-push hook at .git/hooks/pre-push\n", tui.IconDone)
-	fmt.Printf("  %s\n", auditStyleMuted.Render("devx audit will now run automatically before every git push."))
+
 	return nil
 }
 

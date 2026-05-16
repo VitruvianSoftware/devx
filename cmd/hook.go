@@ -23,6 +23,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -33,6 +35,38 @@ var hookCmd = &cobra.Command{
 	Use:    "hook",
 	Short:  "Internal commands invoked by git hooks",
 	Hidden: true,
+}
+
+var hookPreCommitCmd = &cobra.Command{
+	Use:   "pre-commit",
+	Short: "Invoked by the .git/hooks/pre-commit hook",
+	RunE: func(_ *cobra.Command, _ []string) error {
+		// Resolve current branch
+		branch := "unknown"
+		if out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
+			branch = strings.TrimSpace(string(out))
+		}
+
+		protected := map[string]bool{
+			"main": true, "master": true,
+			"develop": true, "development": true, "dev": true,
+		}
+
+		if protected[branch] {
+			_, _ = fmt.Fprintln(os.Stderr)
+			_, _ = fmt.Fprintln(os.Stderr, "╭──────────────────────────────────────────────────────────────────╮")
+			_, _ = fmt.Fprintf(os.Stderr, "│  ❌ Direct commits to '%s' are blocked by devx.%s│\n", branch, strings.Repeat(" ", 15-len(branch)))
+			_, _ = fmt.Fprintln(os.Stderr, "│                                                                  │")
+			_, _ = fmt.Fprintln(os.Stderr, "│  Please create a feature branch first:                           │")
+			_, _ = fmt.Fprintln(os.Stderr, "│    git checkout -b <your-feature-branch>                         │")
+			_, _ = fmt.Fprintln(os.Stderr, "│                                                                  │")
+			_, _ = fmt.Fprintln(os.Stderr, "│  Bypass (not recommended): git commit --no-verify                │")
+			_, _ = fmt.Fprintln(os.Stderr, "╰──────────────────────────────────────────────────────────────────╯")
+			_, _ = fmt.Fprintln(os.Stderr)
+			os.Exit(1)
+		}
+		return nil
+	},
 }
 
 var hookPrePushCmd = &cobra.Command{
@@ -56,6 +90,7 @@ var hookPrePushCmd = &cobra.Command{
 }
 
 func init() {
+	hookCmd.AddCommand(hookPreCommitCmd)
 	hookCmd.AddCommand(hookPrePushCmd)
 	rootCmd.AddCommand(hookCmd)
 }

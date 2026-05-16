@@ -259,3 +259,52 @@ devx audit
 	}
 	return nil
 }
+
+// InstallPreCommitHook writes a git pre-commit hook to .git/hooks/pre-commit
+// that prevents direct commits to protected branches (main, master).
+func InstallPreCommitHook(cwd string) error {
+	hooksDir := cwd + "/.git/hooks"
+	if _, err := os.Stat(hooksDir); os.IsNotExist(err) {
+		return fmt.Errorf("not a git repository (no .git/hooks directory found)")
+	}
+	hookPath := hooksDir + "/pre-commit"
+
+	// Don't overwrite an existing hook without reading it
+	if _, err := os.Stat(hookPath); err == nil {
+		existing, _ := os.ReadFile(hookPath)
+		if strings.Contains(string(existing), "devx") || strings.Contains(string(existing), "Protected Branch") {
+			return fmt.Errorf("already installed")
+		}
+		return fmt.Errorf("a pre-commit hook already exists at %s — add the branch check manually", hookPath)
+	}
+
+	hook := `#!/bin/sh
+# Installed by devx audit install-hooks
+# Prevents direct commits to protected trunk branches
+# (main, master, develop, development, dev).
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+case "$BRANCH" in
+  main|master|develop|development|dev)
+    echo ""
+    echo "╭──────────────────────────────────────────────────────────────────╮"
+    echo "│  ❌ Direct commits to '${BRANCH}' are blocked by devx.           │"
+    echo "│                                                                  │"
+    echo "│  Please create a feature branch first:                           │"
+    echo "│    git checkout -b <your-feature-branch>                         │"
+    echo "│                                                                  │"
+    echo "│  Bypass (not recommended): git commit --no-verify                │"
+    echo "╰──────────────────────────────────────────────────────────────────╯"
+    echo ""
+    exit 1
+    ;;
+esac
+
+exit 0
+`
+	if err := os.WriteFile(hookPath, []byte(hook), 0755); err != nil {
+		return fmt.Errorf("failed to write pre-commit hook: %w", err)
+	}
+	return nil
+}
