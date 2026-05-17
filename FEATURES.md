@@ -84,6 +84,15 @@ This document serves as an organized historical record of all major capabilities
   * `devx agent ship`: Auto-generates conventional commit messages by passing `git diff` to the best available AI backend when the `-m` flag is omitted.
   * `devx agent review --ai-review`: Executes a local AI-powered code review focusing on bugs, security, and error handling before pushing a review PR.
 
+### 65. MCP Server — Devx as a First-Class Tool Surface for AI Agents (DONE)
+* **The Problem:** Even with skill files (Idea 15) and local-LLM bridging (Idea 64), agents still interact with devx by shelling out and parsing text — they have to remember `--json` and `-y` flags, trap numeric exit codes, and reconstruct schemas from `--help` output. Every agent host (Claude Code, Cursor, Codex, Gemini CLI, Zed, etc.) reinvents this work.
+* **The Solution:** Shipped `devx mcp` — both a [Model Context Protocol](https://modelcontextprotocol.io) server that exposes ~18 devx commands as typed tools, and a one-command installer that wires devx into every detected agent host.
+  * `devx mcp serve` — long-running stdio MCP server. Each tool (`devx_doctor`, `devx_db_spawn`, `devx_cloud_spawn`, `devx_state_share`, `devx_ship`, ...) shells out to the devx binary in a subprocess and returns the structured result. Destructive tools (`devx_*_rm`, `devx_vm_teardown`, `devx_state_attach`, `devx_ship`) carry `destructiveHint: true` so hosts can prompt the user before invocation. Read-only tools carry `readOnlyHint: true` so hosts know they're safe.
+  * `devx mcp install [host…]` — zero-config installer. Auto-detects supported hosts (Claude Code, Cursor, Codex CLI, Gemini CLI, Zed, Continue.dev, Windsurf, OpenCode) and writes the correct MCP entry to each one's config in the right format (JSON, TOML) and at the right scope (per-project where supported, per-user otherwise). Idempotent — re-running is safe and preserves the user's other MCP servers and unrelated keys. Plugin-model hosts (Cowork, Antigravity) get a copy-pasteable snippet plus host-specific instructions.
+  * `devx mcp status / uninstall / doctor / list` — round out the lifecycle. `doctor` actually launches the server in a subprocess, performs the handshake, calls `tools/list`, and confirms the expected tool set comes back.
+  * Cobra-style `--json`, `-y`, and `--dry-run` flags throughout for agent consumption and safe-by-default trial runs.
+* **Key files:** `internal/mcpserver/{server,tools,exec}.go`, `internal/mcpinstall/{host,host_json,host_codex,host_manual,registry}.go`, `cmd/mcp{,_serve,_install,_uninstall,_status,_doctor,_list}.go`, `docs/guide/mcp.md`, `docs/.vitepress/config.mjs`
+
 ---
 
 ## Developer Onboarding Automation
