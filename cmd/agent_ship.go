@@ -205,7 +205,7 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create PR")
 	}
 
-	prURL, err := ship.CreatePR(cwd, shipCommitMsg, shipCommitMsg, shipBaseBranch)
+	prURL, err := ship.CreatePR(cwd, shipCommitMsg, shipBaseBranch)
 	result.PRURL = prURL
 	if err != nil {
 		result.ExitCode = ship.ExitPRFail

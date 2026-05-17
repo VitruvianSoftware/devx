@@ -181,7 +181,7 @@ func runAgentReview(_ *cobra.Command, _ []string) error {
 		fmt.Printf("  %s %s\n", shipStylePhase.Render("▸ Phase 3:"), "Create PR for Review")
 	}
 
-	prURL, err := ship.CreatePR(cwd, reviewCommitMsg, reviewCommitMsg, reviewBaseBranch)
+	prURL, err := ship.CreatePR(cwd, reviewCommitMsg, reviewBaseBranch)
 	result.PRURL = prURL
 	if err != nil {
 		result.ExitCode = ship.ExitPRFail
