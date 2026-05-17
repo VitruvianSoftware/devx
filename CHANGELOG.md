@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.45.0](https://github.com/VitruvianSoftware/devx/compare/v0.44.0...v0.45.0) (2026-05-17)
+
+
+### Features
+
+* add zero-config auto-detection for Bazel stacks ([11f40b6](https://github.com/VitruvianSoftware/devx/commit/11f40b6f6a569f9e21ba7c4eac780ba4f1773bbe))
+* **mcp:** devx as a first-class MCP tool surface for AI coding agents ([#182](https://github.com/VitruvianSoftware/devx/issues/182)) ([c651580](https://github.com/VitruvianSoftware/devx/commit/c651580938052a51b75c75ac2e116c1e65ea2cfc))
+* protect common trunk branches in pre-commit hook ([#179](https://github.com/VitruvianSoftware/devx/issues/179)) ([0745f88](https://github.com/VitruvianSoftware/devx/commit/0745f88cc7da62bedbc862c8451df87e3fd5e545))
+* wire devx ci run into envvault + add S3/MinIO emulator ([#180](https://github.com/VitruvianSoftware/devx/issues/180)) ([1da5ad5](https://github.com/VitruvianSoftware/devx/commit/1da5ad58644e136665bd6fc13bd4764dd05e4d0d))
+
+
+### Bug Fixes
+
+* **ship:** split commit message into PR title + body so multi-line -m works ([#189](https://github.com/VitruvianSoftware/devx/issues/189)) ([99acc06](https://github.com/VitruvianSoftware/devx/commit/99acc066dcf39c900d99576a91d2f5f6102ff2ab))
+
 ## [0.44.0](https://github.com/VitruvianSoftware/devx/compare/v0.43.1...v0.44.0) (2026-05-12)
 
 
