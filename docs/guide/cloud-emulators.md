@@ -1,6 +1,6 @@
-# Cloud Emulators (GCS & more)
+# Cloud Emulators (GCS, S3 & more)
 
-`devx cloud` spins up local GCP service emulators inside the devx VM so your application can use real GCP SDKs without touching actual cloud infrastructure during development.
+`devx cloud` spins up local cloud service emulators inside the devx VM so your application can use real cloud SDKs (Google Cloud, AWS) without touching actual cloud infrastructure during development.
 
 ## Why Emulators?
 
@@ -12,9 +12,10 @@
 ## Spawn an Emulator
 
 ```bash
-devx cloud spawn gcs      # Google Cloud Storage (fake-gcs-server)
-devx cloud spawn pubsub   # Google Cloud Pub/Sub
+devx cloud spawn gcs       # Google Cloud Storage (fake-gcs-server)
+devx cloud spawn pubsub    # Google Cloud Pub/Sub
 devx cloud spawn firestore # Google Cloud Firestore
+devx cloud spawn s3        # Amazon S3 (MinIO)
 ```
 
 On success, `devx cloud spawn` prints the environment variable your application needs:
@@ -69,13 +70,14 @@ Stops and removes the container. Since emulators run with in-memory backends, no
 
 ## Supported Services
 
-| Key | Name | Port | SDK Env Var |
-|-----|------|------|-------------|
+| Key | Name | Port | SDK Env Var(s) |
+|-----|------|------|----------------|
 | `gcs` | Google Cloud Storage | 4443 | `STORAGE_EMULATOR_HOST` |
 | `pubsub` | Google Cloud Pub/Sub | 8085 | `PUBSUB_EMULATOR_HOST` |
 | `firestore` | Google Cloud Firestore | 8080 | `FIRESTORE_EMULATOR_HOST` |
+| `s3` | Amazon S3 (MinIO) | 9000 | `AWS_ENDPOINT_URL_S3`, `AWS_ENDPOINT_URL`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` |
 
-> **TODO:** AWS S3 emulation via MinIO (`devx cloud spawn s3`) is planned for a future release.
+The S3 emulator pre-seeds MinIO's default credentials (`minioadmin` / `minioadmin`) into the injected env vars so the AWS SDKs work out of the box — these credentials only grant access to your local container.
 
 ## Connecting from Your Code
 
@@ -100,4 +102,29 @@ const storage = new Storage();
 # No code changes needed when STORAGE_EMULATOR_HOST is set
 from google.cloud import storage
 client = storage.Client()
+```
+
+### Go (S3 via aws-sdk-go-v2)
+
+```go
+// AWS SDK v2 reads AWS_ENDPOINT_URL_S3 automatically from the environment.
+cfg, _ := config.LoadDefaultConfig(ctx)
+client := s3.NewFromConfig(cfg, func(o *s3.Options) { o.UsePathStyle = true })
+```
+
+### Python (S3 via boto3 1.34+)
+
+```python
+# boto3 1.34+ reads AWS_ENDPOINT_URL_S3 automatically. For older versions,
+# pass endpoint_url=os.environ["AWS_ENDPOINT_URL_S3"] explicitly.
+import boto3
+s3 = boto3.client("s3")
+```
+
+### Node.js (S3 via @aws-sdk/client-s3 v3)
+
+```js
+// AWS SDK v3 reads AWS_ENDPOINT_URL_S3 automatically.
+import { S3Client } from "@aws-sdk/client-s3";
+const s3 = new S3Client({ forcePathStyle: true });
 ```

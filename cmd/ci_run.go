@@ -22,6 +22,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -163,7 +164,15 @@ func runCIRun(cmd *cobra.Command, args []string) error {
 // loadVaultSecrets attempts to load secrets from devx vault providers.
 // Returns an empty map on failure — secrets are best-effort for local CI.
 func loadVaultSecrets() map[string]string {
-	// TODO: Wire into internal/envvault once the vault providers are
-	// integrated. For now, return empty secrets.
-	return map[string]string{}
+	secrets, source, err := loadAvailableSecrets()
+	if err != nil {
+		if !outputJSON {
+			_, _ = fmt.Fprintf(os.Stderr, "⚠️  Vault fetch failed (continuing with no secrets): %v\n", err)
+		}
+		return map[string]string{}
+	}
+	if len(secrets) > 0 && !outputJSON {
+		fmt.Printf("🔒 Injected %d secrets from %s\n", len(secrets), source)
+	}
+	return secrets
 }

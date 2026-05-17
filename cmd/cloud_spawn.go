@@ -159,6 +159,14 @@ func buildGCSArgs(serviceName, runtime, containerName string, port int, emulator
 			"gcloud", "beta", "emulators", "firestore", "start",
 			fmt.Sprintf("--host-port=0.0.0.0:%d", emulator.InternalPort),
 		)
+	case "s3":
+		// MinIO requires an explicit data dir and address. Console is left
+		// on a dynamic port — we only expose the S3 API port.
+		runArgs = append(runArgs,
+			"server",
+			"--address", fmt.Sprintf(":%d", emulator.InternalPort),
+			"/data",
+		)
 	}
 
 	return runArgs
