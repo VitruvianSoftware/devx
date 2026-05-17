@@ -619,3 +619,95 @@ func TestCurrentBranch_UnknownInNonGitDir(t *testing.T) {
 		t.Errorf("expected 'unknown', got %q", branch)
 	}
 }
+
+func TestSplitCommitMessage(t *testing.T) {
+	cases := []struct {
+		name      string
+		input     string
+		wantTitle string
+		wantBody  string
+	}{
+		{
+			name:      "subject only",
+			input:     "feat: add cool thing",
+			wantTitle: "feat: add cool thing",
+			wantBody:  "",
+		},
+		{
+			name:      "subject plus body separated by blank line",
+			input:     "feat: add cool thing\n\nLonger explanation\nof what changed.",
+			wantTitle: "feat: add cool thing",
+			wantBody:  "Longer explanation\nof what changed.",
+		},
+		{
+			name:      "subject plus body without blank separator",
+			input:     "fix: handle nil pointer\nObserved in prod under heavy load.",
+			wantTitle: "fix: handle nil pointer",
+			wantBody:  "Observed in prod under heavy load.",
+		},
+		{
+			name:      "leading and trailing whitespace stripped",
+			input:     "   \n\n  chore: tidy up   \n\nbody here\n  \n",
+			wantTitle: "chore: tidy up",
+			wantBody:  "body here",
+		},
+		{
+			name:      "internal blank lines preserved in body",
+			input:     "feat: x\n\npara one\n\npara two\n\npara three",
+			wantTitle: "feat: x",
+			wantBody:  "para one\n\npara two\n\npara three",
+		},
+		{
+			name:      "empty input yields empty title and body",
+			input:     "",
+			wantTitle: "",
+			wantBody:  "",
+		},
+		{
+			name:      "whitespace-only input yields empty title and body",
+			input:     "   \n\n   ",
+			wantTitle: "",
+			wantBody:  "",
+		},
+		{
+			name:      "long subject is preserved verbatim",
+			input:     "feat(mcp): devx as a first-class MCP tool surface for AI coding agents",
+			wantTitle: "feat(mcp): devx as a first-class MCP tool surface for AI coding agents",
+			wantBody:  "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotTitle, gotBody := SplitCommitMessage(tc.input)
+			if gotTitle != tc.wantTitle {
+				t.Errorf("title = %q, want %q", gotTitle, tc.wantTitle)
+			}
+			if gotBody != tc.wantBody {
+				t.Errorf("body = %q, want %q", gotBody, tc.wantBody)
+			}
+		})
+	}
+}
+
+func TestSplitCommitMessageTitleNeverContainsNewline(t *testing.T) {
+	// Invariant the fix relies on: regardless of input, the title returned
+	// by SplitCommitMessage must never contain a newline, since GitHub's
+	// API rejects multi-line PR titles.
+	inputs := []string{
+		"single line",
+		"line one\nline two",
+		"line one\n\nline two",
+		"\n\nleading newlines\nthen body",
+		"",
+		"\n",
+	}
+	for _, in := range inputs {
+		title, _ := SplitCommitMessage(in)
+		for _, r := range title {
+			if r == '\n' {
+				t.Errorf("title %q contains newline (input was %q)", title, in)
+				break
+			}
+		}
+	}
+}

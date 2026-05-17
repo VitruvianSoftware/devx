@@ -450,9 +450,14 @@ func GitPush(dir, commitMsg, branch string) error {
 	return nil
 }
 
-// CreatePR creates a GitHub PR.
+// CreatePR creates a GitHub PR from a commit-message-style string. The first
+// line of commitMsg becomes the PR title; the remainder (if any) becomes the
+// PR body. Splitting is required because GitHub's API rejects titles that
+// contain newlines or exceed ~256 chars, so passing the full multi-line `-m`
+// payload as the title returns a 422 and surfaces as `gh pr create: exit 1`.
 // Returns the PR URL.
-func CreatePR(dir, title, body, baseBranch string) (string, error) {
+func CreatePR(dir, commitMsg, baseBranch string) (string, error) {
+	title, body := SplitCommitMessage(commitMsg)
 	out, err := runCmdOutput(dir, []string{
 		"gh", "pr", "create",
 		"--title", title,
@@ -460,18 +465,33 @@ func CreatePR(dir, title, body, baseBranch string) (string, error) {
 		"--base", baseBranch,
 	})
 	if err != nil {
-		return "", fmt.Errorf("gh pr create: %w", err)
+		return "", fmt.Errorf("gh pr create: %w\n%s", err, strings.TrimSpace(out))
 	}
 	return strings.TrimSpace(out), nil
 }
 
-// MergePR merges the given PR using admin privileges.
+// SplitCommitMessage splits a commit-style string into (title, body) using
+// the first newline as the separator. Surrounding whitespace is trimmed from
+// both halves. The body preserves its internal blank lines.
+func SplitCommitMessage(msg string) (title, body string) {
+	parts := strings.SplitN(strings.TrimSpace(msg), "\n", 2)
+	title = strings.TrimSpace(parts[0])
+	if len(parts) == 2 {
+		body = strings.TrimSpace(parts[1])
+	}
+	return
+}
+
+// MergePR merges the given PR using admin privileges. Captures stderr so
+// transient failures (mergeability race, branch-protection edge cases)
+// surface a real error message instead of an opaque exit code.
 func MergePR(dir, prURL string) error {
-	if err := runCmd(dir, []string{
+	out, err := runCmdOutput(dir, []string{
 		"gh", "pr", "merge", prURL,
 		"--squash", "--admin", "-d",
-	}, false); err != nil {
-		return fmt.Errorf("gh pr merge: %w", err)
+	})
+	if err != nil {
+		return fmt.Errorf("gh pr merge: %w\n%s", err, strings.TrimSpace(out))
 	}
 	return nil
 }
