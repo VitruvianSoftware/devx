@@ -93,6 +93,15 @@ This document serves as an organized historical record of all major capabilities
   * Cobra-style `--json`, `-y`, and `--dry-run` flags throughout for agent consumption and safe-by-default trial runs.
 * **Key files:** `internal/mcpserver/{server,tools,exec}.go`, `internal/mcpinstall/{host,host_json,host_codex,host_manual,registry}.go`, `cmd/mcp{,_serve,_install,_uninstall,_status,_doctor,_list}.go`, `docs/guide/mcp.md`, `docs/.vitepress/config.mjs`
 
+### 66. Local Cron Job Testing (`devx cron`) (DONE)
+* **The Problem:** Production cron jobs (nightly cleanups, hourly snapshots, weekly reports, periodic syncs) are notoriously hard to test locally. The schedule cadence is too slow for iteration; cobbling together a one-off invocation requires knowing every env var, vault secret, and working directory the job depends on; and bugs in cron code typically only surface after deploy, in the middle of the night, when nobody is watching.
+* **The Solution:** Shipped `devx cron` — declare jobs once in `devx.yaml`, invoke them on demand with the project's full env + vault secrets injected. Two subcommands keep the surface tiny:
+  * `devx cron list` — tabular view of every declared job (name, schedule, command, description). `--json` for agent consumption.
+  * `devx cron run <name>` — execute one job immediately. Pulls vault secrets the same way `devx shell` does (1Password, Bitwarden, GCP Secret Manager, `.env` fallback), layers per-job env on top (job env wins on conflict), streams stdout/stderr in real time, supports per-job `timeout`, honors `--dry-run` (prints resolved plan without executing) and `--json` (structured Result with exit code, duration, timed-out flag).
+  * Schedule expressions are **informational only** in this version — there is no long-running scheduler daemon. Production cadence remains your existing cron / k8s CronJob / cloud scheduler; `devx cron` is for the local-test loop. Scope kept narrow deliberately to ship something focused rather than yet another half-baked scheduler.
+  * Clean Ctrl+C handling — interrupts propagate to the subprocess as SIGTERM rather than orphaning it.
+* **Key files:** `internal/cron/cron.go`, `cmd/cron{,_list,_run}.go`, `cmd/devxconfig.go` (added `DevxConfigCron` schema and `Cron []DevxConfigCron` field), `devx.yaml.example` (section 9), `docs/guide/cron.md`, `docs/.vitepress/config.mjs`
+
 ---
 
 ## Developer Onboarding Automation

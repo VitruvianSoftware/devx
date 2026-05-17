@@ -241,6 +241,19 @@ type DevxConfigTelemetry struct {
 	OtlpEndpoint string `yaml:"otlp_endpoint"`
 }
 
+// DevxConfigCron defines a named scheduled task. The Schedule field is
+// informational in v1 — `devx cron run <name>` is one-shot and does not
+// start a long-running scheduler. Use it to document the production cadence
+// so the local-test environment stays grounded in reality.
+type DevxConfigCron struct {
+	Name        string            `yaml:"name"`                  // Unique identifier (e.g. "nightly-cleanup")
+	Schedule    string            `yaml:"schedule"`              // Cron expression (informational in v1)
+	Command     []string          `yaml:"command"`               // Argv to execute (e.g. ["node", "scripts/cleanup.js"])
+	Description string            `yaml:"description,omitempty"` // Free-text purpose; surfaced in `devx cron list`
+	Timeout     string            `yaml:"timeout,omitempty"`     // Go-duration string (e.g. "5m"); empty = no timeout
+	Env         map[string]string `yaml:"env,omitempty"`         // Per-job env vars, merged on top of project env
+}
+
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
 	Name          string                            `yaml:"name"`          // Project name
@@ -258,6 +271,7 @@ type DevxConfig struct {
 	Bridge        *DevxConfigBridge                 `yaml:"bridge"`        // Hybrid edge-to-local routing (Idea 46.1)
 	State         *DevxConfigState                  `yaml:"state"`         // State replication settings (Idea 56)
 	Telemetry     *DevxConfigTelemetry              `yaml:"telemetry"`     // Telemetry export endpoints
+	Cron          []DevxConfigCron                  `yaml:"cron"`          // Named cron jobs runnable via `devx cron run` (Idea 66)
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────
