@@ -215,10 +215,9 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** Implemented `devx db snapshot create <engine> <name>` and `devx db snapshot restore <engine> <name>`. Uses `podman volume export/import` (tar archives) for instant, zero-SQL snapshots. For Docker, falls back to a lightweight Alpine helper container. Full subcommand tree: `create`, `restore`, `list`, `rm`. Respects `--dry-run`, `-y`, and `--json` flags.
 * **Key files:** `cmd/db_snapshot.go`, `internal/database/snapshot.go`
 
-### 19. Local GCS & Cloud Emulation (DONE)
-* **The Problem:** Modern apps depend on GCP cloud services (GCS for file uploads, Pub/Sub for queues). Testing these locally requires pointing to real GCP projects or shared dev environments that get polluted.
-* **The Solution:** Implemented `devx cloud spawn gcs|pubsub|firestore`. Runs `fake-gcs-server` (GCS), or the GCP Cloud SDK emulators (Pub/Sub, Firestore) as named containers. Automatically injects the correct SDK env vars (`STORAGE_EMULATOR_HOST`, `PUBSUB_EMULATOR_HOST`, etc.) when using `devx shell`. Full subcommand tree: `spawn`, `list`, `rm`. Respects `--json` and `--dry-run`.
-* **TODO:** AWS S3 emulation via MinIO (`devx cloud spawn s3`) planned for a future release.
+### 19. Local Cloud Emulation — GCS, Pub/Sub, Firestore, S3 (DONE)
+* **The Problem:** Modern apps depend on managed cloud services (GCS/S3 for file uploads, Pub/Sub for queues). Testing these locally requires pointing to real cloud projects or shared dev environments that get polluted.
+* **The Solution:** Implemented `devx cloud spawn gcs|pubsub|firestore|s3`. Runs `fake-gcs-server` (GCS), the GCP Cloud SDK emulators (Pub/Sub, Firestore), and MinIO (S3) as named containers. Automatically injects the correct SDK env vars (`STORAGE_EMULATOR_HOST`, `PUBSUB_EMULATOR_HOST`, `AWS_ENDPOINT_URL_S3`, etc.) when using `devx shell`. For S3, MinIO's default credentials are pre-seeded into the env so AWS SDKs work out of the box. Full subcommand tree: `spawn`, `list`, `rm`. Respects `--json` and `--dry-run`.
 * **Key files:** `cmd/cloud.go`, `cmd/cloud_spawn.go`, `cmd/cloud_list.go`, `cmd/cloud_rm.go`, `internal/cloud/emulator.go`
 
 ### 20. Zero-Config Local HTTPS / TLS Certificates _(SUPERSEDED)_
