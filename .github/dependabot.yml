@@ -18,14 +18,75 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot configuration for the devx repo.
+#
+# Three ecosystems are watched:
+#   1. gomod    — the main Go module (root)
+#   2. github-actions — every workflow under .github/workflows/
+#   3. npm      — the VitePress docs site (docs/)
+#
+# Strategy:
+#   - Minor + patch updates are grouped into a single weekly PR per ecosystem,
+#     so we get at most 3 grouped PRs/week (one per ecosystem) plus
+#     individual PRs for any major-version bumps that need human review.
+#   - Commit messages use Conventional Commits style (chore(deps): ...) so
+#     release-please correctly categorises them and they don't pollute the
+#     CHANGELOG's feat/fix sections.
+#   - open-pull-requests-limit caps the queue so dependabot can't flood the
+#     PR list if a backlog accumulates.
 
 version: 2
 updates:
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # ─── Go module (root) ──────────────────────────────────────────────────
+  - package-ecosystem: "gomod"
+    directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      go-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ─── GitHub Actions workflows ──────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    groups:
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # ─── VitePress docs site ───────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docs"
+    commit-message:
+      prefix: "chore(docs)"
+      include: "scope"
+    groups:
+      docs-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
