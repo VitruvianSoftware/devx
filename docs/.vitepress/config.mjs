@@ -37,7 +37,7 @@ export default withMermaid(defineConfig({
           { text: 'Container VMs', link: '/guide/virtual-machine' },
           { text: 'VM Providers', link: '/guide/providers' },
           { text: 'Databases (Ephemeral)', link: '/guide/databases' },
-          { text: 'Cloud Emulators (GCS)', link: '/guide/cloud-emulators' },
+          { text: 'Cloud Emulators (GCS, S3)', link: '/guide/cloud-emulators' },
           { text: 'The Nuke Button', link: '/guide/nuke' }
         ]
       },
