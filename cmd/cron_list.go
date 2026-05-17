@@ -79,7 +79,7 @@ func runCronList(_ *cobra.Command, _ []string) error {
 
 	fmt.Printf("🕐 %d cron job(s) in devx.yaml:\n\n", len(jobs))
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "  NAME\tSCHEDULE\tCOMMAND\tDESCRIPTION")
+	_, _ = fmt.Fprintln(tw, "  NAME\tSCHEDULE\tCOMMAND\tDESCRIPTION")
 	for _, j := range jobs {
 		desc := j.Description
 		if desc == "" {
@@ -89,7 +89,7 @@ func runCronList(_ *cobra.Command, _ []string) error {
 		if schedule == "" {
 			schedule = "—"
 		}
-		fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\n",
 			j.Name, schedule, strings.Join(j.Command, " "), desc)
 	}
 	_ = tw.Flush()

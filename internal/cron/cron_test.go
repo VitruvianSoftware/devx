@@ -141,7 +141,7 @@ func TestExecuteHappyPathReturnsExitZero(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	res, err := Execute(context.Background(), ExecuteConfig{
 		Job: Job{
@@ -175,7 +175,7 @@ func TestExecuteNonZeroExitIsReported(t *testing.T) {
 		t.Skip("uses POSIX shell binaries")
 	}
 	devnull, _ := os.Open(os.DevNull)
-	defer devnull.Close()
+	defer func() { _ = devnull.Close() }()
 
 	res, err := Execute(context.Background(), ExecuteConfig{
 		Job: Job{
@@ -202,7 +202,7 @@ func TestExecuteTimeoutMarksResult(t *testing.T) {
 		t.Skip("uses POSIX shell binaries")
 	}
 	devnull, _ := os.Open(os.DevNull)
-	defer devnull.Close()
+	defer func() { _ = devnull.Close() }()
 
 	res, err := Execute(context.Background(), ExecuteConfig{
 		Job: Job{
@@ -274,7 +274,7 @@ func TestExecuteHonorsWorkDir(t *testing.T) {
 	}
 	tmp := t.TempDir()
 	out, _ := os.CreateTemp(tmp, "stdout-*")
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	res, err := Execute(context.Background(), ExecuteConfig{
 		Job: Job{
