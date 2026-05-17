@@ -1,10 +1,85 @@
+# Copyright (c) 2026 VitruvianSoftware
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# devx cluster — multi-node K3s cluster topology.
+#
+# Quick start:
+#   1. cp cluster.yaml.example cluster.yaml
+#   2. Edit cluster.yaml: pick a cluster name, list your Macs as nodes,
+#      and paste a fresh Tailscale auth key (see comment below).
+#   3. devx cluster init       (bootstrap from scratch)
+#      devx cluster apply      (reconcile after edits)
+#      devx cluster status     (current state)
+#      devx cluster doctor     (pre-flight health checks)
+#
+# Why this file is .example: the real cluster.yaml contains a Tailscale
+# auth key, which is sensitive. cluster.yaml itself is .gitignored so the
+# key never lands in git history. Copy this template, fill in your own
+# values, and never commit your filled-in cluster.yaml.
+# ──────────────────────────────────────────────────────────────────────────────
+
 cluster:
-  name: james-cluster
+  # Unique name for this cluster; surfaces in `devx cluster status` and
+  # is used as a label on the generated kubeconfig context.
+  name: my-cluster
+
+  # Pin a K3s version for deterministic provisioning. Bump it via
+  # `devx cluster upgrade` (rolling, zero-downtime) rather than hand-editing.
   k3sVersion: "v1.35.3+k3s1"
+
+  # Where to write the kubeconfig that `kubectl` should use against this
+  # cluster. Keep it separate from your default ~/.kube/config so you
+  # don't clobber other contexts.
   kubeconfig: "~/.kube/cluster.yaml"
 
+  # MetalLB provides LoadBalancer services on bare-metal/Lima setups.
+  # The ipRange must be reachable on the LAN your nodes share — pick a
+  # block outside your DHCP server's allocation pool.
+  metallb:
+    enabled: true
+    ipRange: 192.168.1.240-192.168.1.250
+
+  # Tailscale joins every node to your tailnet so the cluster works
+  # across NATs and from anywhere. The auth key below is REQUIRED —
+  # generate a fresh one at:
+  #   https://login.tailscale.com/admin/settings/keys
+  # Recommended key settings: Reusable, Ephemeral OFF, Pre-approved,
+  # Tag-limited (e.g. tag:devx-cluster), 90-day expiry.
+  tailscale:
+    enabled: true
+    authKey: "tskey-auth-REPLACE_ME_WITH_A_FRESH_KEY"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Nodes — one entry per Mac that joins the cluster.
+#
+# roles:
+#   server  → control-plane (etcd + API server). Use an odd count (1, 3, 5).
+#   agent   → worker node, runs your application pods.
+#
+# pool: an opaque tag for grouping nodes in `devx cluster status` output.
+# vm:   per-node Lima VM resources. Start small; bump for heavier workloads.
+# ──────────────────────────────────────────────────────────────────────────────
+
 nodes:
-  - host: james-macbook-pro
+  - host: my-laptop
     role: server
     pool: laptop-cp-1
     vm:
@@ -12,26 +87,18 @@ nodes:
       memory: 4GiB
       disk: 30GiB
 
-  - host: james-mbp16
+  - host: my-desktop
     role: server
-    pool: laptop-cp-2
+    pool: desktop-cp-1
     vm:
       cpus: 8
-      memory: 8GiB
-      disk: 30GiB
+      memory: 10GiB
+      disk: 80GiB
 
-  - host: james-mbp32
-    role: server
-    pool: laptop-cp-3
-    vm:
-      cpus: 8
-      memory: 8GiB
-      disk: 50GiB
-
-  - host: james-mbp
+  - host: my-build-machine
     role: agent
-    pool: laptop-worker-1
+    pool: workers
     vm:
       cpus: 8
-      memory: 8GiB
-      disk: 30GiB
+      memory: 20GiB
+      disk: 100GiB

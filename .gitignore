@@ -5,6 +5,7 @@
 # Our local config
 devx.yaml
 homelab.yaml
+cluster.yaml
 
 # Go build output
 /devx
