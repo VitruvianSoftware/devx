@@ -86,6 +86,7 @@ export default withMermaid(defineConfig({
           { text: 'Pipeline Stages', link: '/guide/pipeline' },
           { text: 'Local CI Emulation', link: '/guide/ci' },
           { text: 'Predictive Pre-Building', link: '/guide/caching' },
+          { text: 'Cron Job Testing', link: '/guide/cron' },
           { text: 'MCP Server for AI Agents', link: '/guide/mcp' }
         ]
       }

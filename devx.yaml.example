@@ -331,3 +331,23 @@ profiles:
 #   # Use your own S3/GCS bucket for secure team sharing (recommended)
 #   relay: "s3://my-team-devx-state/checkpoints"
 #   # relay: "gs://my-team-devx-state/checkpoints"
+
+# ─── 9. Cron Jobs (Idea 66) ──────────────────────────────────────────────────────
+# Declare named cron jobs so they can be invoked on demand with the project's
+# vault secrets injected: `devx cron list` / `devx cron run <name>`.
+# The schedule is informational in this version — there is no long-running
+# scheduler. Pair the local one-shot with whatever production cron / k8s
+# CronJob fires the same command on its real cadence.
+#
+# cron:
+#   - name: nightly-cleanup
+#     schedule: "0 2 * * *"
+#     description: "Purge sessions older than 30 days"
+#     command: ["node", "scripts/cleanup.js"]
+#     timeout: "5m"
+#     env:
+#       DRY_RUN: "false"
+#
+#   - name: hourly-snapshot
+#     schedule: "0 * * * *"
+#     command: ["pg_dump", "-Fc", "-f", "/backups/snap.dump", "myapp"]
