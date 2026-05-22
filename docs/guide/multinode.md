@@ -83,10 +83,22 @@ When enabled, `devx cluster` will:
 
 For each node in the cluster, you can interact with its Docker daemon directly from the node's physical host machine using the forwarded Unix socket.
 
-Set the `DOCKER_HOST` environment variable to point to the socket located in the node's Lima configuration directory:
+#### Option 1: Symlink the Docker Socket (Frictionless, Default)
+
+To run standard `docker` commands directly without setting any environment variables, you can symlink the forwarded socket to `/var/run/docker.sock` on the host:
+
+```bash
+sudo ln -sf "$HOME/.lima/k8s-node/sock/docker.sock" /var/run/docker.sock
+docker ps
+```
+
+#### Option 2: Set the `DOCKER_HOST` environment variable
+
+Alternatively, you can direct your Docker CLI to the socket via the `DOCKER_HOST` environment variable:
 
 ```bash
 export DOCKER_HOST="unix://$HOME/.lima/k8s-node/sock/docker.sock"
 docker ps
 ```
+
 
