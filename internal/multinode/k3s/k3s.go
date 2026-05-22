@@ -90,7 +90,7 @@ func (m *Manager) InstallTailscale(ctx context.Context, authKey string) (string,
 }
 
 // InitCluster bootstraps the first control plane node with --cluster-init.
-func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale bool) error {
+func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale, useDocker bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -122,6 +122,9 @@ func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion stri
 		extraArgs += " --flannel-iface=tailscale0"
 	} else {
 		extraArgs += " --flannel-iface=lima0"
+	}
+	if useDocker {
+		extraArgs += " --docker"
 	}
 
 	script := fmt.Sprintf(
@@ -182,7 +185,7 @@ metadata:
 }
 
 // JoinServer joins a server node to an existing HA cluster.
-func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale bool) error {
+func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale, useDocker bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -214,6 +217,9 @@ func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool
 		extraArgs += " --flannel-iface=tailscale0"
 	} else {
 		extraArgs += " --flannel-iface=lima0"
+	}
+	if useDocker {
+		extraArgs += " --docker"
 	}
 
 	// Install K3s binary and create systemd service without starting it,
@@ -269,7 +275,7 @@ func (m *Manager) waitForJoin(ctx context.Context, timeout time.Duration) error 
 }
 
 // JoinAgent joins a worker node to the cluster.
-func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, useTailscale bool) error {
+func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, useTailscale, useDocker bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -293,6 +299,9 @@ func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool,
 		extraArgs += " --flannel-iface=tailscale0"
 	} else {
 		extraArgs += " --flannel-iface=lima0"
+	}
+	if useDocker {
+		extraArgs += " --docker"
 	}
 
 	script := fmt.Sprintf(

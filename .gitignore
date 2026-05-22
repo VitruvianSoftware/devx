@@ -30,3 +30,7 @@ config.ign
 *.swp
 *~
 cmd/var/
+
+# Python
+__pycache__/
+*.pyc

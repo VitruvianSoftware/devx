@@ -32,6 +32,8 @@ cluster:
   name: test-cluster
   k3sVersion: "v1.31.2+k3s1"
   kubeconfig: "~/.kube/test.yaml"
+  docker:
+    enabled: true
 nodes:
   - host: host-1
     role: server
@@ -70,6 +72,9 @@ nodes:
 
 	if cfg.Cluster.Name != "test-cluster" {
 		t.Errorf("expected cluster name 'test-cluster', got %q", cfg.Cluster.Name)
+	}
+	if !cfg.Cluster.Docker.Enabled {
+		t.Error("expected cluster.docker.enabled to be true")
 	}
 	if len(cfg.Nodes) != 4 {
 		t.Errorf("expected 4 nodes, got %d", len(cfg.Nodes))

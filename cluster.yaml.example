@@ -49,6 +49,10 @@ cluster:
   # cluster. Keep it separate from your default ~/.kube/config so you
   # don't clobber other contexts.
   kubeconfig: "~/.kube/cluster.yaml"
+  # Optional: Enable Docker container runtime and forward docker.sock to host
+  docker:
+    enabled: true
+
 
   # MetalLB provides LoadBalancer services on bare-metal/Lima setups.
   # The ipRange must be reachable on the LAN your nodes share — pick a

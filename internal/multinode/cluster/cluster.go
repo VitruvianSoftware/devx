@@ -84,7 +84,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 			runner := util.NewRunner(node)
 			mgr := lima.NewManager(runner, node)
 
-			if err := mgr.Provision(gctx); err != nil {
+			if err := mgr.Provision(gctx, cfg.Cluster.Docker.Enabled); err != nil {
 				return fmt.Errorf("[%s] provisioning VM: %w", node.Host, err)
 			}
 
@@ -149,7 +149,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	initRunner := util.NewRunner(initNode)
 	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
-	if err := initK3s.InitCluster(ctx, ipMap[initNode.Host], initNode.Pool, cfg.Cluster.K3sVersion, serverIPs, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled); err != nil {
+	if err := initK3s.InitCluster(ctx, ipMap[initNode.Host], initNode.Pool, cfg.Cluster.K3sVersion, serverIPs, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled); err != nil {
 		return fmt.Errorf("[%s] initializing K3s: %w\n\nRecovery: re-run 'cluster init' to retry", initNode.Host, err)
 	}
 
@@ -173,7 +173,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 			runner := util.NewRunner(node)
 			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
-			if err := k3sMgr.JoinServer(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{ipMap[node.Host]}, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled); err != nil {
+			if err := k3sMgr.JoinServer(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{ipMap[node.Host]}, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as server: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
 			}
 
@@ -192,7 +192,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 			runner := util.NewRunner(node)
 			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
 
-			if err := k3sMgr.JoinAgent(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled); err != nil {
+			if err := k3sMgr.JoinAgent(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as agent: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
 			}
 			slog.Info("node joined as agent", "host", node.Host)
@@ -287,7 +287,7 @@ func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 		}
 
 		// Ensure VM is provisioned.
-		if err := limaMgr.Provision(ctx); err != nil {
+		if err := limaMgr.Provision(ctx, cfg.Cluster.Docker.Enabled); err != nil {
 			return fmt.Errorf("[%s] provisioning: %w", node.Host, err)
 		}
 
@@ -306,11 +306,11 @@ func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 
 		switch node.Role {
 		case "server":
-			if err := k3sMgr.JoinServer(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{nodeIP}, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled); err != nil {
+			if err := k3sMgr.JoinServer(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{nodeIP}, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as server: %w", node.Host, err)
 			}
 		case "agent":
-			if err := k3sMgr.JoinAgent(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled); err != nil {
+			if err := k3sMgr.JoinAgent(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled); err != nil {
 				return fmt.Errorf("[%s] joining as agent: %w", node.Host, err)
 			}
 		}

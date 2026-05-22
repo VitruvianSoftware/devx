@@ -43,6 +43,7 @@ type ClusterConfig struct {
 	Kubeconfig string          `yaml:"kubeconfig"`
 	MetalLB    MetalLBConfig   `yaml:"metallb"`
 	Tailscale  TailscaleConfig `yaml:"tailscale"`
+	Docker     DockerConfig    `yaml:"docker"`
 }
 
 // TailscaleConfig holds configuration for Tailscale networking.
@@ -55,6 +56,11 @@ type TailscaleConfig struct {
 type MetalLBConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	IPRange string `yaml:"ipRange"`
+}
+
+// DockerConfig holds configuration for Docker runtime integration.
+type DockerConfig struct {
+	Enabled bool `yaml:"enabled"`
 }
 
 // NodeConfig describes a single node in the cluster.
