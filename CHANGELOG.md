@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.0](https://github.com/VitruvianSoftware/devx/compare/v0.50.0...v0.51.0) (2026-05-23)
+
+
+### Features
+
+* **orchestrator:** add live-reload (pod file sync) for runtime: kubernetes ([#207](https://github.com/VitruvianSoftware/devx/issues/207)) ([f113782](https://github.com/VitruvianSoftware/devx/commit/f11378295879db027e57b627edb9ccc6b39d5abc))
+
 ## [0.50.0](https://github.com/VitruvianSoftware/devx/compare/v0.49.0...v0.50.0) (2026-05-23)
 
 
