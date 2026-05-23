@@ -72,6 +72,17 @@ type BridgeNodeConfig struct {
 	InterceptMode string // "steal" or "mirror"
 }
 
+// KubeNodeConfig holds kubernetes-deploy configuration for a DAG node
+// (runtime: kubernetes): devx renders Manifests and applies them via kubectl.
+type KubeNodeConfig struct {
+	Manifests  string   // kustomize dir | raw manifest file/dir | helm chart
+	Renderer   string   // "kustomize" (default) | "raw" | "helm"
+	Namespace  string   // target namespace (default "default")
+	Context    string   // kube context
+	Kubeconfig string   // kubeconfig path
+	Images     []string // images to build + load before apply (later slice)
+}
+
 // HealthcheckConfig defines how to verify a service is ready.
 type HealthcheckConfig struct {
 	// HTTP endpoint to poll (e.g., "http://localhost:8080/health")
@@ -127,6 +138,12 @@ type Node struct {
 	// Bridge-specific fields (Idea 46.3)
 	BridgeMode   BridgeMode        // for RuntimeBridge nodes
 	BridgeConfig *BridgeNodeConfig // bridge-specific parameters
+
+	// Kubernetes-deploy field (runtime: kubernetes)
+	Kube *KubeNodeConfig
+
+	// Runtime state for kubernetes cleanup (what was applied, for `devx down`)
+	kubeApplied *KubeNodeConfig
 
 	// Runtime state
 	process     *exec.Cmd
@@ -251,6 +268,11 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				n.bridgeState.Cleanup()
 			}
 
+			// Kubernetes cleanup: delete what was applied to the cluster
+			if n.kubeApplied != nil {
+				deleteKubernetesNode(n)
+			}
+
 			if n.cancel != nil {
 				n.cancel()
 			}
@@ -278,6 +300,11 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 					case RuntimeBridge:
 						if err := startBridgeNode(ctx, n); err != nil {
 							errCh <- fmt.Errorf("failed to start bridge service %q: %w", n.Name, err)
+							return
+						}
+					case RuntimeKubernetes:
+						if err := startKubernetesNode(ctx, n); err != nil {
+							errCh <- fmt.Errorf("failed to deploy service %q: %w", n.Name, err)
 							return
 						}
 					default:
@@ -333,6 +360,12 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 					fmt.Printf("  \u2705 %s is healthy\n", name)
 					continue
 				}
+			}
+
+			if node.Runtime == RuntimeKubernetes {
+				// Already health-gated inside startKubernetesNode (kubectl wait).
+				fmt.Printf("  \u2705 %s is healthy (deployment available)\n", name)
+				continue
 			}
 
 			if node.Healthcheck.HTTP != "" || node.Healthcheck.TCP != "" {

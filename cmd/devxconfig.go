@@ -127,6 +127,19 @@ type DevxConfigServiceBridgeIntercept struct {
 	Mode      string `yaml:"mode"`       // "steal" or "mirror" (required)
 }
 
+// DevxConfigServiceKubernetes configures a runtime: kubernetes service — devx
+// renders the manifests and applies them to the target cluster (skaffold-class
+// deploy). Cluster targeting (kubeconfig/context) falls back to KUBECONFIG, then
+// ~/.kube/config.
+type DevxConfigServiceKubernetes struct {
+	Manifests  string   `yaml:"manifests"`            // kustomize dir (default), raw manifest file/dir, or helm chart
+	Renderer   string   `yaml:"renderer,omitempty"`   // "kustomize" (default) | "raw" | "helm"
+	Namespace  string   `yaml:"namespace,omitempty"`  // target namespace (default: "default")
+	Context    string   `yaml:"context,omitempty"`    // kube context (default: current context)
+	Kubeconfig string   `yaml:"kubeconfig,omitempty"` // kubeconfig path (default: $KUBECONFIG or ~/.kube/config)
+	Images     []string `yaml:"images,omitempty"`     // images to build + load before apply (added in a later slice)
+}
+
 // DevxConfigService defines a developer application in devx.yaml.
 type DevxConfigService struct {
 	Name            string                            `yaml:"name"`
@@ -139,6 +152,7 @@ type DevxConfigService struct {
 	Sync            []DevxConfigSync                  `yaml:"sync,omitempty"`             // file sync mappings into containers
 	BridgeTarget    *DevxConfigServiceBridgeTarget    `yaml:"bridge_target,omitempty"`    // Idea 46.3: inline outbound bridge
 	BridgeIntercept *DevxConfigServiceBridgeIntercept `yaml:"bridge_intercept,omitempty"` // Idea 46.3: inline intercept
+	Kubernetes      *DevxConfigServiceKubernetes      `yaml:"kubernetes,omitempty"`       // runtime: kubernetes deploy spec
 	Dir             string                            `yaml:"-"`                          // Internal: working directory (set by include resolver)
 }
 
@@ -619,6 +633,9 @@ func mergeProfile(cfg *DevxConfig, profile DevxConfigProfile) {
 				}
 				if ps.BridgeIntercept != nil {
 					cfg.Services[i].BridgeIntercept = ps.BridgeIntercept
+				}
+				if ps.Kubernetes != nil {
+					cfg.Services[i].Kubernetes = ps.Kubernetes
 				}
 				found = true
 				break

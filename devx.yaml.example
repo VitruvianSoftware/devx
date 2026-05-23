@@ -167,6 +167,23 @@ services:
     # Recommended for projects where build times exceed 60 seconds.
     # predictive_build: true
 
+  # --- Kubernetes-deploy service (skaffold-class) ---
+  # With runtime: kubernetes, devx renders your manifests and applies them to the
+  # target cluster, then gates the DAG on the namespace's Deployments becoming
+  # Available (no port-forward needed). Applied resources are pruned on shutdown.
+  # - name: payments-api
+  #   runtime: kubernetes
+  #   depends_on:
+  #     - name: postgres
+  #       condition: service_healthy
+  #   kubernetes:
+  #     manifests: ./deploy/k8s/overlays/local  # kustomize dir (default), raw manifest file/dir, or helm chart
+  #     renderer: kustomize                      # kustomize (default) | raw | helm (helm not yet implemented)
+  #     namespace: payments-dev                  # target namespace (default: "default"; created if missing)
+  #     context: ""                              # kube context (default: current context)
+  #     kubeconfig: ""                           # kubeconfig path (default: $KUBECONFIG, then ~/.kube/config)
+  #     # images: ["myorg/payments-api:dev"]     # build + load into the cluster before apply (roadmap)
+
 # --- Idea 37: Environment Profiles ---
 # Profiles apply additive/merge overlays on top of the base config above.
 # Uses Docker Compose override semantics:
