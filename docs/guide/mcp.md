@@ -90,6 +90,47 @@ Each tool has a typed input schema (engine names, port numbers, etc.) so the age
 │ (Claude/etc) │                    │   serve      │ ←─ stdout  ──── │ --json   │
 └──────────────┘                    └──────────────┘                 └──────────┘
 ```
+ 
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph LR
+    subgraph Host ["IDE / Agent Host Environment"]
+        agent["AI Agent Host (Claude Code / Cursor / Zed)"]
+        subgraph DevxServer ["devx MCP Process (devx mcp serve)"]
+            rpc["JSON-RPC 2.0 Handler"]
+            reg["Tools Registry"]
+        end
+        cli["devx CLI Binary (devx ... --json)"]
+    end
+
+    agent -->|"1. stdin / stdout (JSON-RPC)"| rpc
+    rpc -->|"2. lookup tool"| reg
+    rpc -->|"3. executes command (subprocess)"| cli
+    cli -->|"4. returns stdout"| rpc
+    rpc -->|"5. sends result back"| agent
+```
+
+### Tool Execution Flowchart
+
+```mermaid
+flowchart TD
+    Start([Host sends tools/call request]) --> Parse[Parse arguments & lookup tool handler]
+    Parse --> Found{Tool registered?}
+    Found -- No --> Err[Return invalid params / method not found error]
+    Found -- Yes --> Construct[Map tool args to devx CLI command args]
+    
+    Construct --> Spawn[Spawn devx binary subprocess with --json]
+    Spawn --> Capture[Capture subprocess stdout and stderr]
+    
+    Capture --> WaitExit{Subprocess exits?}
+    WaitExit -- Exit 0 --> Success[Format JSON output as tool content]
+    WaitExit -- Exit Non-Zero --> Failure[Format stderr as tool error output]
+    
+    Success --> Respond[Send JSON-RPC tools/call response over stdout]
+    Failure --> Respond
+    Respond --> End([Done])
+```
 
 ## Manual install (advanced)
 

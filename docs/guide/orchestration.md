@@ -41,7 +41,76 @@ The `runtime` parameter gives development teams ultimate execution flexibility:
 
 ## Startup Sequence (DAG) Execution
 
-When running `devx up`, dependencies are resolved and grouped into parallel execution tiers. 
+When running `devx up`, dependencies are resolved and grouped into parallel execution tiers.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph CLI ["User / Agent Interface"]
+        user["User / AI Agent"]
+        cli["devx CLI"]
+    end
+
+    subgraph Core ["Orchestration Engine (internal/orchestrator)"]
+        config["Config Parser & Profiles Manager"]
+        dag["DAG Scheduler & Resolver"]
+        portres["Port Conflict Resolver"]
+        diag["Diagnostics Engine (Crash logs)"]
+    end
+
+    subgraph NodeTypes ["Runner Nodes (DAG execution)"]
+        hostnode["HostNode (Local Subprocesses)"]
+        bridgenode["BridgeNode (K8s Tunnels & Intercepts)"]
+        kubenode["KubeNode (Helm / Kubectl manifests)"]
+        cloudnode["CloudRunNode (Cloud Run services)"]
+    end
+
+    user -->|"runs devx up"| cli
+    cli --> config
+    config -->|"parses devx.yaml + overrides"| dag
+    dag -->|"resolves ports"| portres
+    dag -->|"tier execution"| NodeTypes
+    NodeTypes -->|"on failure"| diag
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start([devx up]) --> Config[Parse devx.yaml & Merge Profile Overrides]
+    Config --> ValidateGraph{Circular dependencies?}
+    ValidateGraph -- Yes --> Fail[Fail: Circular Graph Error]
+    ValidateGraph -- No --> ResolvePorts[Resolve Port Conflicts & Auto-Shift]
+    ResolvePorts --> BuildTiers[Build Execution Tiers 1..N]
+    
+    BuildTiers --> LoopTiers{For each Tier}
+    LoopTiers -->|"Next Tier"| StartTier[Execute all tier nodes in parallel]
+    
+    StartTier --> WaitNode{Wait for readiness condition}
+    
+    WaitNode -- service_healthy --> PollHealth[HTTP/TCP Healthcheck Polling]
+    WaitNode -- service_completed_successfully --> WaitOneShot[Wait for exit 0 of task]
+    
+    PollHealth --> CheckNodeStatus{Status ok?}
+    WaitOneShot --> CheckNodeStatus
+    
+    CheckNodeStatus -- Yes --> AllNodesReady{All tier nodes ready?}
+    CheckNodeStatus -- No / Timeout --> TailLogs[Extract last 50 lines of logs & Show Crash Card]
+    TailLogs --> TearDownStarted[Tear down already started tiers in reverse order]
+    TearDownStarted --> Fail
+    
+    AllNodesReady -- Yes --> MoreTiers{More Tiers?}
+    AllNodesReady -- No --> WaitNode
+    
+    MoreTiers -- Yes --> LoopTiers
+    MoreTiers -- No --> Running([All services running & healthy])
+    
+    Running --> CtrlC[Shutdown Triggered / Ctrl+C]
+    CtrlC --> ReverseTiers[Stop services in reverse tier order N..1]
+    ReverseTiers --> End([Cleanup Completed])
+```
+ 
 
 ![DAG Execution Output Screenshot] 
 ```text
