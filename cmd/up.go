@@ -35,6 +35,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/cloudflare"
 	"github.com/VitruvianSoftware/devx/internal/config"
 	"github.com/VitruvianSoftware/devx/internal/exposure"
+	"github.com/VitruvianSoftware/devx/internal/image"
 	"github.com/VitruvianSoftware/devx/internal/logs"
 	"github.com/VitruvianSoftware/devx/internal/network"
 	"github.com/VitruvianSoftware/devx/internal/orchestrator"
@@ -265,13 +266,24 @@ var upCmd = &cobra.Command{
 				case "kubernetes":
 					rt = orchestrator.RuntimeKubernetes
 					if svc.Kubernetes != nil {
+						var images []image.Spec
+						for _, im := range svc.Kubernetes.Images {
+							images = append(images, image.Spec{
+								Name:       im.Name,
+								Context:    im.Context,
+								Dockerfile: im.Dockerfile,
+								Tag:        im.Tag,
+								Platforms:  im.Platforms,
+							})
+						}
 						kubeCfg = &orchestrator.KubeNodeConfig{
-							Manifests:  svc.Kubernetes.Manifests,
-							Renderer:   svc.Kubernetes.Renderer,
-							Namespace:  svc.Kubernetes.Namespace,
-							Context:    svc.Kubernetes.Context,
-							Kubeconfig: svc.Kubernetes.Kubeconfig,
-							Images:     svc.Kubernetes.Images,
+							Manifests:    svc.Kubernetes.Manifests,
+							Renderer:     svc.Kubernetes.Renderer,
+							Namespace:    svc.Kubernetes.Namespace,
+							Context:      svc.Kubernetes.Context,
+							Kubeconfig:   svc.Kubernetes.Kubeconfig,
+							ProviderName: resolveProviderName(),
+							Images:       images,
 						}
 					}
 				case "cloud":

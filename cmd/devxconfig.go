@@ -127,17 +127,29 @@ type DevxConfigServiceBridgeIntercept struct {
 	Mode      string `yaml:"mode"`       // "steal" or "mirror" (required)
 }
 
+// DevxConfigKubernetesImage declares an image devx builds and loads into the
+// cluster's in-cluster registry before applying manifests (runtime: kubernetes).
+// The built image is pushed as localhost:<NodePort>/<name>:<tag> — reference
+// exactly that in your manifests, with imagePullPolicy: Always.
+type DevxConfigKubernetesImage struct {
+	Name       string   `yaml:"name"`                 // image name (becomes localhost:<port>/<name>:<tag>)
+	Context    string   `yaml:"context,omitempty"`    // build context dir (default ".")
+	Dockerfile string   `yaml:"dockerfile,omitempty"` // Dockerfile path relative to context (default "Dockerfile")
+	Tag        string   `yaml:"tag,omitempty"`        // image tag (default "dev")
+	Platforms  []string `yaml:"platforms,omitempty"`  // target platforms, e.g. [linux/amd64, linux/arm64]; empty = builder default
+}
+
 // DevxConfigServiceKubernetes configures a runtime: kubernetes service — devx
 // renders the manifests and applies them to the target cluster (skaffold-class
 // deploy). Cluster targeting (kubeconfig/context) falls back to KUBECONFIG, then
 // ~/.kube/config.
 type DevxConfigServiceKubernetes struct {
-	Manifests  string   `yaml:"manifests"`            // kustomize dir (default), raw manifest file/dir, or helm chart
-	Renderer   string   `yaml:"renderer,omitempty"`   // "kustomize" (default) | "raw" | "helm"
-	Namespace  string   `yaml:"namespace,omitempty"`  // target namespace (default: "default")
-	Context    string   `yaml:"context,omitempty"`    // kube context (default: current context)
-	Kubeconfig string   `yaml:"kubeconfig,omitempty"` // kubeconfig path (default: $KUBECONFIG or ~/.kube/config)
-	Images     []string `yaml:"images,omitempty"`     // images to build + load before apply (added in a later slice)
+	Manifests  string                      `yaml:"manifests"`            // kustomize dir (default), raw manifest file/dir, or helm chart
+	Renderer   string                      `yaml:"renderer,omitempty"`   // "kustomize" (default) | "raw" | "helm"
+	Namespace  string                      `yaml:"namespace,omitempty"`  // target namespace (default: "default")
+	Context    string                      `yaml:"context,omitempty"`    // kube context (default: current context)
+	Kubeconfig string                      `yaml:"kubeconfig,omitempty"` // kubeconfig path (default: $KUBECONFIG or ~/.kube/config)
+	Images     []DevxConfigKubernetesImage `yaml:"images,omitempty"`     // images devx builds + loads into the cluster registry before apply
 }
 
 // DevxConfigService defines a developer application in devx.yaml.

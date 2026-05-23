@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/VitruvianSoftware/devx/internal/bridge"
+	"github.com/VitruvianSoftware/devx/internal/image"
 )
 
 // kubectlArgs builds a fresh kubectl arg slice with --kubeconfig/--context flags
@@ -115,6 +116,15 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 	flag, err := applyFlagForRenderer(renderer)
 	if err != nil {
 		return fmt.Errorf("service %q: %w", n.Name, err)
+	}
+
+	// Build + load any configured images into the cluster's in-cluster registry
+	// before applying, so the manifests' image references (localhost:<port>/...)
+	// resolve on every node.
+	if len(k.Images) > 0 {
+		if err := image.BuildAndLoad(ctx, k.ProviderName, n.Dir, kubeconfig, k.Context, k.Images); err != nil {
+			return fmt.Errorf("service %q: %w", n.Name, err)
+		}
 	}
 
 	// Idempotently ensure the target namespace exists.
