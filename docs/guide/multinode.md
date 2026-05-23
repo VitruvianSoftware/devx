@@ -40,6 +40,16 @@ Bootstraps a new cluster from the config file. It will provision the Lima VMs on
 
 Joins new or pending agent nodes to the existing cluster. Useful for expanding your cluster after the initial `init`.
 
+### `devx cluster reconcile`
+
+Converges already-provisioned nodes to devx's current **node baseline** without rebuilding them. Today that means ensuring the standard package set is installed inside every node's Lima VM — notably **`socat`**, which `kubectl port-forward` and [`devx bridge`](bridge.md) require to carry traffic on Docker-runtime k3s nodes.
+
+Run this on a cluster that was created before a node-level requirement landed (for example, an older cluster whose nodes predate the `socat` baseline), so it can adopt the requirement without a `destroy`/`init` cycle.
+
+*   **Idempotent**: package installs are no-ops on nodes that already satisfy the baseline; safe to run repeatedly.
+*   **Dry Run**: use `-n` or `--dry-run` to preview the exact per-node command without changing anything.
+*   **Scope**: it only installs packages inside existing VMs — it does **not** touch K3s, node membership, or VM lifecycle (use `init`/`join`/`apply` for those).
+
 ### `devx cluster apply`
 
 Reconciles the cluster state. It ensures all running nodes match the specifications in the `cluster.yaml` configuration.

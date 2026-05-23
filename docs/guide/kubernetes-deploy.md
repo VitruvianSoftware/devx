@@ -193,6 +193,29 @@ services:
 
 The pod's image needs `tar` (used by `kubectl cp`); `node_modules`, `.git`, `dist`, `build`, etc. are skipped; and the in-pod process is responsible for reloading on the synced changes (run it in watch mode).
 
+## Port-forwarding
+
+Set `port_forward: true` and devx automatically discovers the Services in the namespace after deploy and runs `kubectl port-forward` for each — mapping every Service port to a (conflict-resolved) local port, with no need to enumerate them. Each mapping is printed (`localhost:<port> → svc/<name>:<port>`), and the forwards are torn down on shutdown.
+
+```yaml
+services:
+  - name: payments-api
+    runtime: kubernetes
+    kubernetes:
+      manifests: ./deploy/k8s/overlays/local
+      port_forward: true
+```
+
+::: tip Bridge vs. auto port-forward
+This is the simple "reach my just-deployed Services locally" case. devx's [`bridge`](bridge.md) remains the tool for connecting to *remote/existing* cluster services and for traffic **interception** (`steal`), which is beyond port-forwarding.
+:::
+
+::: warning Requires `socat` on the nodes
+`kubectl port-forward` needs `socat` on the cluster nodes to carry traffic. Without it the forward binds locally but connections fail (`socat not found` / `lost connection to pod`). This applies to `bridge` too.
+
+For [devx-provisioned clusters](multinode.md), `socat` is part of the node baseline and is installed automatically — new clusters get it during provisioning, and existing clusters can adopt it (without a rebuild) by running [`devx cluster reconcile`](multinode.md#devx-cluster-reconcile). On clusters devx didn't provision, install `socat` on each node yourself.
+:::
+
 ## Lifecycle & Cleanup
 
 The deploy is a first-class DAG node: it respects `depends_on` ordering, gates dependents on readiness, and is torn down in reverse order on shutdown. devx records exactly what it applied (resolved manifests path, renderer, namespace, context) and runs `kubectl delete … --ignore-not-found` on exit. The namespace itself is left in place.

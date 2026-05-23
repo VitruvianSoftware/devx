@@ -86,6 +86,7 @@ type KubeNodeConfig struct {
 	Release      string       // helm release name (renderer: helm; default: service name)
 	Values       []string     // helm values files (renderer: helm)
 	Sync         []KubeSync   // live-reload: local dirs synced into the deployed pod
+	PortForward  bool         // auto-discover the namespace's Services and forward them to localhost
 }
 
 // CloudRunNodeConfig holds Cloud Run deploy configuration for a DAG node
@@ -168,6 +169,9 @@ type Node struct {
 	// Cloud Run deploy field (runtime: cloud) + what was deployed, for cleanup
 	CloudRun   *CloudRunNodeConfig
 	crDeployed *CloudRunNodeConfig
+
+	// Runtime state for kubernetes port-forward discovery (stops forwards on shutdown)
+	pfCancel context.CancelFunc
 
 	// Runtime state
 	process     *exec.Cmd
@@ -292,9 +296,12 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				n.bridgeState.Cleanup()
 			}
 
-			// Kubernetes cleanup: stop live-reload watchers, then delete what was applied
+			// Kubernetes cleanup: stop live-reload + port-forward watchers, then delete what was applied
 			if n.podSyncCancel != nil {
 				n.podSyncCancel()
+			}
+			if n.pfCancel != nil {
+				n.pfCancel()
 			}
 			if n.kubeApplied != nil {
 				deleteKubernetesNode(n)

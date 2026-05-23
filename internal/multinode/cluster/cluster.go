@@ -321,6 +321,60 @@ func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	return nil
 }
 
+// Reconcile converges already-provisioned nodes to the current desired
+// baseline without rebuilding them. Today that means ensuring the standard
+// node package set (lima.NodePackages — notably socat, which kubectl
+// port-forward and devx bridge need to carry traffic on Docker-runtime k3s
+// nodes) is installed inside every node's Lima VM.
+//
+// Unlike Init/Join it does not touch K3s or VM lifecycle — it only installs
+// packages on nodes that already exist, so a cluster that predates a new
+// node-level requirement can adopt it without a destroy/recreate. It is safe
+// to run repeatedly: apt-get install is idempotent and already-satisfied
+// nodes are fast no-ops. Nodes are reconciled in parallel.
+func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
+	slog.Info("reconciling cluster nodes", "name", cfg.Cluster.Name, "nodes", len(cfg.Nodes), "dry_run", dryRun)
+
+	if dryRun {
+		fmt.Printf("📋 Dry-run: would ensure node packages (%s) on %d node(s):\n", lima.NodePackages, len(cfg.Nodes))
+		for _, node := range cfg.Nodes {
+			fmt.Printf("  [%s] %s\n", node.Host, ensureDepsCommand())
+		}
+		fmt.Println("\n  No changes were made (dry-run mode).")
+		return nil
+	}
+
+	fmt.Printf("🔧 Reconciling %d node(s): ensuring packages (%s)...\n", len(cfg.Nodes), lima.NodePackages)
+
+	g, gctx := errgroup.WithContext(ctx)
+	for _, node := range cfg.Nodes {
+		node := node
+		g.Go(func() error {
+			runner := util.NewRunner(node)
+			if _, err := runner.LimaShellSudo(gctx, node.GetVMName(), ensureDepsCommand()); err != nil {
+				return fmt.Errorf("[%s] ensuring node packages: %w", node.Host, err)
+			}
+			fmt.Printf("  [%s] packages ensured\n", node.Host)
+			slog.Info("node packages ensured", "host", node.Host)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("node reconciliation failed: %w", err)
+	}
+
+	fmt.Printf("\n✅ Cluster %q reconciled.\n", cfg.Cluster.Name)
+	return nil
+}
+
+// ensureDepsCommand returns the shell command that idempotently installs the
+// standard node package set (lima.NodePackages) inside a node's Lima VM. It is
+// run via Runner.LimaShellSudo, which wraps it in `sudo sh -c`, so it must be a
+// plain command with no sudo prefix of its own.
+func ensureDepsCommand() string {
+	return fmt.Sprintf("apt-get update -qq && apt-get install -y -qq %s", lima.NodePackages)
+}
+
 // Remove drains and removes a specific node from the cluster.
 func Remove(ctx context.Context, cfg *config.Config, hostName string, dryRun bool) error {
 	slog.Info("removing node", "host", hostName, "dry_run", dryRun)

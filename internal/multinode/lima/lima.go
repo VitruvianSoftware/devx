@@ -44,6 +44,14 @@ const (
 	VMStatusUnknown    VMStatus = "Unknown"
 )
 
+// NodePackages are the apt packages installed on every Lima node during
+// provisioning. socat is required for `kubectl port-forward` (and devx
+// bridge) to carry traffic on Docker-runtime k3s nodes — without it the
+// forward binds locally but connections fail with "socat not found". Keeping
+// this list in one place lets both initial provisioning (GenerateConfig) and
+// `devx cluster reconcile` install the exact same set on existing nodes.
+const NodePackages = "curl open-iscsi nfs-common socat"
+
 // Manager handles Lima VM operations on a remote host.
 type Manager struct {
 	runner *remote.Runner
@@ -113,12 +121,12 @@ networks:
 `
 	}
 
-	config += `provision:
+	config += fmt.Sprintf(`provision:
   - mode: system
     script: |
       #!/bin/bash
-      apt-get update -qq && apt-get install -y -qq curl open-iscsi nfs-common
-`
+      apt-get update -qq && apt-get install -y -qq %s
+`, NodePackages)
 	if dockerEnabled {
 		config += `      curl -fsSL https://get.docker.com | sh
       # Add all interactive users (UID >= 1000 or UID == 501) to the docker group

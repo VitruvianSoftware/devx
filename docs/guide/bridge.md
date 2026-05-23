@@ -15,6 +15,7 @@ Bridge follows devx's **Client-Driven Architecture** principle. In Phase 1, all 
 - `kubectl` installed and on your PATH
 - A valid kubeconfig with access to your target cluster
 - VPN connected (if your cluster requires it)
+- `socat` on the cluster nodes — `kubectl port-forward` (which every bridge tunnel uses) needs it to carry traffic; without it tunnels bind locally but connections fail (`socat not found` / `lost connection to pod`). On [devx-provisioned clusters](multinode.md) this is part of the node baseline (installed automatically; run [`devx cluster reconcile`](multinode.md#devx-cluster-reconcile) to add it to an older cluster); elsewhere install it on each node yourself.
 
 Run `devx doctor` to verify:
 

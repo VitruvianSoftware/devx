@@ -297,6 +297,7 @@ var upCmd = &cobra.Command{
 							Release:      svc.Kubernetes.Release,
 							Values:       svc.Kubernetes.Values,
 							Sync:         syncs,
+							PortForward:  svc.Kubernetes.PortForward,
 						}
 					}
 				case "cloud":
