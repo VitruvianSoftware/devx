@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.52.0](https://github.com/VitruvianSoftware/devx/compare/v0.51.0...v0.52.0) (2026-05-23)
+
+
+### Features
+
+* **orchestrator:** add Cloud Run deployer for runtime: cloud ([#209](https://github.com/VitruvianSoftware/devx/issues/209)) ([4f34ec8](https://github.com/VitruvianSoftware/devx/commit/4f34ec81cbc0789c0299a1826afeed29f5081066))
+
 ## [0.51.0](https://github.com/VitruvianSoftware/devx/compare/v0.50.0...v0.51.0) (2026-05-23)
 
 
