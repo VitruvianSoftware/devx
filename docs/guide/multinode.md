@@ -110,6 +110,70 @@ flowchart TD
     Teardown --> Destroyed(["🗑️ Cluster destroyed"])
 ```
 
+### Cluster Lifecycle States
+
+```mermaid
+stateDiagram-v2
+    [*] --> Unprovisioned
+    Unprovisioned --> Initializing : devx cluster init
+    Initializing --> ControlPlaneReady : k3s server boots
+    ControlPlaneReady --> Scaling : devx cluster join
+    Scaling --> ClusterReady : all agents joined
+    ClusterReady --> Upgrading : devx cluster upgrade
+    Upgrading --> ClusterReady : upgrade complete
+    ClusterReady --> Reconciling : devx cluster reconcile
+    Reconciling --> ClusterReady : drift corrected
+    ClusterReady --> Destroying : devx cluster destroy
+    ControlPlaneReady --> Destroying : devx cluster destroy
+    Destroying --> [*]
+```
+
+### Network Topology
+
+```mermaid
+graph LR
+    subgraph Host ["Developer Host"]
+        devxcli["devx CLI"]
+        kubectlbin["kubectl"]
+        dockercli["docker CLI (optional)"]
+        limactl["limactl"]
+    end
+
+    subgraph ServerVM ["Lima VM — Server Node"]
+        k3sServer["k3s server\n(control plane)"]
+        apiServer["API :6443"]
+        dockerd["Docker CE\n(optional)"]
+        socatSrv["socat\n(port-forward support)"]
+        dockerSock["/var/run/docker.sock"]
+    end
+
+    subgraph Agent1 ["Lima VM — Agent Node 1"]
+        k3sAgent1["k3s agent"]
+        dockerAgent1["Docker CE\n(optional)"]
+        socatA1["socat"]
+    end
+
+    subgraph Agent2 ["Lima VM — Agent Node 2"]
+        k3sAgent2["k3s agent"]
+        dockerAgent2["Docker CE\n(optional)"]
+        socatA2["socat"]
+    end
+
+    devxcli -->|"provision VMs"| limactl
+    limactl -->|"creates"| ServerVM
+    limactl -->|"creates"| Agent1
+    limactl -->|"creates"| Agent2
+
+    kubectlbin -->|"KUBECONFIG"| apiServer
+    k3sServer --- apiServer
+
+    k3sAgent1 -->|"joined via token"| apiServer
+    k3sAgent2 -->|"joined via token"| apiServer
+
+    dockerd --- dockerSock
+    dockerSock -.->|"sock forwarded\nvia lima"| dockercli
+```
+
 ## Commands
 
 The cluster manager provides several commands to handle the lifecycle of your multi-node cluster.

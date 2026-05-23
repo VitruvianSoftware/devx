@@ -2,6 +2,94 @@
 
 The `devx vm` commands manage the lifecycle of your local development VM — a lightweight Linux instance running inside your chosen provider (Lima, Colima, Docker, OrbStack, or Podman).
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of the Container VM feature.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        butane["Butane Compiler"]
+        resolver["Provider Resolver"]
+        envFile[".env Credentials"]
+    end
+
+    subgraph Provider ["VM Provider (Lima / Colima / Docker / OrbStack / Podman)"]
+        vm["VM Instance"]
+    end
+
+    subgraph VM ["Inside VM (Linux Guest)"]
+        runtime["Container Runtime"]
+        cf_svc["cloudflared.service (systemd)"]
+        ts_svc["tailscaled.service (systemd)"]
+        volumes["Persistent Volumes"]
+    end
+
+    subgraph External ["External Services"]
+        cfEdge["Cloudflare Edge"]
+        tsCoord["Tailscale Coordination Server"]
+    end
+
+    cli -->|"compiles Butane templates"| butane
+    butane -->|"produces Ignition config"| resolver
+    cli -->|"injects credentials from"| envFile
+    resolver -->|"provisions VM via detected provider"| vm
+    vm -->|"boots systemd units"| cf_svc
+    vm -->|"boots systemd units"| ts_svc
+    vm -->|"mounts"| volumes
+    vm -->|"starts"| runtime
+    cf_svc -->|"establishes tunnel"| cfEdge
+    ts_svc -->|"registers node"| tsCoord
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx vm init"]) --> DetectProvider{"--provider flag\nspecified?"}
+    DetectProvider -->|"Yes"| UseFlag["Use specified provider"]
+    DetectProvider -->|"No"| AutoDetect["Auto-detect provider\n(Lima → Colima → Docker → OrbStack → Podman)"]
+    AutoDetect --> ProviderFound{"Provider\nfound?"}
+    ProviderFound -->|"No"| ErrNoProvider["❌ Error: no supported\nVM provider detected"]
+    ProviderFound -->|"Yes"| UseFlag
+    UseFlag --> CompileButane["Compile Butane templates\ninto Ignition config"]
+    CompileButane --> DryRun{"--dry-run\nflag set?"}
+    DryRun -->|"Yes"| PrintIgnition["Print Ignition JSON\nto stdout"] --> ExitDry(["Exit (no VM created)"])
+    DryRun -->|"No"| CreateVM["Create VM via provider\nwith Ignition file"]
+    CreateVM --> VMCreated{"VM creation\nsucceeded?"}
+    VMCreated -->|"No"| ErrCreate["❌ Error: VM creation failed"]
+    VMCreated -->|"Yes"| WaitBoot["Wait for systemd\nservices to boot"]
+    WaitBoot --> BootOk{"Boot completed\nwithin timeout?"}
+    BootOk -->|"No"| ErrTimeout["❌ Error: boot timeout"]
+    BootOk -->|"Yes"| VerifyCF["Verify Cloudflare Tunnel\nconnectivity"]
+    VerifyCF --> CFOk{"Tunnel\nconnected?"}
+    CFOk -->|"No"| ErrTunnel["❌ Error: Cloudflare Tunnel\nfailed to connect"]
+    CFOk -->|"Yes"| VerifyTS["Verify Tailscale\nconnectivity"]
+    VerifyTS --> TSOk{"Tailscale\nconnected?"}
+    TSOk -->|"No"| ErrTS["❌ Error: Tailscale\nfailed to connect"]
+    TSOk -->|"Yes"| Success(["✅ VM ready"])
+```
+
+### VM Lifecycle States
+
+```mermaid
+stateDiagram-v2
+    [*] --> Uninitialized
+    Uninitialized --> Provisioning : devx vm init
+    Provisioning --> Running : boot complete
+    Provisioning --> Failed : boot error
+    Running --> Running : devx vm resize
+    Running --> Sleeping : devx vm sleep
+    Running --> Destroyed : devx vm teardown
+    Sleeping --> Running : devx vm init (wake)
+    Sleeping --> Destroyed : devx vm teardown
+    Failed --> Destroyed : devx vm teardown
+    Destroyed --> [*]
+```
+
 ## Commands
 
 ### `devx vm init`
