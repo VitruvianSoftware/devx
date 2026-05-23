@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.49.0](https://github.com/VitruvianSoftware/devx/compare/v0.48.0...v0.49.0) (2026-05-23)
+
+
+### Features
+
+* **image:** build + load service images into the cluster for runtime: kubernetes ([#203](https://github.com/VitruvianSoftware/devx/issues/203)) ([f50ca73](https://github.com/VitruvianSoftware/devx/commit/f50ca7391a304b10570135c45c837aa855711969))
+
 ## [0.48.0](https://github.com/VitruvianSoftware/devx/compare/v0.47.0...v0.48.0) (2026-05-23)
 
 
