@@ -2,6 +2,84 @@
 
 `devx nuke` is a safe, confirmation-guarded hard reset for your local development environment. When caches go corrupt, containers drift, or you just need to start completely fresh — one command does it all.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx nuke`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        dev["Developer / AI Agent"]
+        cli["devx CLI"]
+        subgraph ScanEngine ["Nuke Scan Engine"]
+            langScanner["Language Cache Scanner\n(Node.js, Go, Python, Rust, Java)"]
+            containerScanner["Container & Volume Scanner\n(managed-by=devx filter)"]
+            sizeCalc["Disk Size Calculator"]
+        end
+        subgraph ManifestEngine ["Impact Manifest"]
+            manifestBuilder["Manifest Builder\n(group by category + sizes)"]
+            safeList["Safe List Enforcer\n(source, .env, devx.yaml, SSH, snapshots)"]
+        end
+        subgraph DestroyEngine ["Destroyer"]
+            cacheDeleter["Cache & Artefact Deleter\n(rm -rf)"]
+            containerDestroyer["Container & Volume Destroyer\n(provider-aware teardown)"]
+        end
+        runtime["Container Runtime\n(podman / docker / nerdctl)"]
+        tui["Confirmation TUI\n(interactive prompt)"]
+    end
+
+    subgraph Project ["Project File System"]
+        caches["Language Caches\n(node_modules, .next, GOPATH, etc.)"]
+        devxContainers["devx-managed Containers\n& Volumes"]
+    end
+
+    dev -->|"devx nuke"| cli
+    cli --> langScanner
+    cli --> containerScanner
+    langScanner -->|"scans"| caches
+    containerScanner -->|"queries"| runtime
+    runtime -->|"lists"| devxContainers
+    langScanner --> sizeCalc
+    containerScanner --> sizeCalc
+    sizeCalc --> manifestBuilder
+    safeList -->|"excludes protected items"| manifestBuilder
+    manifestBuilder --> tui
+    tui -->|"confirmed"| cacheDeleter
+    tui -->|"confirmed"| containerDestroyer
+    cacheDeleter -->|"deletes"| caches
+    containerDestroyer -->|"tears down via"| runtime
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx nuke"]) --> ScanLang["Scan language ecosystems\n(Node.js, Go, Python, Rust, Java)"]
+    ScanLang --> ScanContainers["Scan devx-managed containers\n& volumes (managed-by=devx)"]
+    ScanContainers --> FilterExist["Filter to items that\nactually exist on disk"]
+    FilterExist --> CalcSizes["Calculate disk sizes\nfor each item"]
+    CalcSizes --> BuildManifest["Build impact manifest\n(grouped by category)"]
+    BuildManifest --> EnforceSafe["Enforce safe list\n(source, .env, devx.yaml, SSH, snapshots)"]
+
+    EnforceSafe --> DryRun{"--dry-run?"}
+    DryRun -->|"Yes"| ShowManifest(["Display manifest\nand exit (no deletion)"])
+
+    DryRun -->|"No"| DisplayManifest["Display manifest\nwith categories & sizes"]
+    DisplayManifest --> AutoConfirm{"-y flag?"}
+    AutoConfirm -->|"Yes"| Delete
+    AutoConfirm -->|"No"| Confirm{"User confirms\ndeletion?"}
+    Confirm -->|"No"| Cancel(["Cancelled\n(nothing deleted)"])
+    Confirm -->|"Yes"| Delete
+
+    Delete["Delete all items"] --> DeleteCaches["Remove language caches\n& build artefacts (rm -rf)"]
+    Delete --> DeleteContainers["Tear down containers & volumes\n(via active --runtime provider)"]
+    DeleteCaches --> Done
+    DeleteContainers --> Done
+    Done(["Exit 0\nNuke complete — clean slate"])
+```
+
 ## What Gets Nuked
 
 Before deleting anything, `devx nuke` **scans first and shows you exactly what will be removed** — grouped by category and with disk sizes — then asks for confirmation.

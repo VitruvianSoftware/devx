@@ -53,6 +53,72 @@ devx webhook catch  │  q to quit
   ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of the Webhook Catcher.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI"]
+        httpserver["HTTP Catch-All Server (port 9999)"]
+        parser["Request Parser (headers, body, signatures)"]
+        tui["TUI Renderer (Bubble Tea)"]
+        jsonout["JSON Line Writer (stdout)"]
+    end
+
+    subgraph Tunnel ["Optional: Cloudflare Tunnel (--expose)"]
+        cloudflared["cloudflared quick-tunnel"]
+        publicurl["Public URL (*.trycloudflare.com)"]
+    end
+
+    subgraph External ["External Services"]
+        stripe["Stripe / GitHub / Twilio"]
+        localapp["Your Application"]
+    end
+
+    cli -->|"webhook catch"| httpserver
+    httpserver -->|"parse request"| parser
+    parser -->|"interactive TTY"| tui
+    parser -->|"--json flag or non-TTY"| jsonout
+
+    cli -->|"--expose flag"| cloudflared
+    cloudflared -->|"encrypted tunnel"| publicurl
+    stripe -->|"POST webhook"| publicurl
+    publicurl -->|"forward"| httpserver
+    localapp -->|"POST http://localhost:9999"| httpserver
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx webhook catch"]) --> BindPort["Bind HTTP server on --port (default 9999)"]
+    BindPort -->|Port in use| ErrPort["Error: port already in use"]
+    BindPort -->|OK| CheckExpose{"--expose flag?"}
+    CheckExpose -->|Yes| StartTunnel["Start cloudflared quick-tunnel"]
+    StartTunnel -->|Failed| ErrTunnel["Error: tunnel creation failed"]
+    StartTunnel -->|OK| PrintURLs["Print local + public HTTPS URL"]
+    CheckExpose -->|No| PrintLocal["Print local URL only"]
+    PrintURLs --> CheckMode
+    PrintLocal --> CheckMode{"Interactive TTY?"}
+    CheckMode -->|Yes & no --json| LaunchTUI["Launch TUI (Bubble Tea)"]
+    CheckMode -->|No or --json| StreamJSON["Stream JSON lines to stdout"]
+    LaunchTUI --> WaitReq["Wait for incoming HTTP requests"]
+    StreamJSON --> WaitReq
+    WaitReq -->|Request received| ParseReq["Parse method, path, headers, body"]
+    ParseReq --> ExtractSig["Extract signature headers (Stripe, GitHub, etc.)"]
+    ExtractSig --> FormatBody["Pretty-print JSON body (if Content-Type matches)"]
+    FormatBody --> Render{"Output mode?"}
+    Render -->|TUI| RenderTUI["Render request card in TUI"]
+    Render -->|JSON| EmitJSON["Emit JSON line to stdout"]
+    RenderTUI --> WaitReq
+    EmitJSON --> WaitReq
+    WaitReq -->|"q key or Ctrl+C"| Shutdown["Stop server & close tunnel (if any)"]
+```
+
 ## Public URL via Cloudflare Tunnel
 
 Use `--expose` to get a public HTTPS URL for services that can't reach `localhost` (e.g. Stripe's webhook dashboard, GitHub webhooks):

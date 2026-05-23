@@ -4,6 +4,93 @@ Devx enables you to bundle your exact running environment state and share it wit
 
 By using `devx state share` and `devx state attach`, you can snapshot running containers, exported database volumes, and environment metadata into a single encrypted artifact and securely transfer it via your own S3 or Google Cloud Storage buckets.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx state share` and `devx state attach`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph SenderHost ["Sender Host"]
+        senderCLI["devx CLI (sender)"]
+        criuExport["CRIU Checkpointer"]
+        dbExport["Database Volume Exporter"]
+        bundler["Bundler (tar.gz)"]
+        encryptor["AES-256-GCM Encryptor"]
+        passGen["Passphrase Generator (4-word)"]
+        uploader["Upload Agent (aws / gcloud CLI)"]
+    end
+
+    subgraph Relay ["Cloud Relay (Bring-Your-Own-Bucket)"]
+        bucket["S3 / GCS Bucket"]
+    end
+
+    subgraph ReceiverHost ["Receiver Host"]
+        receiverCLI["devx CLI (receiver)"]
+        downloader["Download Agent (aws / gcloud CLI)"]
+        decryptor["AES-256-GCM Decryptor"]
+        unbundler["Unbundler (tar.gz)"]
+        restorer["Topology Restorer"]
+    end
+
+    senderCLI -->|"devx state share"| criuExport
+    senderCLI -->|"devx state share"| dbExport
+    criuExport -->|"Container memory & FS state"| bundler
+    dbExport -->|"Volume .tar archives"| bundler
+    bundler -->|"Compressed bundle"| encryptor
+    passGen -->|"PBKDF2-derived 32-byte key"| encryptor
+    encryptor -->|"Encrypted blob"| uploader
+    uploader -->|"Upload ciphertext"| bucket
+
+    receiverCLI -->|"devx state attach"| downloader
+    downloader -->|"Download ciphertext"| bucket
+    bucket -->|"Encrypted blob"| downloader
+    downloader --> decryptor
+    decryptor -->|"Passphrase via PBKDF2"| unbundler
+    unbundler -->|"Extracted archives"| restorer
+    restorer -->|"Restore containers & volumes"| receiverRuntime["Container Runtime (Podman)"]
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx state &lt;subcommand&gt;"]) --> Route{Which subcommand?}
+
+    Route -->|"share"| CheckCRIU{"Provider is Podman?"}
+    CheckCRIU -->|Yes| FullShare["Checkpoint containers via CRIU"]
+    CheckCRIU -->|No| DBOnly["Fallback: export database volumes only"]
+    FullShare --> ExportVols["Export database volumes to .tar archives"]
+    DBOnly --> ExportVols
+    ExportVols --> Bundle["Compress all artifacts into .tar.gz"]
+    Bundle --> GenPass["Generate 4-word passphrase"]
+    GenPass --> DeriveKey["Derive 32-byte key via PBKDF2 (SHA-256, 600k iterations)"]
+    DeriveKey --> Encrypt["Encrypt bundle with AES-256-GCM"]
+    Encrypt --> CheckRelay{"Relay configured in devx.yaml?"}
+    CheckRelay -->|No| RelayErr(["Error: No relay bucket configured"])
+    CheckRelay -->|Yes| Upload["Upload encrypted blob via aws/gcloud CLI"]
+    Upload --> UploadOk{"Upload successful?"}
+    UploadOk -->|No| UploadErr(["Error: Upload failed (check credentials)"])
+    UploadOk -->|Yes| PrintID["Print share ID + passphrase to terminal"]
+    PrintID --> ShareDone([Done])
+
+    Route -->|"attach"| Download["Download encrypted blob from S3/GCS"]
+    Download --> DownloadOk{"Download successful?"}
+    DownloadOk -->|No| DlErr(["Error: Download failed (check credentials/URL)"])
+    DownloadOk -->|Yes| Decrypt["Decrypt blob using provided passphrase"]
+    Decrypt --> DecryptOk{"Passphrase valid?"}
+    DecryptOk -->|No| PassErr(["Error: Invalid passphrase"])
+    DecryptOk -->|Yes| Unbundle["Extract .tar.gz bundle"]
+    Unbundle --> Confirm{"User confirms destructive restore?"}
+    Confirm -->|No| AttachAbort([Aborted])
+    Confirm -->|Yes| StopLocal["Stop & remove current local containers"]
+    StopLocal --> Restore["Restore containers & volumes from bundle"]
+    Restore --> AttachDone([Topology restored])
+
+    Route -->|"share --db-only"| DBOnly
+```
+
 ## How it works
 
 When you run `devx state share`, Devx performs the following steps:

@@ -54,6 +54,83 @@ devx test ui -- npx playwright test --reporter=html
 devx test ui --runtime docker --command "npx playwright test"
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx test ui`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI"]
+        yaml["devx.yaml (test config)"]
+        envInjector["Environment Injector"]
+        testRunner["Test Runner Process (Playwright / Cypress)"]
+    end
+
+    subgraph EphemeralStack ["Ephemeral Test Stack (namespaced by Run ID)"]
+        dbSpawner["DB Spawner"]
+        postgres["Ephemeral Postgres Container"]
+        redis["Ephemeral Redis Container"]
+        migrationRunner["Setup / Migration Runner"]
+    end
+
+    subgraph Runtime ["Container Runtime (Podman / Docker)"]
+        runtime["Container Engine"]
+    end
+
+    cli -->|"devx test ui"| yaml
+    yaml -->|"Reads databases & test config"| cli
+    cli -->|"Generates unique Run ID"| dbSpawner
+    dbSpawner -->|"Provisions containers on random ports"| runtime
+    runtime -->|"Starts"| postgres
+    runtime -->|"Starts"| redis
+    postgres -->|"Ready signal (log polling)"| dbSpawner
+    redis -->|"Ready signal (log polling)"| dbSpawner
+    dbSpawner -->|"Connection strings"| envInjector
+    envInjector -->|"DATABASE_URL, POSTGRES_URL, REDIS_URL"| migrationRunner
+    migrationRunner -->|"Runs setup command"| postgres
+    envInjector -->|"Injects env vars"| testRunner
+    testRunner -->|"Executes test suite"| Host
+    testRunner -->|"Exit (pass/fail/crash)"| teardown["Teardown Manager"]
+    teardown -->|"Unconditionally removes containers & volumes"| runtime
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx test ui"]) --> ParseConfig["Parse test config from devx.yaml + CLI flags"]
+    ParseConfig --> GenID["Generate unique Run ID (e.g. 698e02)"]
+    GenID --> SelectRuntime{"--runtime flag?"}
+    SelectRuntime -->|"docker"| UseDocker["Use Docker engine"]
+    SelectRuntime -->|"podman (default)"| UsePodman["Use Podman engine"]
+    UseDocker --> SpawnDBs
+    UsePodman --> SpawnDBs
+
+    SpawnDBs["Spawn ephemeral DB containers on random free ports"] --> WaitReady{"All containers ready?"}
+    WaitReady -->|"Polling logs..."| WaitReady
+    WaitReady -->|Yes| BuildURLs["Build connection strings (DATABASE_URL, etc.)"]
+    WaitReady -->|"Timeout"| SpawnErr(["Error: Container failed to start"])
+    SpawnErr --> Teardown
+
+    BuildURLs --> HasSetup{"Setup command configured?"}
+    HasSetup -->|Yes| RunSetup["Run setup command (e.g. npm run db:migrate)"]
+    RunSetup --> SetupOk{"Setup succeeded?"}
+    SetupOk -->|No| SetupErr(["Error: Setup command failed"])
+    SetupErr --> Teardown
+    SetupOk -->|Yes| RunTests
+    HasSetup -->|No| RunTests
+
+    RunTests["Run test command with injected env vars"] --> TestResult{"Tests exit code"}
+    TestResult -->|"0 (pass)"| Teardown
+    TestResult -->|"non-zero (fail)"| Teardown
+    TestResult -->|"crash/signal"| Teardown
+
+    Teardown["Unconditionally tear down all ephemeral containers & volumes"] --> Done([Done — dev DB untouched])
+```
+
 ## How It Works
 
 1. **Generates a unique run ID** (e.g., `698e02`) to namespace all ephemeral resources

@@ -4,6 +4,106 @@ Setting up `.env` files across a team securely is historically a massive pain, r
 
 `devx` integrates directly with secure remote vaults (Bitwarden, 1Password, GCP Secret Manager) to securely synchronize zero-trust infrastructure environments into local Macbook development workflows.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Vault Secrets Syncing.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        configParser["devx.yaml Config Parser"]
+        authOrch["Auth Orchestrator\n(interactive login / unlock / SSO / 2FA)"]
+        secretResolver["Secret Resolver"]
+        envWriter[".env Writer / In-Memory Injector"]
+        schemaValidator["Schema Validator\n(.env.example)"]
+    end
+
+    subgraph VaultProviders ["Remote Vault Providers"]
+        bw["Bitwarden\n(bw CLI)"]
+        op["1Password\n(op CLI)"]
+        gcp["GCP Secret Manager\n(gcloud CLI)"]
+    end
+
+    subgraph Targets ["Secret Targets"]
+        devxShell["devx shell\n(in-memory env)"]
+        envFile[".env file"]
+    end
+
+    cli -->|"devx config pull / push / validate"| configParser
+    configParser -->|"parses env: URIs\n(bitwarden:// 1password:// gcp://)"| secretResolver
+    secretResolver -->|"checks session"| authOrch
+    authOrch -->|"bw login / unlock"| bw
+    authOrch -->|"op signin"| op
+    authOrch -->|"gcloud auth"| gcp
+
+    secretResolver -->|"fetch secrets"| bw
+    secretResolver -->|"fetch secrets"| op
+    secretResolver -->|"fetch secrets"| gcp
+
+    secretResolver -->|"pull: inject"| envWriter
+    envWriter -->|"in-memory"| devxShell
+    envWriter -->|"writes"| envFile
+
+    cli -->|"devx config push"| secretResolver
+    secretResolver -->|"push: upload"| bw
+    secretResolver -->|"push: upload"| op
+    secretResolver -->|"push: upload"| gcp
+
+    cli -->|"devx config validate"| schemaValidator
+    schemaValidator -->|"reads .env.example"| schemaValidator
+    schemaValidator -->|"cross-checks"| secretResolver
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx config pull / push / validate"]) --> ParseConfig["Parse devx.yaml env: block"]
+    ParseConfig --> DetectProviders["Detect vault providers from URIs\n(bitwarden:// | 1password:// | gcp://)"]
+
+    DetectProviders --> Command{{"Which command?"}}
+
+    Command -->|"pull"| PullAuth
+    Command -->|"push"| PushAuth
+    Command -->|"validate"| ValidateStart
+
+    PullAuth["Check vault session"] --> SessionOK{{"Authenticated?"}}
+    SessionOK -->|"No"| InteractiveAuth["Prompt: Interactive login / unlock\n(Email+2FA, API Key, SSO)"]
+    InteractiveAuth --> AuthResult{{"Auth succeeded?"}}
+    AuthResult -->|"No"| AuthError["❌ Authentication failed"]
+    AuthError --> Fail([Fail])
+    AuthResult -->|"Yes"| FetchSecrets
+
+    SessionOK -->|"Yes"| FetchSecrets["Fetch secrets from all configured vaults"]
+    FetchSecrets --> FetchOK{{"All secrets fetched?"}}
+    FetchOK -->|"No"| FetchError["❌ Failed to fetch from provider"]
+    FetchError --> Fail
+
+    FetchOK -->|"Yes"| InjectEnv["Inject secrets in-memory\nto devx shell containers"]
+    InjectEnv --> PullDone(["✓ Secrets synced"])
+
+    PushAuth["Check vault session"] --> PushSessionOK{{"Authenticated?"}}
+    PushSessionOK -->|"No"| InteractiveAuth
+    PushSessionOK -->|"Yes"| ReadLocal["Read local .env"]
+    ReadLocal --> RemoteExists{{"Remote item exists?"}}
+    RemoteExists -->|"No"| AutoProvision["Auto-provision Secure Note / secret"]
+    RemoteExists -->|"Yes"| UploadSecrets["Upload secrets to vault"]
+    AutoProvision --> UploadSecrets
+    UploadSecrets --> PushDone(["✓ Pushed to remote vaults"])
+
+    ValidateStart["Read .env.example as schema"] --> CrossCheck["Cross-verify against\nvault sources + local .env"]
+    CrossCheck --> Gaps{{"Missing or empty keys?"}}
+    Gaps -->|"No"| AllValid(["✓ All keys valid"])
+    Gaps -->|"Yes"| JsonCheck{{"--json flag?"}}
+    JsonCheck -->|"Yes"| JsonReport["Output JSON report"]
+    JsonCheck -->|"No"| HumanReport["Print ✓/✗/⚠ table"]
+    JsonReport --> ValidateDone(["Validation complete"])
+    HumanReport --> ValidateDone
+```
+
 ## Pulling Secrets (`devx config pull`)
 
 Instead of sharing `.env` files manually, team members define their secret locations in the `devx.yaml` topology mapping:

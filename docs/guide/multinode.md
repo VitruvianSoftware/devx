@@ -24,6 +24,92 @@ nodes:
       disk: 30GiB
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Multi-Node Clusters.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI (cluster subcommand)"]
+        clusterYaml["cluster.yaml"]
+        kubecfg["~/.kube/cluster.yaml"]
+        kubectl["kubectl"]
+    end
+
+    subgraph LimaLayer ["Lima VM Manager (limactl)"]
+        limactl["limactl"]
+    end
+
+    subgraph ServerVM ["Lima VM — Server Node"]
+        k3sServer["k3s server (control plane)"]
+        dockerServer["Docker CE (optional)"]
+        socat["socat (port-forward support)"]
+    end
+
+    subgraph AgentVM ["Lima VM — Agent Node(s)"]
+        k3sAgent["k3s agent (worker)"]
+        dockerAgent["Docker CE (optional)"]
+        socatAgent["socat"]
+    end
+
+    cli -->|"reads desired state"| clusterYaml
+    cli -->|"provision / start / stop / delete VMs"| limactl
+    limactl -->|"creates"| ServerVM
+    limactl -->|"creates"| AgentVM
+    cli -->|"k3s install --cluster-init"| k3sServer
+    cli -->|"k3s install --server (join)"| k3sAgent
+    k3sAgent -->|"joins via token"| k3sServer
+    cli -->|"extracts & writes"| kubecfg
+    kubectl -->|"KUBECONFIG=cluster.yaml"| kubecfg
+    dockerServer -.->|"sock forwarded to host"| Host
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx cluster init"]) --> DryRun{"--dry-run?"}
+    DryRun -->|"yes"| PrintPlan["Print planned actions\n(no changes made)"]
+    DryRun -->|"no"| CheckPrereqs{"limactl\ninstalled?"}
+
+    CheckPrereqs -->|"no"| AutoInstall{"--auto-install?"}
+    AutoInstall -->|"yes"| InstallLima["Install limactl"]
+    AutoInstall -->|"no"| ErrPrereq["Error: missing\nprerequisites"]
+    InstallLima --> ProvisionVMs
+    CheckPrereqs -->|"yes"| ProvisionVMs["Provision Lima VMs\nper cluster.yaml"]
+
+    ProvisionVMs --> BootstrapServer["Bootstrap k3s server\n(--cluster-init)"]
+    BootstrapServer --> ExtractToken["Extract node join token"]
+    ExtractToken --> ExportKubeconfig["Extract & write kubeconfig\nto ~/.kube/cluster.yaml"]
+    ExportKubeconfig --> ServerReady(["✅ Control plane ready"])
+
+    ServerReady --> Join(["devx cluster join"])
+    Join --> JoinAgents["Join agent nodes\nvia k3s token"]
+    JoinAgents --> ClusterReady(["✅ Cluster fully joined"])
+
+    ClusterReady --> Apply(["devx cluster apply"])
+    Apply --> Reconcile["Reconcile node specs\nvs cluster.yaml"]
+
+    ClusterReady --> Upgrade(["devx cluster upgrade"])
+    Upgrade --> RollingUpgrade["Rolling k3s version\nupgrade across nodes"]
+
+    ClusterReady --> ReconcileCmd(["devx cluster reconcile"])
+    ReconcileCmd --> RecDryRun{"--dry-run?"}
+    RecDryRun -->|"yes"| RecPreview["Preview per-node\npackage commands"]
+    RecDryRun -->|"no"| RecInstall["Install baseline packages\n(e.g. socat) on each node"]
+
+    ClusterReady --> Destroy(["devx cluster destroy"])
+    Destroy --> Confirm{"--non-interactive\nor -y?"}
+    Confirm -->|"no"| Prompt["Prompt for confirmation"]
+    Confirm -->|"yes"| Teardown
+    Prompt -->|"confirmed"| Teardown["Uninstall k3s,\ndelete VMs,\nremove kubeconfig"]
+    Prompt -->|"cancelled"| Abort["Abort"]
+    Teardown --> Destroyed(["🗑️ Cluster destroyed"])
+```
+
 ## Commands
 
 The cluster manager provides several commands to handle the lifecycle of your multi-node cluster.

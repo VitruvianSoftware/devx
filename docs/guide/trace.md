@@ -4,6 +4,95 @@ When running multiple microservices locally natively or via `devx.yaml`, figurin
 
 `devx` brings observability to your local environment with zero configuration.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Shift-Left Distributed Observability.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        envInjector["OTEL Env Injector"]
+        devxShell["devx shell"]
+    end
+
+    subgraph Runtime ["Container Runtime (Podman / Docker)"]
+        jaeger["Jaeger All-in-One\n(UI: :16686, OTLP: :4317)"]
+        grafana["Grafana LGTM Stack\n(Loki + Grafana + Tempo + Mimir)"]
+        grafanaUI["Grafana UI (:3000)"]
+        tempoUI["Tempo (:3100)"]
+        dashboard["Auto-Provisioned\nBuild Metrics Dashboard"]
+    end
+
+    subgraph AppServices ["Application Services"]
+        svc1["Service A\n(OTEL SDK)"]
+        svc2["Service B\n(OTEL SDK)"]
+    end
+
+    subgraph Storage ["Local Persistence (optional)"]
+        telemetryDir["~/.devx/telemetry/"]
+    end
+
+    cli -->|"devx trace spawn"| jaeger
+    cli -->|"devx trace spawn grafana"| grafana
+    grafana --- grafanaUI
+    grafana --- tempoUI
+    grafana --- dashboard
+
+    cli -->|"injects OTEL_EXPORTER_OTLP_ENDPOINT"| envInjector
+    envInjector -->|"env var"| devxShell
+    envInjector -->|"env var"| svc1
+    envInjector -->|"env var"| svc2
+
+    svc1 -->|"OTLP traces"| jaeger
+    svc2 -->|"OTLP traces"| jaeger
+    svc1 -->|"OTLP traces"| grafana
+    svc2 -->|"OTLP traces"| grafana
+
+    grafana -->|"--persist"| telemetryDir
+    jaeger -->|"--persist"| telemetryDir
+
+    cli -->|"devx trace list / rm"| jaeger
+    cli -->|"devx trace list / rm"| grafana
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx trace spawn [engine]"]) --> SelectEngine{{"Engine argument?"}}
+
+    SelectEngine -->|"(none / jaeger)"| Jaeger["Select Jaeger All-in-One image"]
+    SelectEngine -->|"grafana"| Grafana["Select Grafana LGTM image"]
+
+    Jaeger --> PersistCheck
+    Grafana --> ProvisionDashboard["Auto-provision Build Metrics dashboard"]
+    ProvisionDashboard --> PersistCheck
+
+    PersistCheck{{"--persist flag?"}} -->|"Yes"| MountVolume["Mount ~/.devx/telemetry/ as volume"]
+    PersistCheck -->|"No"| Ephemeral["Run with ephemeral storage"]
+
+    MountVolume --> StartContainer
+    Ephemeral --> StartContainer
+
+    StartContainer["Start container via runtime"] --> ContainerOK{{"Container started?"}}
+    ContainerOK -->|"No"| Error["❌ Print error (port conflict, runtime not found)"]
+    Error --> Done([Done])
+
+    ContainerOK -->|"Yes"| InjectEnv["Set OTEL_EXPORTER_OTLP_ENDPOINT\nfor devx shell and managed containers"]
+    InjectEnv --> PrintUI["Print UI URL\n(Jaeger :16686 / Grafana :3000)"]
+    PrintUI --> Ready([Ready — traces flow automatically])
+
+    Ready -.->|"later"| Manage(["devx trace list / rm"])
+    Manage --> ListOrRm{{"list or rm?"}}
+    ListOrRm -->|"list"| ListBackends["Show active telemetry engines"]
+    ListOrRm -->|"rm"| Teardown["Stop and remove container"]
+    ListBackends --> Done
+    Teardown --> Done
+```
+
 ## Spawning a Trace Backend
 
 You can instantly spin up a lightweight OpenTelemetry backend locally:
