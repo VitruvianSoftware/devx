@@ -154,15 +154,16 @@ type DevxConfigKubernetesSync struct {
 // deploy). Cluster targeting (kubeconfig/context) falls back to KUBECONFIG, then
 // ~/.kube/config.
 type DevxConfigServiceKubernetes struct {
-	Manifests  string                      `yaml:"manifests"`            // kustomize dir (default), raw manifest file/dir, or helm chart
-	Renderer   string                      `yaml:"renderer,omitempty"`   // "kustomize" (default) | "raw" | "helm"
-	Namespace  string                      `yaml:"namespace,omitempty"`  // target namespace (default: "default")
-	Context    string                      `yaml:"context,omitempty"`    // kube context (default: current context)
-	Kubeconfig string                      `yaml:"kubeconfig,omitempty"` // kubeconfig path (default: $KUBECONFIG or ~/.kube/config)
-	Images     []DevxConfigKubernetesImage `yaml:"images,omitempty"`     // images devx builds + loads into the cluster registry before apply
-	Release    string                      `yaml:"release,omitempty"`    // helm release name (renderer: helm; default: service name)
-	Values     []string                    `yaml:"values,omitempty"`     // helm values files (renderer: helm)
-	Sync       []DevxConfigKubernetesSync  `yaml:"sync,omitempty"`       // live-reload: local dirs synced into the deployed pod
+	Manifests   string                      `yaml:"manifests"`              // kustomize dir (default), raw manifest file/dir, or helm chart
+	Renderer    string                      `yaml:"renderer,omitempty"`     // "kustomize" (default) | "raw" | "helm"
+	Namespace   string                      `yaml:"namespace,omitempty"`    // target namespace (default: "default")
+	Context     string                      `yaml:"context,omitempty"`      // kube context (default: current context)
+	Kubeconfig  string                      `yaml:"kubeconfig,omitempty"`   // kubeconfig path (default: $KUBECONFIG or ~/.kube/config)
+	Images      []DevxConfigKubernetesImage `yaml:"images,omitempty"`       // images devx builds + loads into the cluster registry before apply
+	Release     string                      `yaml:"release,omitempty"`      // helm release name (renderer: helm; default: service name)
+	Values      []string                    `yaml:"values,omitempty"`       // helm values files (renderer: helm)
+	Sync        []DevxConfigKubernetesSync  `yaml:"sync,omitempty"`         // live-reload: local dirs synced into the deployed pod
+	PortForward bool                        `yaml:"port_forward,omitempty"` // auto-discover Services and forward them to localhost
 }
 
 // DevxConfigServiceCloudRun configures a runtime: cloud service — devx deploys the

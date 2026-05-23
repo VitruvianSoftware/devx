@@ -195,6 +195,15 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 		}
 		n.podSyncCancel = cancelSync
 	}
+
+	// Auto-discover the namespace's Services and port-forward them to localhost.
+	if k.PortForward {
+		_, cancelPF, err := startPortForwards(ctx, kubeconfig, k.Context, ns)
+		if err != nil {
+			return fmt.Errorf("service %q: %w", n.Name, err)
+		}
+		n.pfCancel = cancelPF
+	}
 	return nil
 }
 
