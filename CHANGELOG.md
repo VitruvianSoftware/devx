@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.0](https://github.com/VitruvianSoftware/devx/compare/v0.49.0...v0.50.0) (2026-05-23)
+
+
+### Features
+
+* **orchestrator:** add helm renderer for runtime: kubernetes ([#205](https://github.com/VitruvianSoftware/devx/issues/205)) ([a8e2c81](https://github.com/VitruvianSoftware/devx/commit/a8e2c815c883788457af2a15027c2b94d29b4f15))
+
 ## [0.49.0](https://github.com/VitruvianSoftware/devx/compare/v0.48.0...v0.49.0) (2026-05-23)
 
 
