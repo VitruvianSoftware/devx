@@ -40,6 +40,60 @@ cron:
 | `timeout` | optional | Go duration string (`5m`, `30s`, `1h30m`). Empty = no timeout. |
 | `env` | optional | Per-job env vars, merged on top of project env. Job-level `env` wins over vault secrets with the same key. |
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx cron run`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        user["User / AI Agent"]
+        cli["devx CLI (cron command)"]
+        config["Config Resolver"]
+        vaults["Vault Secrets Injector (1Password/etc)"]
+        exec["Subprocess Executor"]
+        process["Cron Script (Host Subprocess)"]
+    end
+
+    user -->|"runs devx cron run"| cli
+    cli -->|"1. reads job config"| config
+    cli -->|"2. gathers credentials"| vaults
+    cli -->|"3. configures env & spawns"| exec
+    exec -->|"runs command"| process
+    process -->|"real-time output"| user
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start([devx cron run name]) --> Parse[Load devx.yaml & Find Job by Name]
+    Parse --> Found{Job Found?}
+    Found -- No --> Fail[Fail: Unknown Job]
+    Found -- Yes --> FetchSecrets[Fetch secrets from Vaults / .env fallback]
+    
+    FetchSecrets --> MergeEnv[Merge env: Host Env + Secrets + Job Overrides]
+    MergeEnv --> DryRun{--dry-run ?}
+    
+    DryRun -- Yes --> PrintPlan[Print resolved execution plan & exit]
+    DryRun -- No --> SetTimeout[Set timeout context from timeout field]
+    
+    SetTimeout --> Spawn[Spawn command as host subprocess]
+    Spawn --> StreamLogs[Stream stdout/stderr to terminal in real-time]
+    
+    StreamLogs --> WaitExit{Process exits or times out?}
+    
+    WaitExit -- Timeout --> Kill[Kill subprocess & exit code 1]
+    WaitExit -- Normal Exit --> GetCode[Capture subprocess exit code]
+    
+    Kill --> Report[Report duration & status]
+    GetCode --> Report
+    
+    Report --> End([Exit CLI with subprocess exit code])
+```
+
 ## Commands
 
 ### List

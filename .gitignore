@@ -11,6 +11,9 @@ cluster.yaml
 /devx
 dist/
 
+# Dependencies
+node_modules/
+
 # Go tooling
 vendor/
 
