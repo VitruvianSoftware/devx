@@ -386,6 +386,7 @@ var upCmd = &cobra.Command{
 					Command:      svc.Command,
 					Env:          svc.Env,
 					Dir:          svc.Dir,
+					OneShot:      svc.OneShot,
 					BridgeMode:   bridgeMode,
 					BridgeConfig: bridgeCfg,
 					Kube:         kubeCfg,
