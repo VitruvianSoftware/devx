@@ -96,31 +96,36 @@ Any time you need to execute unit tests, integration tests, or verify compilatio
 
 These devx wrappers natively emit rich telemetry for Grafana observability and enforce deterministic test environments. This rule is absolute: **Dogfood the local CLI.**
 
-## 🚀 11. Ship Code with `devx agent ship` or `review` (MANDATORY)
+## 🚀 11. PR-First Review Workflow with `devx agent review` (MANDATORY)
 
-You are **FORBIDDEN** from using raw `git push` in this repository. A pre-push git hook will block you if you try. Instead, you MUST use `devx agent` commands to commit, push, and verify CI.
+You are **FORBIDDEN** from committing or pushing directly to the `main` branch. You are also **FORBIDDEN** from using raw `git push` in this repository (a pre-push hook will block it). You must always follow a Pull Request-based SDLC workflow.
 
-**For automated merging (Default):**
+**Mandatory Branching Step:**
+Before making ANY code edits or running any shipping commands, you MUST create and check out a dedicated feature branch from `main`:
 ```bash
-devx agent ship -m "feat: your commit message"
+git checkout -b feat/your-feature-name
 ```
 
-This command orchestrates the full lifecycle:
-1. **Pre-flight:** Runs local tests, lint, and build automatically
-2. **Commit & Push:** Stages, commits, pushes (it bypasses the hook internally)
-3. **PR & CI Poll:** Creates a PR and blocks your terminal until the CI pipeline completes
-4. **Merge:** Squash-merges the PR only if CI is green
-
-**For human review (No Auto-Merge):**
-If the human specifically requests you to create a PR for them to review, use:
+**Standard Workflow (For Human Review):**
+Unless the user explicitly asks you to auto-merge, you MUST always use `devx agent review`:
 ```bash
 devx agent review -m "feat: your commit message"
 ```
-This does the exact same pre-flight, push, and blocking CI poll as `ship`, but it **leaves the PR open** for human review instead of merging it.
+This command orchestrates the full review lifecycle:
+1. **Pre-flight**: Runs local tests, lint, and build automatically.
+2. **Commit & Push**: Stages, commits, and pushes to the remote feature branch.
+3. **PR Creation**: Automatically creates a GitHub Pull Request from your feature branch to `main`.
+4. **CI Verification**: Polls the CI pipeline and blocks until it completes.
+5. **Human Review**: Leaves the PR open for human review (does NOT auto-merge).
 
-If the pipeline fails, both commands return Exit Code `53` with condensed failure logs. You MUST fix the issue and re-run the command immediately.
+**For Automated Merging (Only when explicitly requested):**
+If and only if the user explicitly instructs you to auto-merge the changes once green, use:
+```bash
+devx agent ship -m "feat: your commit message"
+```
+This performs the same steps but squash-merges the PR automatically once CI passes.
 
-For machine-readable output: `devx agent ship -m "message" --json`
+*Note: Running either command while checked out on `main` will fail, as GitHub cannot create a PR with `main` as both the head and base branch.*
 
 ## 🔗 12. Hybrid Bridge (`devx bridge`)
 
