@@ -88,6 +88,18 @@ type KubeNodeConfig struct {
 	Sync         []KubeSync   // live-reload: local dirs synced into the deployed pod
 }
 
+// CloudRunNodeConfig holds Cloud Run deploy configuration for a DAG node
+// (runtime: cloud): devx deploys Image to Cloud Run via `gcloud run deploy`.
+type CloudRunNodeConfig struct {
+	Image                string            // container image to deploy
+	Service              string            // Cloud Run service name (default: node name)
+	Region               string            // GCP region
+	Project              string            // GCP project ID
+	Env                  map[string]string // env vars set on the service
+	AllowUnauthenticated bool              // expose publicly
+	Flags                []string          // extra `gcloud run deploy` flags
+}
+
 // HealthcheckConfig defines how to verify a service is ready.
 type HealthcheckConfig struct {
 	// HTTP endpoint to poll (e.g., "http://localhost:8080/health")
@@ -152,6 +164,10 @@ type Node struct {
 
 	// Runtime state for kubernetes live-reload (stops pod-sync watchers on shutdown)
 	podSyncCancel context.CancelFunc
+
+	// Cloud Run deploy field (runtime: cloud) + what was deployed, for cleanup
+	CloudRun   *CloudRunNodeConfig
+	crDeployed *CloudRunNodeConfig
 
 	// Runtime state
 	process     *exec.Cmd
@@ -283,6 +299,9 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			if n.kubeApplied != nil {
 				deleteKubernetesNode(n)
 			}
+			if n.crDeployed != nil {
+				deleteCloudRunNode(n)
+			}
 
 			if n.cancel != nil {
 				n.cancel()
@@ -316,6 +335,11 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 					case RuntimeKubernetes:
 						if err := startKubernetesNode(ctx, n); err != nil {
 							errCh <- fmt.Errorf("failed to deploy service %q: %w", n.Name, err)
+							return
+						}
+					case RuntimeCloud:
+						if err := startCloudRunNode(ctx, n); err != nil {
+							errCh <- fmt.Errorf("failed to deploy Cloud Run service %q: %w", n.Name, err)
 							return
 						}
 					default:
@@ -376,6 +400,11 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			if node.Runtime == RuntimeKubernetes {
 				// Already health-gated inside startKubernetesNode (kubectl wait).
 				fmt.Printf("  \u2705 %s is healthy (deployment available)\n", name)
+				continue
+			}
+			if node.Runtime == RuntimeCloud {
+				// Already deployed + gated inside startCloudRunNode.
+				fmt.Printf("  \u2705 %s is healthy (Cloud Run deployed)\n", name)
 				continue
 			}
 
