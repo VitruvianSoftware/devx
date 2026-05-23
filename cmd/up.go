@@ -259,6 +259,7 @@ var upCmd = &cobra.Command{
 				var bridgeMode orchestrator.BridgeMode
 				var bridgeCfg *orchestrator.BridgeNodeConfig
 				var kubeCfg *orchestrator.KubeNodeConfig
+				var crCfg *orchestrator.CloudRunNodeConfig
 
 				switch svc.Runtime {
 				case "container":
@@ -300,6 +301,17 @@ var upCmd = &cobra.Command{
 					}
 				case "cloud":
 					rt = orchestrator.RuntimeCloud
+					if svc.CloudRun != nil {
+						crCfg = &orchestrator.CloudRunNodeConfig{
+							Image:                svc.CloudRun.Image,
+							Service:              svc.CloudRun.Service,
+							Region:               svc.CloudRun.Region,
+							Project:              svc.CloudRun.Project,
+							Env:                  svc.CloudRun.Env,
+							AllowUnauthenticated: svc.CloudRun.AllowUnauthenticated,
+							Flags:                svc.CloudRun.Flags,
+						}
+					}
 				case "bridge":
 					rt = orchestrator.RuntimeBridge
 					// Build BridgeNodeConfig from inline fields + top-level bridge config
@@ -376,6 +388,7 @@ var upCmd = &cobra.Command{
 					BridgeMode:   bridgeMode,
 					BridgeConfig: bridgeCfg,
 					Kube:         kubeCfg,
+					CloudRun:     crCfg,
 				})
 			}
 

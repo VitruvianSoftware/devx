@@ -199,6 +199,21 @@ services:
   #         tag: dev                             # default "dev"
   #         # platforms: [linux/amd64, linux/arm64]  # multi-arch (default: the builder's arch)
 
+  # --- Cloud Run-deploy service (runtime: cloud) ---
+  # With runtime: cloud, devx deploys the image to Google Cloud Run via `gcloud run
+  # deploy` and removes it on shutdown. project, region, and image are required.
+  # - name: brms-offer
+  #   runtime: cloud
+  #   cloud_run:
+  #     image: us-docker.pkg.dev/my-proj/brms/offer:dev   # required
+  #     region: us-central1                                # required
+  #     project: my-dev-project                            # required (no implicit default)
+  #     service: brms-offer                                # optional (default: service name)
+  #     allow_unauthenticated: false                       # optional (default: private)
+  #     env:                                               # optional
+  #       RULES_MANIFEST: gs://my-bucket/manifest.json
+  #     # flags: ["--memory", "512Mi"]                     # optional extra gcloud flags
+
 # --- Idea 37: Environment Profiles ---
 # Profiles apply additive/merge overlays on top of the base config above.
 # Uses Docker Compose override semantics:

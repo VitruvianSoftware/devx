@@ -35,7 +35,7 @@ The `runtime` parameter gives development teams ultimate execution flexibility:
 * `bridge`: Connects to a remote Kubernetes service via `bridge_target` (outbound port-forward) or `bridge_intercept` (inbound traffic steal). Fully managed by the DAG with correct dependency ordering and lifecycle. See [Bridge Guide](bridge.md#hybrid-topology).
 * `container`: (Coming soon) Runs the process isolated within a defined sandbox.
 * `kubernetes`: Renders your manifests (`kustomize`, `raw`, or `helm`) and deploys them to a target cluster, readiness-gating the DAG on the workload becoming `Available`. Can also build + load local images first. The skaffold-class deploy path. See [Kubernetes Deploy](kubernetes-deploy.md).
-* `cloud`: (Coming soon) Runs the process attached remotely to GCP Cloud Run or AWS ECS via emulators.
+* `cloud`: Deploys the service to **Google Cloud Run** via `gcloud run deploy` — records the deploy, surfaces the URL, and removes it on shutdown. The skaffold-class Cloud Run deploy path. See [Cloud Run Deploy](cloud-run.md).
 
 ---
 

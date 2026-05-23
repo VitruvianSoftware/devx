@@ -165,6 +165,19 @@ type DevxConfigServiceKubernetes struct {
 	Sync       []DevxConfigKubernetesSync  `yaml:"sync,omitempty"`       // live-reload: local dirs synced into the deployed pod
 }
 
+// DevxConfigServiceCloudRun configures a runtime: cloud service — devx deploys the
+// image to Google Cloud Run via `gcloud run deploy`. project, region, and image are
+// required (there is no implicit default project).
+type DevxConfigServiceCloudRun struct {
+	Image                string            `yaml:"image"`                           // container image to deploy (required)
+	Service              string            `yaml:"service,omitempty"`               // Cloud Run service name (default: the service name)
+	Region               string            `yaml:"region"`                          // GCP region, e.g. "us-central1" (required)
+	Project              string            `yaml:"project"`                         // GCP project ID (required)
+	Env                  map[string]string `yaml:"env,omitempty"`                   // env vars set on the service
+	AllowUnauthenticated bool              `yaml:"allow_unauthenticated,omitempty"` // expose publicly (default: false)
+	Flags                []string          `yaml:"flags,omitempty"`                 // extra `gcloud run deploy` flags (escape hatch)
+}
+
 // DevxConfigService defines a developer application in devx.yaml.
 type DevxConfigService struct {
 	Name            string                            `yaml:"name"`
@@ -178,6 +191,7 @@ type DevxConfigService struct {
 	BridgeTarget    *DevxConfigServiceBridgeTarget    `yaml:"bridge_target,omitempty"`    // Idea 46.3: inline outbound bridge
 	BridgeIntercept *DevxConfigServiceBridgeIntercept `yaml:"bridge_intercept,omitempty"` // Idea 46.3: inline intercept
 	Kubernetes      *DevxConfigServiceKubernetes      `yaml:"kubernetes,omitempty"`       // runtime: kubernetes deploy spec
+	CloudRun        *DevxConfigServiceCloudRun        `yaml:"cloud_run,omitempty"`        // runtime: cloud (Cloud Run) deploy spec
 	Dir             string                            `yaml:"-"`                          // Internal: working directory (set by include resolver)
 }
 
