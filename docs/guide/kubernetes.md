@@ -41,3 +41,7 @@ Booting a `devx k8s` cluster takes approximately **2-4 seconds** on an Apple Sil
 ::: info Why k3s over Kind?
 `Kind` requires pulling a full OS-in-a-container image and executing complex multi-step `kubeadm` sequences inside it. By orchestrating a raw `rancher/k3s` container directly, `devx` dramatically reduces initialization time and removes the need for multi-stage external orchestration binaries.
 :::
+
+::: tip Deploy your app to this cluster
+Spawning a cluster is step one. To deploy a service onto it as part of `devx up` — rendering kustomize/raw manifests and readiness-gating the DAG — declare `runtime: kubernetes`. See [Kubernetes Deploy](kubernetes-deploy.md).
+:::
