@@ -36,6 +36,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/VitruvianSoftware/devx/internal/image"
 	"github.com/VitruvianSoftware/devx/internal/logs"
 	"github.com/VitruvianSoftware/devx/internal/network"
 )
@@ -75,12 +76,13 @@ type BridgeNodeConfig struct {
 // KubeNodeConfig holds kubernetes-deploy configuration for a DAG node
 // (runtime: kubernetes): devx renders Manifests and applies them via kubectl.
 type KubeNodeConfig struct {
-	Manifests  string   // kustomize dir | raw manifest file/dir | helm chart
-	Renderer   string   // "kustomize" (default) | "raw" | "helm"
-	Namespace  string   // target namespace (default "default")
-	Context    string   // kube context
-	Kubeconfig string   // kubeconfig path
-	Images     []string // images to build + load before apply (later slice)
+	Manifests    string       // kustomize dir | raw manifest file/dir | helm chart
+	Renderer     string       // "kustomize" (default) | "raw" | "helm"
+	Namespace    string       // target namespace (default "default")
+	Context      string       // kube context
+	Kubeconfig   string       // kubeconfig path
+	ProviderName string       // container provider for image builds (e.g. "lima"); resolved by the cmd layer
+	Images       []image.Spec // images devx builds + loads into the cluster registry before apply
 }
 
 // HealthcheckConfig defines how to verify a service is ready.

@@ -113,6 +113,48 @@ devx up --profile k8s
 
 The profile's `kubernetes:` block is merged onto the base service (profile wins).
 
+## Building & Loading Images
+
+devx can build your service images and load them into the cluster before applying, so `runtime: kubernetes` works with locally-built code — not just pre-published images. devx stands up a small **in-cluster registry** (a `registry:2` Deployment on a fixed NodePort, in namespace `devx-registry`), builds each image with your configured container provider, and pushes it there. Reference the image in your manifests as `localhost:30500/<name>:<tag>` (with `imagePullPolicy: Always`) — every node pulls it from its own NodePort, so no per-node registry configuration is required.
+
+```yaml
+services:
+  - name: payments-api
+    runtime: kubernetes
+    kubernetes:
+      manifests: ./deploy/k8s/overlays/local
+      images:
+        - name: payments-api      # → pushed as localhost:30500/payments-api:dev
+          context: ./payments-api  # build context (default ".")
+          dockerfile: Dockerfile   # relative to context (default "Dockerfile")
+          tag: dev                 # default "dev"
+          # platforms: [linux/amd64, linux/arm64]   # multi-arch (default: the builder's arch)
+```
+
+Reference the built image in your manifests:
+
+```yaml
+spec:
+  containers:
+    - name: payments-api
+      image: localhost:30500/payments-api:dev
+      imagePullPolicy: Always
+```
+
+On `devx up`, devx builds and pushes before applying:
+
+```text
+  🗄️  in-cluster registry ready (push 100.x.y.z:30500 · ref localhost:30500)
+  🔨 building payments-api (lima)...
+  📦 loaded payments-api — reference it in manifests as localhost:30500/payments-api:dev
+```
+
+::: tip Mixed-architecture clusters
+If your cluster mixes amd64 and arm64 nodes, a single-arch image fails to pull on the other architecture (`no matching manifest for ...`). Build multi-arch with `platforms: [linux/amd64, linux/arm64]`, or pin pods to a matching arch via a `kubernetes.io/arch` nodeSelector.
+:::
+
+Building requires a working container engine for your devx provider (podman, docker, or a Lima/Colima VM with nerdctl).
+
 ## Lifecycle & Cleanup
 
 The deploy is a first-class DAG node: it respects `depends_on` ordering, gates dependents on readiness, and is torn down in reverse order on shutdown. devx records exactly what it applied (resolved manifests path, renderer, namespace, context) and runs `kubectl delete … --ignore-not-found` on exit. The namespace itself is left in place.
@@ -121,5 +163,4 @@ The deploy is a first-class DAG node: it respects `depends_on` ordering, gates d
 
 - **Readiness gate** waits on `Deployment`s in the target namespace. Workloads that ship only `StatefulSet`/`Job`/`CronJob`, or manifests that hardcode a different namespace, aren't covered by the gate yet.
 - **`helm` renderer** is recognized but not implemented.
-- **Image build/load** (`kubernetes.images`) is parsed but not yet wired — building service images and loading them into the local cluster is on the roadmap.
 - **Live-reload (sync)** into running pods is planned.

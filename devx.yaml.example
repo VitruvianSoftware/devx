@@ -182,7 +182,14 @@ services:
   #     namespace: payments-dev                  # target namespace (default: "default"; created if missing)
   #     context: ""                              # kube context (default: current context)
   #     kubeconfig: ""                           # kubeconfig path (default: $KUBECONFIG, then ~/.kube/config)
-  #     # images: ["myorg/payments-api:dev"]     # build + load into the cluster before apply (roadmap)
+  #     # images devx builds + loads into an in-cluster registry before apply; reference
+  #     # them in manifests as localhost:30500/<name>:<tag> (with imagePullPolicy: Always):
+  #     images:
+  #       - name: payments-api                   # → localhost:30500/payments-api:dev
+  #         context: ./payments-api              # build context (default ".")
+  #         dockerfile: Dockerfile               # relative to context (default "Dockerfile")
+  #         tag: dev                             # default "dev"
+  #         # platforms: [linux/amd64, linux/arm64]  # multi-arch (default: the builder's arch)
 
 # --- Idea 37: Environment Profiles ---
 # Profiles apply additive/merge overlays on top of the base config above.
