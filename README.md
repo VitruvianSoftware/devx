@@ -30,6 +30,7 @@ We go far beyond basic container networking by natively integrating the premium 
 * ☢️ **The Nuke Button:** Instantly hard-reset corrupted project caches, volumes, and images with a single atomic command (`devx nuke`).
 
 ### Kubernetes & Hybrid
+* 🚀 **Skaffold-Class Cluster Deploy:** Deploy a service to any cluster with `runtime: kubernetes` — devx renders your manifests (`kustomize` via `kubectl apply -k`, or `raw` via `-f`) and applies them to the target context/namespace, then readiness-gates the DAG on the namespace's Deployments becoming `Available` (no port-forward needed). Resources are pruned on shutdown. (Helm renderer + image build/load are on the roadmap.)
 * 🔗 **Hybrid Bridge to Kubernetes:** Declaratively bridge remote K8s services into `devx up` with `runtime: bridge`. Outbound port-forwarding and inbound traffic interception participate natively in the DAG.
 * ☸️ **Zero-Config Local Kubernetes:** Spin up an instant, isolated K3s control plane directly inside your VM without destroying your host machine.
 * 🖥️ **Multi-Node Clusters:** Scale your local K8s development beyond a single laptop by provisioning distributed, highly available K3s clusters across multiple physical machines via Lima VMs.

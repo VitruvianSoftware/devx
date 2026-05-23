@@ -257,12 +257,23 @@ var upCmd = &cobra.Command{
 				rt := orchestrator.RuntimeHost
 				var bridgeMode orchestrator.BridgeMode
 				var bridgeCfg *orchestrator.BridgeNodeConfig
+				var kubeCfg *orchestrator.KubeNodeConfig
 
 				switch svc.Runtime {
 				case "container":
 					rt = orchestrator.RuntimeContainer
 				case "kubernetes":
 					rt = orchestrator.RuntimeKubernetes
+					if svc.Kubernetes != nil {
+						kubeCfg = &orchestrator.KubeNodeConfig{
+							Manifests:  svc.Kubernetes.Manifests,
+							Renderer:   svc.Kubernetes.Renderer,
+							Namespace:  svc.Kubernetes.Namespace,
+							Context:    svc.Kubernetes.Context,
+							Kubeconfig: svc.Kubernetes.Kubeconfig,
+							Images:     svc.Kubernetes.Images,
+						}
+					}
 				case "cloud":
 					rt = orchestrator.RuntimeCloud
 				case "bridge":
@@ -340,6 +351,7 @@ var upCmd = &cobra.Command{
 					Dir:          svc.Dir,
 					BridgeMode:   bridgeMode,
 					BridgeConfig: bridgeCfg,
+					Kube:         kubeCfg,
 				})
 			}
 

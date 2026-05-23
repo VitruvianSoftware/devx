@@ -46,6 +46,7 @@ export default withMermaid(defineConfig({
         items: [
           { text: 'Hybrid Bridge', link: '/guide/bridge' },
           { text: 'Zero-Config Kubernetes', link: '/guide/kubernetes' },
+          { text: 'Kubernetes Deploy', link: '/guide/kubernetes-deploy' },
           { text: 'Multi-Node Clusters', link: '/guide/multinode' }
         ]
       },
