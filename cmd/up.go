@@ -276,6 +276,15 @@ var upCmd = &cobra.Command{
 								Platforms:  im.Platforms,
 							})
 						}
+						var syncs []orchestrator.KubeSync
+						for _, sy := range svc.Kubernetes.Sync {
+							syncs = append(syncs, orchestrator.KubeSync{
+								Src:       sy.Src,
+								Dest:      sy.Dest,
+								Selector:  sy.Selector,
+								Container: sy.Container,
+							})
+						}
 						kubeCfg = &orchestrator.KubeNodeConfig{
 							Manifests:    svc.Kubernetes.Manifests,
 							Renderer:     svc.Kubernetes.Renderer,
@@ -286,6 +295,7 @@ var upCmd = &cobra.Command{
 							Images:       images,
 							Release:      svc.Kubernetes.Release,
 							Values:       svc.Kubernetes.Values,
+							Sync:         syncs,
 						}
 					}
 				case "cloud":

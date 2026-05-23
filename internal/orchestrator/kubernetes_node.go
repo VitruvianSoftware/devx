@@ -186,6 +186,15 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 		Release:    release,
 	}
 	fmt.Printf("  ✅ %s deployed\n", n.Name)
+
+	// Start live-reload watchers (sync local dirs into the running pod), if configured.
+	if len(k.Sync) > 0 {
+		cancelSync, err := startPodSync(ctx, n, kubeconfig, k.Context, ns, k.Sync)
+		if err != nil {
+			return fmt.Errorf("service %q: %w", n.Name, err)
+		}
+		n.podSyncCancel = cancelSync
+	}
 	return nil
 }
 

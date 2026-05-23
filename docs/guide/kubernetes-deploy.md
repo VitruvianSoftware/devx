@@ -174,6 +174,25 @@ If your cluster mixes amd64 and arm64 nodes, a single-arch image fails to pull o
 
 Building requires a working container engine for your devx provider (podman, docker, or a Lima/Colima VM with nerdctl).
 
+## Live-reload (file sync)
+
+`kubernetes.sync` keeps local source in sync with the running pod for hot-reload: after deploy, devx copies each `src` into the matching pod and re-copies it on change (polled ~1s), so an in-pod watch process (`tsx watch`, `nodemon`, `air`, …) reloads. The watchers stop on shutdown.
+
+```yaml
+services:
+  - name: payments-api
+    runtime: kubernetes
+    kubernetes:
+      manifests: ./deploy/k8s/overlays/local
+      sync:
+        - src: ./src                    # local dir (relative to the service dir)
+          dest: /app/src                # path inside the pod
+          selector: app=payments-api    # pod label selector
+          # container: payments-api     # optional (default: the pod's first container)
+```
+
+The pod's image needs `tar` (used by `kubectl cp`); `node_modules`, `.git`, `dist`, `build`, etc. are skipped; and the in-pod process is responsible for reloading on the synced changes (run it in watch mode).
+
 ## Lifecycle & Cleanup
 
 The deploy is a first-class DAG node: it respects `depends_on` ordering, gates dependents on readiness, and is torn down in reverse order on shutdown. devx records exactly what it applied (resolved manifests path, renderer, namespace, context) and runs `kubectl delete … --ignore-not-found` on exit. The namespace itself is left in place.
@@ -181,4 +200,4 @@ The deploy is a first-class DAG node: it respects `depends_on` ordering, gates d
 ## Limitations & Roadmap
 
 - **Readiness gate** waits on `Deployment`s in the target namespace. Workloads that ship only `StatefulSet`/`Job`/`CronJob`, or manifests that hardcode a different namespace, aren't covered by the gate yet.
-- **Live-reload (sync)** into running pods is planned.
+- **Live-reload** uses ~1s polling + `kubectl cp` (whole-directory) — fsnotify-based instant sync and per-file copies are a future optimization.

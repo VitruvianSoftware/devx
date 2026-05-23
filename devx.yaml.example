@@ -182,6 +182,11 @@ services:
   #     # For renderer: helm, `manifests` is a chart directory; optional helm fields:
   #     # release: payments-api                  # helm release name (default: service name)
   #     # values: [values-local.yaml]            # helm values files
+  #     # live-reload: sync local dirs into the running pod for hot reload
+  #     sync:
+  #       - src: ./src                           # local dir (relative to service dir)
+  #         dest: /app/src                       # path inside the pod
+  #         selector: app=payments-api           # pod label selector
   #     namespace: payments-dev                  # target namespace (default: "default"; created if missing)
   #     context: ""                              # kube context (default: current context)
   #     kubeconfig: ""                           # kubeconfig path (default: $KUBECONFIG, then ~/.kube/config)

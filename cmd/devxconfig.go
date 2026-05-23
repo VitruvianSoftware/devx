@@ -139,6 +139,16 @@ type DevxConfigKubernetesImage struct {
 	Platforms  []string `yaml:"platforms,omitempty"`  // target platforms, e.g. [linux/amd64, linux/arm64]; empty = builder default
 }
 
+// DevxConfigKubernetesSync maps a local directory to a path inside the deployed pod
+// for live-reload: devx copies it in after deploy and re-copies on change, so an
+// in-pod watcher (tsx watch, nodemon, ...) hot-reloads.
+type DevxConfigKubernetesSync struct {
+	Src       string `yaml:"src"`                 // local source dir (relative to the service dir)
+	Dest      string `yaml:"dest"`                // destination path inside the pod
+	Selector  string `yaml:"selector"`            // pod label selector, e.g. "app=brms-offer"
+	Container string `yaml:"container,omitempty"` // container in the pod (default: first)
+}
+
 // DevxConfigServiceKubernetes configures a runtime: kubernetes service — devx
 // renders the manifests and applies them to the target cluster (skaffold-class
 // deploy). Cluster targeting (kubeconfig/context) falls back to KUBECONFIG, then
@@ -152,6 +162,7 @@ type DevxConfigServiceKubernetes struct {
 	Images     []DevxConfigKubernetesImage `yaml:"images,omitempty"`     // images devx builds + loads into the cluster registry before apply
 	Release    string                      `yaml:"release,omitempty"`    // helm release name (renderer: helm; default: service name)
 	Values     []string                    `yaml:"values,omitempty"`     // helm values files (renderer: helm)
+	Sync       []DevxConfigKubernetesSync  `yaml:"sync,omitempty"`       // live-reload: local dirs synced into the deployed pod
 }
 
 // DevxConfigService defines a developer application in devx.yaml.
