@@ -85,6 +85,7 @@ type KubeNodeConfig struct {
 	Images       []image.Spec // images devx builds + loads into the cluster registry before apply
 	Release      string       // helm release name (renderer: helm; default: service name)
 	Values       []string     // helm values files (renderer: helm)
+	Sync         []KubeSync   // live-reload: local dirs synced into the deployed pod
 }
 
 // HealthcheckConfig defines how to verify a service is ready.
@@ -148,6 +149,9 @@ type Node struct {
 
 	// Runtime state for kubernetes cleanup (what was applied, for `devx down`)
 	kubeApplied *KubeNodeConfig
+
+	// Runtime state for kubernetes live-reload (stops pod-sync watchers on shutdown)
+	podSyncCancel context.CancelFunc
 
 	// Runtime state
 	process     *exec.Cmd
@@ -272,7 +276,10 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				n.bridgeState.Cleanup()
 			}
 
-			// Kubernetes cleanup: delete what was applied to the cluster
+			// Kubernetes cleanup: stop live-reload watchers, then delete what was applied
+			if n.podSyncCancel != nil {
+				n.podSyncCancel()
+			}
 			if n.kubeApplied != nil {
 				deleteKubernetesNode(n)
 			}
