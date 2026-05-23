@@ -64,6 +64,35 @@ flowchart TD
     ReloadClean --> Done["✓ All tunnels cleaned up"]
 ```
 
+### Network Path
+
+```mermaid
+graph LR
+    subgraph LocalMachine ["Local Machine (plain HTTP)"]
+        app["Local App\n(:3000)"]
+        cloudflared["cloudflared.service\n(systemd in VM)"]
+    end
+
+    subgraph CloudflareNetwork ["Cloudflare Network"]
+        edge["Cloudflare Edge\n(TLS termination)"]
+        dns["DNS CNAME\n(*.user.ipv1337.dev)"]
+    end
+
+    subgraph Internet ["Internet"]
+        publicurl["Public URL\n(https://app.user.ipv1337.dev)"]
+        browser["Browser"]
+    end
+
+    app -->|"HTTP traffic\n(no TLS)"| cloudflared
+    cloudflared -->|"Encrypted Tunnel\n(outbound connection)"| edge
+    edge -->|"resolve hostname"| dns
+    dns -->|"route to tunnel"| edge
+    browser -->|"HTTPS request"| publicurl
+    publicurl -->|"TLS terminated\nat edge"| edge
+    edge -->|"decrypted traffic\nvia tunnel"| cloudflared
+    cloudflared -->|"forward to\nlocalhost:3000"| app
+```
+
 ## Commands
 
 ### `devx tunnel expose`

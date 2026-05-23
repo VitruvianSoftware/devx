@@ -91,6 +91,56 @@ flowchart TD
     Route -->|"share --db-only"| DBOnly
 ```
 
+### Sharing & Attaching Sequence
+
+```mermaid
+sequenceDiagram
+    actor Sender as Sender Developer
+    participant sCLI as devx CLI (sender)
+    participant Bucket as S3 / GCS Bucket
+    participant rCLI as devx CLI (receiver)
+    actor Receiver as Receiver Developer
+
+    Note over Sender, Receiver: Share Phase
+
+    Sender->>sCLI: devx state share
+    activate sCLI
+    sCLI->>sCLI: Checkpoint containers via CRIU
+    sCLI->>sCLI: Export database volumes to .tar archives
+    sCLI->>sCLI: Bundle all artifacts into .tar.gz
+    sCLI->>sCLI: Generate 4-word passphrase
+    sCLI->>sCLI: Derive 32-byte key (PBKDF2 SHA-256, 600k iter)
+    sCLI->>sCLI: Encrypt bundle with AES-256-GCM
+    sCLI->>Bucket: Upload encrypted blob (aws/gcloud CLI)
+    Bucket-->>sCLI: Upload confirmed
+    sCLI-->>Sender: Print share ID + passphrase
+    deactivate sCLI
+
+    Note over Sender, Receiver: Out-of-Band Passphrase Exchange
+
+    Sender-->>Receiver: Share ID + passphrase (Slack, email, etc.)
+
+    Note over Sender, Receiver: Attach Phase
+
+    Receiver->>rCLI: devx state attach '<share-id>:<passphrase>'
+    activate rCLI
+    rCLI->>Bucket: Download encrypted blob (aws/gcloud CLI)
+    Bucket-->>rCLI: Return ciphertext
+    rCLI->>rCLI: Derive key from passphrase (PBKDF2)
+    rCLI->>rCLI: Decrypt blob with AES-256-GCM
+    alt Passphrase invalid
+        rCLI-->>Receiver: Error: Invalid passphrase
+    else Passphrase valid
+        rCLI->>rCLI: Extract .tar.gz bundle
+        rCLI-->>Receiver: Prompt: confirm destructive restore?
+        Receiver->>rCLI: Confirm
+        rCLI->>rCLI: Stop & remove current local containers
+        rCLI->>rCLI: Restore containers & volumes from bundle
+        rCLI-->>Receiver: Topology restored successfully
+    end
+    deactivate rCLI
+```
+
 ## How it works
 
 When you run `devx state share`, Devx performs the following steps:

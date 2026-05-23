@@ -110,6 +110,23 @@ flowchart TD
     CtrlC --> ReverseTiers[Stop services in reverse tier order N..1]
     ReverseTiers --> End([Cleanup Completed])
 ```
+
+### Service Lifecycle States
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending
+    Pending --> WaitingOnDeps : dependencies not ready
+    WaitingOnDeps --> Starting : all deps healthy
+    Pending --> Starting : no dependencies
+    Starting --> HealthChecking : process spawned
+    HealthChecking --> Healthy : healthcheck passes
+    HealthChecking --> Failed : healthcheck timeout / retries exhausted
+    Healthy --> ShuttingDown : Ctrl+C / devx down
+    Failed --> ShuttingDown : cleanup triggered
+    ShuttingDown --> Stopped
+    Stopped --> [*]
+```
  
 
 ![DAG Execution Output Screenshot] 
