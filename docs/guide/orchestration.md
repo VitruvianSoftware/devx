@@ -71,6 +71,54 @@ $ devx up
 
 ---
 
+## One-shot tasks (run-to-completion)
+
+Not every node is a long-running server. Data seeds, schema migrations, and other init steps need to **run once, finish, and gate whatever depends on them**. Mark such a node `oneshot: true`: devx runs its command, waits for the process to exit, and treats **exit 0** as "ready" — instead of polling a healthcheck. Dependents express the wait with `condition: service_completed_successfully`.
+
+```yaml
+services:
+  # Populate the local object store, then exit.
+  - name: seed
+    runtime: host                       # or container
+    command: ["node", "seed-local.mjs"]
+    oneshot: true
+    depends_on:
+      - name: fake-gcs
+        condition: service_healthy
+    healthcheck:
+      timeout: "5m"                     # optional: bound the run (default 10m)
+
+  # Doesn't start until the seed has completed successfully.
+  - name: offer
+    runtime: host
+    command: ["npm", "run", "dev:offer"]
+    port: 8080
+    depends_on:
+      - name: seed
+        condition: service_completed_successfully
+```
+
+```text
+📋 Starting tier 2: seed
+  🚀 Starting seed: node seed-local.mjs
+  ⏳ Waiting for seed to complete...
+  ✅ seed completed
+
+📋 Starting tier 3: offer
+  🚀 Starting offer: npm run dev:offer
+  ✅ offer is healthy
+```
+
+Semantics:
+
+* **Success = exit 0.** A non-zero exit fails `devx up` (with the task's crash logs tailed inline), so dependents never start against a half-prepared environment.
+* **Bounded.** A one-shot is given `healthcheck.timeout` to finish (default 10m); exceeding it is treated as a failure.
+* **Tier-ordered.** Because dependents `depends_on` the task, it lands in an earlier tier — the next tier only starts once it has completed.
+
+This is the local-dev counterpart to a Kubernetes seed `Job`: in a [`runtime: kubernetes`](kubernetes-deploy.md) deploy the seed ships as a `Job` inside your manifests, while `oneshot` covers the `host`/`container` path.
+
+---
+
 ## Visual Architecture Map (`devx map`)
 
 For onboarding engineers, reading a 300-line `devx.yaml` file to understand the system topology is daunting. `devx` provides a command to visualize the orchestration DAG immediately:
