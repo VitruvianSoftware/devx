@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.0](https://github.com/VitruvianSoftware/devx/compare/v0.53.0...v0.54.0) (2026-05-23)
+
+
+### Features
+
+* **orchestrator:** add one-shot (run-to-completion) tasks ([#213](https://github.com/VitruvianSoftware/devx/issues/213)) ([f6fb72f](https://github.com/VitruvianSoftware/devx/commit/f6fb72fa9109adfed1c1f5ce2652c76743300676))
+
 ## [0.53.0](https://github.com/VitruvianSoftware/devx/compare/v0.52.0...v0.53.0) (2026-05-23)
 
 
