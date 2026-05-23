@@ -212,6 +212,8 @@ This is the simple "reach my just-deployed Services locally" case. devx's [`brid
 
 ::: warning Requires `socat` on the nodes
 `kubectl port-forward` needs `socat` on the cluster nodes to carry traffic. Without it the forward binds locally but connections fail (`socat not found` / `lost connection to pod`). This applies to `bridge` too.
+
+For [devx-provisioned clusters](multinode.md), `socat` is part of the node baseline and is installed automatically — new clusters get it during provisioning, and existing clusters can adopt it (without a rebuild) by running [`devx cluster reconcile`](multinode.md#devx-cluster-reconcile). On clusters devx didn't provision, install `socat` on each node yourself.
 :::
 
 ## Lifecycle & Cleanup

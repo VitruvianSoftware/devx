@@ -47,6 +47,7 @@ func init() {
 		newClusterInitCmd(&clusterConfigFile),
 		newClusterApplyCmd(&clusterConfigFile),
 		newClusterJoinCmd(&clusterConfigFile),
+		newClusterReconcileCmd(&clusterConfigFile),
 		newClusterRemoveCmd(&clusterConfigFile),
 		newClusterDestroyCmd(&clusterConfigFile),
 		newClusterUpgradeCmd(&clusterConfigFile),
