@@ -74,7 +74,26 @@ devx up
 |----------|--------------|-------|
 | `kustomize` (default) | `apply -k` | `manifests` is a directory containing `kustomization.yaml`. Uses kubectl's built-in kustomize — no separate binary. |
 | `raw` | `apply -f` | `manifests` is a plain YAML file, or a directory of manifests. |
-| `helm` | — | Recognized but **not yet implemented** — fails fast with a clear error. Use `kustomize` or `raw`. (Roadmap.) |
+| `helm` | — (uses `helm`) | Deploys via `helm upgrade --install`; `manifests` is a **chart directory**. Supports `release` + `values` (see below). Requires the `helm` CLI on your PATH. |
+
+### Helm
+
+For `renderer: helm`, `manifests` points at a **chart directory**. devx runs `helm upgrade --install` (idempotent — re-running upgrades the release) and tears it down with `helm uninstall` on shutdown. The release name defaults to the service name (override with `release`); `values` lists values files (resolved against the service directory):
+
+```yaml
+services:
+  - name: payments-api
+    runtime: kubernetes
+    kubernetes:
+      renderer: helm
+      manifests: ./charts/payments-api   # chart directory
+      namespace: payments-dev
+      release: payments-api              # optional (default: the service name)
+      values:                            # optional values files
+        - values-local.yaml
+```
+
+Requires the `helm` CLI on your PATH. The readiness gate still applies — devx waits for the release's Deployments to become `Available`.
 
 ## Cluster & Namespace Targeting
 
@@ -162,5 +181,4 @@ The deploy is a first-class DAG node: it respects `depends_on` ordering, gates d
 ## Limitations & Roadmap
 
 - **Readiness gate** waits on `Deployment`s in the target namespace. Workloads that ship only `StatefulSet`/`Job`/`CronJob`, or manifests that hardcode a different namespace, aren't covered by the gate yet.
-- **`helm` renderer** is recognized but not implemented.
 - **Live-reload (sync)** into running pods is planned.

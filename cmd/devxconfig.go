@@ -150,6 +150,8 @@ type DevxConfigServiceKubernetes struct {
 	Context    string                      `yaml:"context,omitempty"`    // kube context (default: current context)
 	Kubeconfig string                      `yaml:"kubeconfig,omitempty"` // kubeconfig path (default: $KUBECONFIG or ~/.kube/config)
 	Images     []DevxConfigKubernetesImage `yaml:"images,omitempty"`     // images devx builds + loads into the cluster registry before apply
+	Release    string                      `yaml:"release,omitempty"`    // helm release name (renderer: helm; default: service name)
+	Values     []string                    `yaml:"values,omitempty"`     // helm values files (renderer: helm)
 }
 
 // DevxConfigService defines a developer application in devx.yaml.

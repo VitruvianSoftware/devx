@@ -72,10 +72,19 @@ func applyFlagForRenderer(renderer string) (string, error) {
 		return "-k", nil
 	case "raw":
 		return "-f", nil
-	case "helm":
-		return "", fmt.Errorf("kubernetes.renderer %q is not implemented yet (use kustomize or raw)", renderer)
 	default:
-		return "", fmt.Errorf("unknown kubernetes.renderer %q (want kustomize, raw, or helm)", renderer)
+		// helm is deployed via `helm upgrade` (see helm.go), not `kubectl apply`.
+		return "", fmt.Errorf("renderer %q is not a kubectl-apply renderer", renderer)
+	}
+}
+
+// validateRenderer reports whether renderer is one devx supports (kustomize, raw, helm).
+func validateRenderer(renderer string) error {
+	switch renderer {
+	case "kustomize", "raw", "helm":
+		return nil
+	default:
+		return fmt.Errorf("unknown kubernetes.renderer %q (want kustomize, raw, or helm)", renderer)
 	}
 }
 
@@ -113,9 +122,13 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 
 	// Validate the renderer up front so a bad config fails fast — before we touch
 	// the cluster (e.g. create a namespace we'd then orphan).
-	flag, err := applyFlagForRenderer(renderer)
-	if err != nil {
+	if err := validateRenderer(renderer); err != nil {
 		return fmt.Errorf("service %q: %w", n.Name, err)
+	}
+	if renderer == "helm" {
+		if err := validateHelm(); err != nil {
+			return fmt.Errorf("service %q: %w", n.Name, err)
+		}
 	}
 
 	// Build + load any configured images into the cluster's in-cluster registry
@@ -133,11 +146,25 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 		return fmt.Errorf("ensuring namespace %q: %w\n%s", ns, err, strings.TrimSpace(out))
 	}
 
-	applyArgs := kubectlArgs(kubeconfig, k.Context, "apply", "-n", ns, flag, manifests)
-
+	// Deploy: helm uses `helm upgrade --install`; kustomize/raw use `kubectl apply`.
+	release := k.Release
+	if release == "" {
+		release = n.Name
+	}
 	fmt.Printf("  ☸️  Deploying %s (%s) %s → ns/%s\n", n.Name, renderer, manifests, ns)
-	if out, err := runKubectl(ctx, applyArgs...); err != nil {
-		return fmt.Errorf("kubectl apply for %q failed: %w\n%s", n.Name, err, strings.TrimSpace(out))
+	if renderer == "helm" {
+		base := n.Dir
+		if base == "" {
+			base, _ = os.Getwd()
+		}
+		if err := helmUpgradeInstall(ctx, kubeconfig, k.Context, ns, release, manifests, resolveValuesPaths(base, k.Values)); err != nil {
+			return fmt.Errorf("helm deploy for %q failed: %w", n.Name, err)
+		}
+	} else {
+		flag, _ := applyFlagForRenderer(renderer) // validated above; kustomize or raw
+		if out, err := runKubectl(ctx, kubectlArgs(kubeconfig, k.Context, "apply", "-n", ns, flag, manifests)...); err != nil {
+			return fmt.Errorf("kubectl apply for %q failed: %w\n%s", n.Name, err, strings.TrimSpace(out))
+		}
 	}
 
 	// Readiness gate: wait for the namespace's Deployments to become Available
@@ -156,6 +183,7 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 		Namespace:  ns,
 		Context:    k.Context,
 		Kubeconfig: kubeconfig,
+		Release:    release,
 	}
 	fmt.Printf("  ✅ %s deployed\n", n.Name)
 	return nil
@@ -165,6 +193,16 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 func deleteKubernetesNode(n *Node) {
 	k := n.kubeApplied
 	if k == nil {
+		return
+	}
+	if k.Renderer == "helm" {
+		release := k.Release
+		if release == "" {
+			release = n.Name
+		}
+		if out, err := helmUninstall(context.Background(), k.Kubeconfig, k.Context, k.Namespace, release); err != nil {
+			fmt.Printf("  ⚠️  cleanup: helm uninstall for %s failed: %s\n", n.Name, strings.TrimSpace(out))
+		}
 		return
 	}
 	// The renderer was validated at apply time (kubeApplied is only set after a
