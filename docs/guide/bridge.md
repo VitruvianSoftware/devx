@@ -179,7 +179,116 @@ flowchart TD
     WaitLoop -->|Ctrl+C| Restore["Restore original selector"]
     Restore --> RemoveAgent["Delete Agent Job & ServiceAccount"]
     RemoveAgent --> Done["✓ Cleanup complete"]
-    WaitLoop -->|Crash / disconnect| SelfHeal["Agent detects tunnel drop → auto-restores selector"]
+    WaitLoop -->|"Crash / disconnect"| SelfHeal["Agent detects tunnel drop → auto-restores selector"]
+```
+
+### Intercept Handshake Sequence
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant CLI as devx CLI
+    participant API as K8s API Server
+    participant Agent as Agent Job (ephemeral Pod)
+    participant Svc as Target Service
+    participant Yamux as Yamux Tunnel
+
+    Dev->>CLI: devx bridge intercept <service> --steal
+    CLI->>CLI: Parse flags & validate --steal
+
+    Note over CLI, API: Phase 1 — RBAC Setup
+    CLI->>API: Create ServiceAccount (devx-bridge-agent-<svc>)
+    API-->>CLI: ServiceAccount created
+    CLI->>API: Create Role (scoped to update target Service)
+    API-->>CLI: Role created
+    CLI->>API: Create RoleBinding
+    API-->>CLI: RoleBinding created
+
+    Note over CLI, Agent: Phase 2 — Agent Deployment
+    CLI->>API: Create Job (mirror target ports, activeDeadlineSeconds=4h)
+    API-->>CLI: Job created
+    API->>Agent: Schedule Pod on node
+    CLI->>API: Poll Pod status (get pods)
+    Agent-->>API: Pod Running
+    API-->>CLI: Pod phase = Running
+
+    Note over CLI, Agent: Phase 3 — Health Gate
+    CLI->>API: kubectl port-forward to Agent control port
+    CLI->>Agent: GET /healthz (via port-forward)
+    Agent-->>CLI: 200 OK — agent ready
+
+    Note over CLI, Svc: Phase 4 — Traffic Redirect
+    CLI->>API: GET Service (save original selector)
+    API-->>CLI: selector: {app: payments-api}
+    CLI->>API: PATCH Service selector → {devx-bridge-agent: <session-id>}
+    API-->>CLI: Selector patched
+    Svc-->>Agent: All inbound traffic now routes to Agent Pod
+
+    Note over Agent, Yamux: Phase 5 — Tunnel Establishment
+    Agent->>Agent: Start Yamux listener on control port
+    CLI->>Yamux: Establish Yamux client session (over port-forward)
+    Yamux-->>CLI: Session established
+    CLI-->>Dev: ✓ Intercepting — traffic flows to localhost
+
+    Note over Svc, Dev: Phase 6 — Live Traffic Flow
+    Svc->>Agent: Cluster client request
+    Agent->>Yamux: Open new Yamux stream
+    Yamux->>CLI: Forward stream via port-forward
+    CLI->>Dev: Proxy to localhost:<local-port>
+    Dev-->>CLI: Response from local app
+    CLI-->>Yamux: Response back through tunnel
+    Yamux-->>Agent: Response via stream
+    Agent-->>Svc: Response to cluster client
+
+    Note over Dev, Agent: Phase 7 — Graceful Shutdown
+    Dev->>CLI: Ctrl+C (SIGINT)
+    CLI->>Agent: Signal tunnel closing
+    Agent->>API: PATCH Service selector → restore original {app: payments-api}
+    API-->>Agent: Selector restored
+    Agent->>API: Delete own Job + ServiceAccount + Role + RoleBinding
+    API-->>Agent: Resources deleted
+    Agent-->>CLI: Cleanup confirmed
+    CLI-->>Dev: ✓ Cleanup complete
+```
+
+### Network Topology
+
+```mermaid
+graph LR
+    subgraph DevMachine ["Developer Machine"]
+        LocalApp["Local App"]
+        CLI["devx CLI"]
+        PF["kubectl port-forward"]
+    end
+
+    subgraph K8sCluster ["Kubernetes Cluster"]
+        APIServer["K8s API Server"]
+        subgraph SvcLayer ["Service Layer"]
+            TargetSvc["Target Service\n(ClusterIP)"]
+        end
+        subgraph Pods ["Workloads"]
+            AppPod["Application Pod"]
+            AgentPod["Agent Pod\n(intercept only)"]
+        end
+    end
+
+    ExtClient["External / Cluster Client"]
+
+    %% Outbound path (devx bridge connect)
+    LocalApp -->|"localhost:localPort"| PF
+    PF -->|"port-forward tunnel"| APIServer
+    APIServer -->|"proxy to Pod"| TargetSvc
+    TargetSvc -->|"selector match"| AppPod
+
+    %% Inbound path (devx bridge intercept --steal)
+    ExtClient -->|"request to Service ClusterIP:port"| TargetSvc
+    TargetSvc -->|"selector patched → agent"| AgentPod
+    AgentPod -->|"Yamux stream over\ncontrol port"| PF
+    PF -->|"localhost:localPort"| LocalApp
+
+    %% Styling
+    linkStyle 0,1,2,3 stroke:#2196F3,stroke-width:2px
+    linkStyle 4,5,6,7 stroke:#FF9800,stroke-width:2px
 ```
 
 ## Commands
