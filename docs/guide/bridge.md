@@ -80,6 +80,108 @@ echo $BRIDGE_PAYMENTS_API_URL  # http://127.0.0.1:9501
 curl $BRIDGE_PAYMENTS_API_URL/health
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flows of the Hybrid Bridge feature.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI"]
+        bridgemgr["Bridge Manager"]
+        envfile["~/.devx/bridge.env"]
+        shell["devx shell"]
+    end
+
+    subgraph K8s ["Remote Kubernetes Cluster"]
+        apiserver["K8s API Server"]
+        svc["Target Service"]
+        pods["Application Pods"]
+        agent["Agent Job / Pod"]
+    end
+
+    subgraph Tunnel ["Tunnel Layer"]
+        pf["kubectl port-forward"]
+        yamux["Yamux Multiplexed Tunnel"]
+    end
+
+    cli -->|"bridge connect / intercept"| bridgemgr
+    bridgemgr -->|"validate kubeconfig & context"| apiserver
+    bridgemgr -->|"outbound: start port-forward"| pf
+    pf -->|"TCP tunnel to Service port"| svc
+    svc --> pods
+
+    bridgemgr -->|"intercept: deploy agent Job"| agent
+    bridgemgr -->|"intercept: patch selector"| svc
+    svc -->|"traffic redirected"| agent
+    agent -->|"Yamux stream"| yamux
+    yamux -->|"via port-forward"| pf
+    pf -->|"proxied to localhost"| cli
+
+    bridgemgr -->|"write BRIDGE_* vars"| envfile
+    shell -->|"auto-inject env vars"| envfile
+```
+
+### Execution Lifecycle — Outbound Connect
+
+```mermaid
+flowchart TD
+    Start(["devx bridge connect"]) --> ParseConfig["Parse devx.yaml / CLI flags"]
+    ParseConfig --> DryRun{"--dry-run?"}
+    DryRun -->|Yes| PrintPlan["Print planned bridges & exit"]
+    DryRun -->|No| ValidateKube["Validate kubeconfig exists"]
+    ValidateKube -->|Not found| ErrKube["Exit 60: KubeconfigNotFound"]
+    ValidateKube -->|Found| TestContext["Test cluster reachability"]
+    TestContext -->|Unreachable| ErrCtx["Exit 61: ContextUnreachable"]
+    TestContext -->|OK| ResolveNS["Resolve target namespace"]
+    ResolveNS -->|Not found| ErrNS["Exit 62: NamespaceNotFound"]
+    ResolveNS -->|OK| ResolveSvc["Resolve target Service"]
+    ResolveSvc -->|Not found| ErrSvc["Exit 63: ServiceNotFound"]
+    ResolveSvc -->|Found| StartPF["Start kubectl port-forward"]
+    StartPF -->|Port in use| AutoShift["Auto-shift to free local port"]
+    AutoShift --> StartPF
+    StartPF -->|Failed after 3 retries| ErrPF["Exit 64: PortForwardFailed"]
+    StartPF -->|Success| WriteEnv["Write BRIDGE_* vars to ~/.devx/bridge.env"]
+    WriteEnv --> Healthy["✓ Bridge active — tunnels healthy"]
+    Healthy --> WaitLoop["Wait for Ctrl+C or tunnel drop"]
+    WaitLoop -->|Tunnel drops| Reconnect["Exponential backoff retry (1s/2s/4s)"]
+    Reconnect -->|Recovered| WaitLoop
+    Reconnect -->|3 retries exhausted| ErrPF
+    WaitLoop -->|Ctrl+C| Cleanup["Kill port-forward processes & clean session"]
+```
+
+### Execution Lifecycle — Inbound Intercept
+
+```mermaid
+flowchart TD
+    Start(["devx bridge intercept &lt;service&gt; --steal"]) --> ParseFlags["Parse flags & validate --steal"]
+    ParseFlags --> DryRun{"--dry-run?"}
+    DryRun -->|Yes| Preview["Print intercept plan & exit"]
+    DryRun -->|No| CheckActive{"Service already intercepted?"}
+    CheckActive -->|Yes| ErrActive["Exit 69: InterceptActive"]
+    CheckActive -->|No| CheckSvc["Resolve Service & validate selector"]
+    CheckSvc -->|ExternalName / no selector| ErrType["Exit 72: ServiceNotInterceptable"]
+    CheckSvc -->|UDP port| ErrProto["Exit 70: UnsupportedProtocol"]
+    CheckSvc -->|OK| CheckRBAC["Verify RBAC permissions"]
+    CheckRBAC -->|Insufficient| ErrRBAC["Exit 68: RBACInsufficient"]
+    CheckRBAC -->|OK| DeployAgent["Deploy Agent Job (mirror ports)"]
+    DeployAgent -->|Failed| ErrDeploy["Exit 65: AgentDeployFailed"]
+    DeployAgent -->|OK| HealthCheck["Wait for Agent health"]
+    HealthCheck -->|Timeout| ErrHealth["Exit 66: AgentHealthFailed"]
+    HealthCheck -->|Healthy| PatchSelector["Patch Service selector → Agent Pod"]
+    PatchSelector -->|Failed| ErrPatch["Exit 67: SelectorPatchFailed"]
+    PatchSelector -->|OK| StartTunnel["Start port-forward + Yamux session"]
+    StartTunnel -->|Failed| ErrTunnel["Exit 71: TunnelFailed"]
+    StartTunnel -->|OK| Intercept["✓ Intercepting — traffic flows to localhost"]
+    Intercept --> WaitLoop["Wait for Ctrl+C or tunnel drop"]
+    WaitLoop -->|Ctrl+C| Restore["Restore original selector"]
+    Restore --> RemoveAgent["Delete Agent Job & ServiceAccount"]
+    RemoveAgent --> Done["✓ Cleanup complete"]
+    WaitLoop -->|Crash / disconnect| SelfHeal["Agent detects tunnel drop → auto-restores selector"]
+```
+
 ## Commands
 
 ### `devx bridge connect`

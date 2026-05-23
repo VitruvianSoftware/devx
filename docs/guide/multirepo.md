@@ -6,6 +6,96 @@ to compose them into a single unified environment.
 
 **Unified Multirepo Orchestration** solves this. A parent `devx.yaml` can "include" the configurations of other projects, merging their databases, services, tunnels, and bridge configurations into a single, massive dependency DAG, creating a local master-node orchestrator that starts everything in the correct dependency order.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Multirepo Orchestration.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        configResolver["Config Resolver"]
+        includeWalker["Include Walker\n(recursive, max depth 5)"]
+        dedup["Path Deduplicator"]
+        wdInjector["Working Dir Injector"]
+        conflictDetector["Conflict Detector"]
+        dagBuilder["Flat DAG Builder"]
+    end
+
+    subgraph Repos ["Repository File System"]
+        parentYaml["orchestrator/devx.yaml\n(parent config)"]
+        childA["payments-api/devx.yaml"]
+        childB["user-service/devx.yaml"]
+        childN["...nested includes"]
+    end
+
+    subgraph MergedTopology ["Merged Runtime Topology"]
+        databases["Databases"]
+        services["Services"]
+        tunnels["Tunnels"]
+        mocks["Mocks"]
+    end
+
+    cli -->|"devx up"| configResolver
+    configResolver -->|"reads"| parentYaml
+    configResolver -->|"finds include: blocks"| includeWalker
+    includeWalker -->|"resolves"| childA
+    includeWalker -->|"resolves"| childB
+    includeWalker -->|"recurses"| childN
+    includeWalker -->|"deduplicates by absolute path"| dedup
+    dedup -->|"resolved configs"| wdInjector
+    wdInjector -->|"injects source repo dirs"| conflictDetector
+    conflictDetector -->|"name collision → fail-fast\nport collision → auto-shift"| dagBuilder
+    dagBuilder -->|"flat merged DAG"| databases
+    dagBuilder -->|"flat merged DAG"| services
+    dagBuilder -->|"flat merged DAG"| tunnels
+    dagBuilder -->|"flat merged DAG"| mocks
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx up (from orchestrator dir)"]) --> ReadParent["Read orchestrator/devx.yaml"]
+    ReadParent --> HasIncludes{{"Has include: blocks?"}}
+
+    HasIncludes -->|"No"| BuildDAG
+    HasIncludes -->|"Yes"| WalkIncludes["Walk include paths"]
+
+    WalkIncludes --> DepthCheck{{"Depth > 5?"}}
+    DepthCheck -->|"Yes"| DepthError["❌ include depth exceeded maximum (5)"]
+    DepthError --> Fail([Fail])
+
+    DepthCheck -->|"No"| ResolveChild["Resolve child devx.yaml"]
+    ResolveChild --> FileExists{{"File exists?"}}
+    FileExists -->|"No"| FileError["❌ cannot read devx.yaml: no such file"]
+    FileError --> Fail
+
+    FileExists -->|"Yes"| Dedup{{"Already resolved (by abs path)?"}}
+    Dedup -->|"Yes"| SkipChild["Skip (circular reference safe)"]
+    Dedup -->|"No"| ParseChild["Parse child config"]
+
+    ParseChild --> ChildIncludes{{"Child has include: blocks?"}}
+    ChildIncludes -->|"Yes"| WalkIncludes
+    ChildIncludes -->|"No"| InjectWD
+
+    SkipChild --> InjectWD["Inject working directory\n(source repo path for each service)"]
+
+    InjectWD --> NameConflict{{"Service name collision?"}}
+    NameConflict -->|"Yes"| NameError["❌ conflict: service X defined in both...\n(fail-fast)"]
+    NameError --> Fail
+
+    NameConflict -->|"No"| PortConflict{{"Port collision?"}}
+    PortConflict -->|"Yes"| AutoShift["⚠️ Auto-shift port with warning"]
+    PortConflict -->|"No"| BuildDAG
+
+    AutoShift --> BuildDAG["Merge all resources into flat DAG\n(databases, services, tunnels, mocks)"]
+    BuildDAG --> StartOrder["Start services in dependency order"]
+    StartOrder --> Done([Running])
+```
+
 ## Quick Start
 
 Create an orchestrator `devx.yaml` at the root of your workspace:

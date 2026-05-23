@@ -49,6 +49,76 @@ devx mock up stripe \
 devx mock up stripe --runtime docker
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Local API Mocking.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI"]
+        runtime["Container Runtime (podman / docker / nerdctl)"]
+        shell["devx shell"]
+    end
+
+    subgraph MockContainer ["Prism Container (devx-mock-&lt;name&gt;)"]
+        prism["Stoplight Prism Mock Engine"]
+        specloader["OpenAPI Spec Loader"]
+        mockendpoints["Mock HTTP Endpoints"]
+    end
+
+    subgraph Remote ["Remote Spec Source"]
+        specurl["OpenAPI Spec URL (HTTPS)"]
+    end
+
+    subgraph App ["Application"]
+        appservice["Your App / Service"]
+    end
+
+    cli -->|"mock up &lt;name&gt;"| runtime
+    runtime -->|"pull & run stoplight/prism"| MockContainer
+    specloader -->|"fetch remote spec"| specurl
+    specloader -->|"parse & validate"| prism
+    prism -->|"generate schema-faithful responses"| mockendpoints
+    appservice -->|"HTTP requests to localhost:port"| mockendpoints
+    shell -->|"inject MOCK_&lt;NAME&gt;_URL"| appservice
+    cli -->|"mock rm / restart"| runtime
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx mock up &lt;name&gt;"]) --> ParseConfig["Parse devx.yaml mocks[] or CLI --url flag"]
+    ParseConfig -->|No spec URL found| ErrNoSpec["Error: no OpenAPI spec URL provided"]
+    ParseConfig -->|OK| DetectRuntime["Detect container runtime (--runtime or auto)"]
+    DetectRuntime -->|Not found| ErrRuntime["Error: no container runtime found"]
+    DetectRuntime -->|Found| CheckExisting{"devx-mock-&lt;name&gt; already running?"}
+    CheckExisting -->|Yes| ReportExisting["Report existing mock (idempotent)"]
+    CheckExisting -->|No| PullImage["Pull stoplight/prism image (if not cached)"]
+    PullImage -->|Pull failed| ErrPull["Error: image pull failed"]
+    PullImage -->|OK| BindPort["Bind local port (--port or next free port)"]
+    BindPort -->|Port in use| AutoShift["Auto-shift to next free port"]
+    AutoShift --> StartContainer
+    BindPort -->|OK| StartContainer["Start devx-mock-&lt;name&gt; container\nwith spec URL as argument"]
+    StartContainer -->|Failed| ErrStart["Error: container start failed"]
+    StartContainer -->|OK| FetchSpec["Prism fetches & validates OpenAPI spec"]
+    FetchSpec -->|Spec invalid / unreachable| ErrSpec["Error: spec fetch or parse failed"]
+    FetchSpec -->|OK| Serve["Prism serves mock endpoints"]
+    Serve --> PrintEnv["Print MOCK_&lt;NAME&gt;_URL=http://localhost:&lt;port&gt;"]
+    PrintEnv --> Ready["✓ Mock server running"]
+
+    Ready --> Restart(["devx mock restart &lt;name&gt;"])
+    Restart --> StopOld["Stop existing container"]
+    StopOld --> StartContainer
+
+    Ready --> Remove(["devx mock rm &lt;name&gt;"])
+    Remove --> StopRm["Stop & remove devx-mock-&lt;name&gt; container"]
+    StopRm --> Done["✓ Mock removed"]
+```
+
 ## How It Works
 
 1. Pulls the `stoplight/prism` image (industry-standard OpenAPI mock engine)

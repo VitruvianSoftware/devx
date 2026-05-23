@@ -45,6 +45,77 @@ When you use `devx shell` to launch your dev container, it automatically discove
 | `--port` | emulator default | Host port to bind |
 | `--runtime` | `auto-detected` | Container runtime (`podman`, `docker`, `nerdctl`) |
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Cloud Emulators.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI (cloud subcommand)"]
+        shell["devx shell"]
+        app["Application Code"]
+        envVars["SDK Env Vars\n(STORAGE_EMULATOR_HOST, etc.)"]
+    end
+
+    subgraph Runtime ["Container Runtime (auto-detected)"]
+        docker["Docker / Podman / nerdctl"]
+    end
+
+    subgraph Emulators ["Emulator Containers"]
+        gcs["fake-gcs-server\n(devx-cloud-gcs :4443)"]
+        pubsub["gcloud pubsub emulator\n(devx-cloud-pubsub :8085)"]
+        firestore["gcloud firestore emulator\n(devx-cloud-firestore :8080)"]
+        minio["MinIO\n(devx-cloud-s3 :9000)"]
+    end
+
+    cli -->|"create / start / rm"| docker
+    docker -->|"runs"| gcs
+    docker -->|"runs"| pubsub
+    docker -->|"runs"| firestore
+    docker -->|"runs"| minio
+
+    cli -->|"prints env vars"| envVars
+    shell -->|"auto-discovers & injects"| envVars
+    app -->|"reads env vars"| envVars
+    app -->|"SDK calls via env endpoint"| Emulators
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx cloud spawn <service>"]) --> ValidateService{"Valid service key?\n(gcs/pubsub/firestore/s3)"}
+    ValidateService -->|"no"| ErrService["Error: unknown\nservice key"]
+    ValidateService -->|"yes"| DetectRuntime{"Detect container\nruntime?"}
+
+    DetectRuntime -->|"not found"| ErrRuntime["Error: no container\nruntime available"]
+    DetectRuntime -->|"found"| CheckRunning{"Emulator container\nalready running?"}
+
+    CheckRunning -->|"yes"| ErrRunning["Error: emulator\nalready running"]
+    CheckRunning -->|"no"| ResolvePort{"--port\nspecified?"}
+
+    ResolvePort -->|"yes"| UseCustomPort["Use custom\nhost port"]
+    ResolvePort -->|"no"| UseDefaultPort["Use emulator\ndefault port"]
+
+    UseCustomPort --> PullImage["Pull emulator image\n(if not cached)"]
+    UseDefaultPort --> PullImage
+
+    PullImage --> StartContainer["Start emulator container\nwith port binding"]
+    StartContainer --> HealthCheck{"Emulator\nresponsive?"}
+
+    HealthCheck -->|"timeout"| ErrBoot["Error: emulator\nfailed to start"]
+    HealthCheck -->|"ready"| SeedCreds{"S3 emulator?"}
+
+    SeedCreds -->|"yes"| InjectAWSCreds["Inject MinIO default\ncredentials into env output"]
+    SeedCreds -->|"no"| PrintEnv
+
+    InjectAWSCreds --> PrintEnv["Print SDK env var\n(e.g. STORAGE_EMULATOR_HOST)"]
+    PrintEnv --> Done(["✅ Emulator ready"])
+```
+
 ## List Running Emulators
 
 ```bash
