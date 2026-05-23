@@ -34,7 +34,7 @@ The `runtime` parameter gives development teams ultimate execution flexibility:
 * `host` (Default): Runs the process natively on your machine via standard execution (e.g. `npm run dev`).
 * `bridge`: Connects to a remote Kubernetes service via `bridge_target` (outbound port-forward) or `bridge_intercept` (inbound traffic steal). Fully managed by the DAG with correct dependency ordering and lifecycle. See [Bridge Guide](bridge.md#hybrid-topology).
 * `container`: (Coming soon) Runs the process isolated within a defined sandbox.
-* `kubernetes`: Renders your manifests (`kustomize` or `raw`) and applies them to a target cluster, readiness-gating the DAG on the workload becoming `Available`. The skaffold-class deploy path. See [Kubernetes Deploy](kubernetes-deploy.md).
+* `kubernetes`: Renders your manifests (`kustomize`, `raw`, or `helm`) and deploys them to a target cluster, readiness-gating the DAG on the workload becoming `Available`. Can also build + load local images first. The skaffold-class deploy path. See [Kubernetes Deploy](kubernetes-deploy.md).
 * `cloud`: (Coming soon) Runs the process attached remotely to GCP Cloud Run or AWS ECS via emulators.
 
 ---

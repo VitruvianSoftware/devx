@@ -58,6 +58,19 @@ func TestKubectlArgs(t *testing.T) {
 	})
 }
 
+func TestValidateRenderer(t *testing.T) {
+	for _, r := range []string{"kustomize", "raw", "helm"} {
+		if err := validateRenderer(r); err != nil {
+			t.Errorf("validateRenderer(%q) = %v, want nil", r, err)
+		}
+	}
+	for _, r := range []string{"", "bogus"} {
+		if err := validateRenderer(r); err == nil || !strings.Contains(err.Error(), "unknown kubernetes.renderer") {
+			t.Errorf("validateRenderer(%q) = %v, want unknown-renderer error", r, err)
+		}
+	}
+}
+
 func TestApplyFlagForRenderer(t *testing.T) {
 	tests := []struct {
 		renderer string
@@ -66,9 +79,9 @@ func TestApplyFlagForRenderer(t *testing.T) {
 	}{
 		{"kustomize", "-k", ""},
 		{"raw", "-f", ""},
-		{"helm", "", "not implemented yet"},
-		{"", "", "unknown kubernetes.renderer"},
-		{"bogus", "", "unknown kubernetes.renderer"},
+		{"helm", "", "not a kubectl-apply renderer"},
+		{"", "", "not a kubectl-apply renderer"},
+		{"bogus", "", "not a kubectl-apply renderer"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.renderer, func(t *testing.T) {

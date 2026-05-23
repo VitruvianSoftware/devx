@@ -178,7 +178,10 @@ services:
   #       condition: service_healthy
   #   kubernetes:
   #     manifests: ./deploy/k8s/overlays/local  # kustomize dir (default), raw manifest file/dir, or helm chart
-  #     renderer: kustomize                      # kustomize (default) | raw | helm (helm not yet implemented)
+  #     renderer: kustomize                      # kustomize (default) | raw | helm
+  #     # For renderer: helm, `manifests` is a chart directory; optional helm fields:
+  #     # release: payments-api                  # helm release name (default: service name)
+  #     # values: [values-local.yaml]            # helm values files
   #     namespace: payments-dev                  # target namespace (default: "default"; created if missing)
   #     context: ""                              # kube context (default: current context)
   #     kubeconfig: ""                           # kubeconfig path (default: $KUBECONFIG, then ~/.kube/config)

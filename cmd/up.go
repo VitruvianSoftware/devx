@@ -284,6 +284,8 @@ var upCmd = &cobra.Command{
 							Kubeconfig:   svc.Kubernetes.Kubeconfig,
 							ProviderName: resolveProviderName(),
 							Images:       images,
+							Release:      svc.Kubernetes.Release,
+							Values:       svc.Kubernetes.Values,
 						}
 					}
 				case "cloud":

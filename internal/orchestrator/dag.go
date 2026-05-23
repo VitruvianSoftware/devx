@@ -83,6 +83,8 @@ type KubeNodeConfig struct {
 	Kubeconfig   string       // kubeconfig path
 	ProviderName string       // container provider for image builds (e.g. "lima"); resolved by the cmd layer
 	Images       []image.Spec // images devx builds + loads into the cluster registry before apply
+	Release      string       // helm release name (renderer: helm; default: service name)
+	Values       []string     // helm values files (renderer: helm)
 }
 
 // HealthcheckConfig defines how to verify a service is ready.
