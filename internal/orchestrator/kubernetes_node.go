@@ -204,6 +204,13 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 		}
 		n.pfCancel = cancelPF
 	}
+
+	// Stream pod logs (inline + ~/.devx/logs/) when opted in.
+	cancelLogs, err := startKubernetesLogs(ctx, n, kubeconfig, k.Context, ns)
+	if err != nil {
+		return fmt.Errorf("service %q: starting log stream: %w", n.Name, err)
+	}
+	n.logWatchCancel = cancelLogs
 	return nil
 }
 

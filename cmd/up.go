@@ -47,6 +47,8 @@ import (
 
 var upDomain string
 var upProfile string
+var upLogs bool
+var upNoLogs bool
 
 var upCmd = &cobra.Command{
 	Use:     "up",
@@ -260,10 +262,12 @@ var upCmd = &cobra.Command{
 				var bridgeCfg *orchestrator.BridgeNodeConfig
 				var kubeCfg *orchestrator.KubeNodeConfig
 				var crCfg *orchestrator.CloudRunNodeConfig
+				var containerCfg *orchestrator.ContainerNodeConfig
 
 				switch svc.Runtime {
 				case "container":
 					rt = orchestrator.RuntimeContainer
+					containerCfg = toContainerNodeConfig(svc, resolveProviderName())
 				case "kubernetes":
 					rt = orchestrator.RuntimeKubernetes
 					if svc.Kubernetes != nil {
@@ -390,6 +394,8 @@ var upCmd = &cobra.Command{
 					BridgeConfig: bridgeCfg,
 					Kube:         kubeCfg,
 					CloudRun:     crCfg,
+					Container:    containerCfg,
+					LogMode:      orchestrator.ResolveLogMode(logFlagPointer(), svc.Logs, cfgYaml.Logs, svc.Runtime),
 				})
 			}
 
@@ -465,6 +471,44 @@ var upCmd = &cobra.Command{
 	},
 }
 
+// logFlagPointer turns the mutually-exclusive --logs/--no-logs flags into the
+// tri-state *bool the resolver expects (nil = neither flag set).
+func logFlagPointer() *bool {
+	switch {
+	case upNoLogs:
+		v := false
+		return &v
+	case upLogs:
+		v := true
+		return &v
+	default:
+		return nil
+	}
+}
+
+// toContainerNodeConfig maps a runtime: container service to its orchestrator
+// config. Returns nil if the service has no `container:` block.
+func toContainerNodeConfig(svc DevxConfigService, providerName string) *orchestrator.ContainerNodeConfig {
+	if svc.Container == nil {
+		return nil
+	}
+	cfg := &orchestrator.ContainerNodeConfig{
+		Image:        svc.Container.Image,
+		Args:         svc.Container.Args,
+		ProviderName: providerName,
+	}
+	if b := svc.Container.Build; b != nil {
+		cfg.Build = &image.Spec{
+			Name:       svc.Name,
+			Context:    b.Context,
+			Dockerfile: b.Dockerfile,
+			Tag:        b.Tag,
+			Platforms:  b.Platforms,
+		}
+	}
+	return cfg
+}
+
 func mustGetwd() string {
 	d, err := os.Getwd()
 	if err != nil {
@@ -476,6 +520,8 @@ func mustGetwd() string {
 func init() {
 	upCmd.Flags().StringVar(&upDomain, "domain", "", "Custom Cloudflare domain (BYOD) to override setting in devx.yaml")
 	upCmd.Flags().StringVar(&upProfile, "profile", "", "Apply a named profile overlay from devx.yaml (additive merge, Docker Compose style)")
+	upCmd.Flags().BoolVar(&upLogs, "logs", false, "Stream logs from all deployed services inline (skaffold-style); also written to ~/.devx/logs/")
+	upCmd.Flags().BoolVar(&upNoLogs, "no-logs", false, "Disable all inline log streaming, including host services")
 	tunnelCmd.AddCommand(upCmd)
 	rootCmd.AddCommand(upCmd) // Aliased at the root level as a top-level command
 }

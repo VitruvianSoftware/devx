@@ -25,12 +25,10 @@ package orchestrator
 import (
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -99,6 +97,16 @@ type CloudRunNodeConfig struct {
 	Env                  map[string]string // env vars set on the service
 	AllowUnauthenticated bool              // expose publicly
 	Flags                []string          // extra `gcloud run deploy` flags
+}
+
+// ContainerNodeConfig holds runtime: container configuration for a DAG node:
+// devx runs a long-lived container in the VM via the provider runtime. Exactly
+// one of Image or Build is set.
+type ContainerNodeConfig struct {
+	Image        string      // pre-built image to run (empty when Build is set)
+	Build        *image.Spec // build-from-context spec (nil when Image is set)
+	Args         []string    // extra flags appended to `<runtime> run`
+	ProviderName string      // container provider to resolve the runtime (e.g. "lima")
 }
 
 // HealthcheckConfig defines how to verify a service is ready.
@@ -170,13 +178,24 @@ type Node struct {
 	CloudRun   *CloudRunNodeConfig
 	crDeployed *CloudRunNodeConfig
 
+	// Container deploy field (runtime: container) + whether we started it, for cleanup
+	Container        *ContainerNodeConfig
+	containerStarted bool
+
 	// Runtime state for kubernetes port-forward discovery (stops forwards on shutdown)
 	pfCancel context.CancelFunc
+
+	// Runtime state for kubernetes log watcher (stops pod watch + container tails on shutdown)
+	logWatchCancel context.CancelFunc
+
+	// Log mode resolved from flag/config for this node.
+	LogMode LogMode // how this node's logs are surfaced (resolved in the cmd layer)
 
 	// Runtime state
 	process     *exec.Cmd
 	cancel      context.CancelFunc
 	bridgeState *BridgeNodeState // runtime state for bridge cleanup
+	logCloser   func() error     // closes the log sink on cleanup
 }
 
 // DAG is a directed acyclic graph of nodes.
@@ -303,11 +322,17 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			if n.pfCancel != nil {
 				n.pfCancel()
 			}
+			if n.logWatchCancel != nil {
+				n.logWatchCancel()
+			}
 			if n.kubeApplied != nil {
 				deleteKubernetesNode(n)
 			}
 			if n.crDeployed != nil {
 				deleteCloudRunNode(n)
+			}
+			if n.containerStarted {
+				_ = removeContainerNode(n)
 			}
 
 			if n.cancel != nil {
@@ -315,6 +340,9 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			}
 			if n.process != nil && n.process.Process != nil {
 				_ = n.process.Process.Kill()
+			}
+			if n.logCloser != nil {
+				_ = n.logCloser()
 			}
 		}
 	}
@@ -347,6 +375,11 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 					case RuntimeCloud:
 						if err := startCloudRunNode(ctx, n); err != nil {
 							errCh <- fmt.Errorf("failed to deploy Cloud Run service %q: %w", n.Name, err)
+							return
+						}
+					case RuntimeContainer:
+						if err := startContainerNode(ctx, n); err != nil {
+							errCh <- fmt.Errorf("failed to start container service %q: %w", n.Name, err)
 							return
 						}
 					default:
@@ -445,21 +478,18 @@ func startHostProcess(ctx context.Context, n *Node) error {
 	if n.Dir != "" {
 		cmd.Dir = n.Dir
 	}
-	// Setup logging to ~/.devx/logs/<name>.log
-	logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
-	_ = os.MkdirAll(logDir, 0755)
-
-	logFile, err := os.OpenFile(
-		filepath.Join(logDir, n.Name+".log"),
-		os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644,
-	)
+	// Setup logging via BuildHostSink: routes output per LogMode (raw → stdout/stderr
+	// + file preserving today's stderr separation, prefixed → unified prefixed view +
+	// file, off → file only). Truncates the log file fresh each run (intentional:
+	// stale content gone, devx logs sees live output).
+	outW, errW, closeFn, err := logs.BuildHostSink(n.Name, sinkMode(n.LogMode), os.Stdout, os.Stderr, logs.ColorEnabled(), nil)
 	if err != nil {
 		cancel()
-		return fmt.Errorf("opening log file: %w", err)
+		return fmt.Errorf("opening log sink: %w", err)
 	}
-
-	cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
-	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+	n.logCloser = closeFn
+	cmd.Stdout = outW
+	cmd.Stderr = errW
 
 	// Inject environment variables
 	cmd.Env = os.Environ()
