@@ -49,3 +49,35 @@ func TestParseServiceForwards(t *testing.T) {
 		t.Error("expected error on invalid JSON")
 	}
 }
+
+func TestAssignLocalPorts(t *testing.T) {
+	fwds := []serviceForward{
+		{Service: "brms-offer", Port: 8080},
+		{Service: "brms-exec", Port: 8080},
+		{Service: "brms-mgmt", Port: 8080},
+		{Service: "fake-gcs", Port: 4443},
+	}
+	// A resolve that never shifts for OS reasons (returns its input) isolates the
+	// in-batch de-duplication: even so, the three :8080 services must each land
+	// on a distinct local port. (kubectl forwards bind asynchronously, so an
+	// OS-only check hands out 8080 three times — the bug this guards against.)
+	active := assignLocalPorts(fwds, func(p int) int { return p })
+	if len(active) != len(fwds) {
+		t.Fatalf("got %d forwards, want %d", len(active), len(fwds))
+	}
+	seen := map[int]bool{}
+	for _, a := range active {
+		if seen[a.Local] {
+			t.Errorf("duplicate local port %d (service %s)", a.Local, a.Service)
+		}
+		seen[a.Local] = true
+	}
+	// First claimant keeps the requested port; service/target are preserved.
+	if active[0] != (activeForward{Local: 8080, Service: "brms-offer", Port: 8080}) {
+		t.Errorf("first forward = %+v, want {8080 brms-offer 8080}", active[0])
+	}
+	// A non-conflicting port is left untouched.
+	if active[3].Local != 4443 {
+		t.Errorf("fake-gcs local = %d, want 4443", active[3].Local)
+	}
+}

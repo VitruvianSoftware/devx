@@ -123,10 +123,21 @@ type HealthcheckConfig struct {
 	Retries int `yaml:"retries"`
 }
 
+// Dependency conditions accepted on DependsOnEntry.Condition. Gating is
+// tier-based: a dependent starts only once every node it depends on has reached
+// readiness for its tier — a normal service when its healthcheck passes (or it
+// has started, if it declares none), and a one-shot task when its process exits
+// successfully (use ConditionServiceCompletedSuccessfully for that case).
+const (
+	ConditionServiceHealthy               = "service_healthy"
+	ConditionServiceStarted               = "service_started"
+	ConditionServiceCompletedSuccessfully = "service_completed_successfully"
+)
+
 // DependsOnEntry references another node and a readiness condition.
 type DependsOnEntry struct {
 	Name      string `yaml:"name"`
-	Condition string `yaml:"condition"` // "service_healthy" or "service_started"
+	Condition string `yaml:"condition"` // one of the Condition* constants
 }
 
 // ServiceConfig defines a developer application in devx.yaml.
@@ -138,6 +149,7 @@ type ServiceConfig struct {
 	Healthcheck HealthcheckConfig `yaml:"healthcheck"`
 	Port        int               `yaml:"port"`
 	Env         map[string]string `yaml:"env"`
+	OneShot     bool              `yaml:"oneshot"`
 }
 
 // NodeType categorises a DAG node.
@@ -160,6 +172,7 @@ type Node struct {
 	Command     []string
 	Env         map[string]string
 	Dir         string // Working directory for host process execution (set by include resolver for multirepo)
+	OneShot     bool   // run-to-completion task: gate dependents on exit 0 instead of a healthcheck
 
 	// Bridge-specific fields (Idea 46.3)
 	BridgeMode   BridgeMode        // for RuntimeBridge nodes
@@ -184,6 +197,7 @@ type Node struct {
 
 	// Runtime state for kubernetes port-forward discovery (stops forwards on shutdown)
 	pfCancel context.CancelFunc
+	forwards []activeForward // active port-forwards, surfaced in the access summary
 
 	// Runtime state for kubernetes log watcher (stops pod watch + container tails on shutdown)
 	logWatchCancel context.CancelFunc
@@ -307,6 +321,7 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 	var startedNodes []*Node
 
 	cleanupFn := func() {
+		tornDown := false
 		for i := len(startedNodes) - 1; i >= 0; i-- {
 			n := startedNodes[i]
 
@@ -326,10 +341,16 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				n.logWatchCancel()
 			}
 			if n.kubeApplied != nil {
+				// deleteKubernetesNode prints the removed resources (formatTeardown).
 				deleteKubernetesNode(n)
+				if len(n.forwards) > 0 {
+					fmt.Println("     🔌 port-forwards stopped")
+				}
+				tornDown = true
 			}
 			if n.crDeployed != nil {
 				deleteCloudRunNode(n)
+				tornDown = true
 			}
 			if n.containerStarted {
 				_ = removeContainerNode(n)
@@ -344,6 +365,9 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			if n.logCloser != nil {
 				_ = n.logCloser()
 			}
+		}
+		if tornDown {
+			fmt.Println("✅ Teardown complete.")
 		}
 	}
 
@@ -448,6 +472,20 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				continue
 			}
 
+			// One-shot task: gate the next tier on the process exiting 0 (e.g. a
+			// data seed that must finish before dependents start), rather than on
+			// a long-running healthcheck.
+			if node.Type == NodeService && node.OneShot {
+				fmt.Printf("  \u23f3 Waiting for %s to complete...\n", name)
+				if err := waitForCompletion(ctx, node); err != nil {
+					logs.TailHostCrashLogs(node.Name, 50)
+					cleanupFn()
+					return nil, fmt.Errorf("one-shot task %q failed: %w", name, err)
+				}
+				fmt.Printf("  \u2705 %s completed\n", name)
+				continue
+			}
+
 			if node.Healthcheck.HTTP != "" || node.Healthcheck.TCP != "" {
 				fmt.Printf("  \u23f3 Waiting for %s to become healthy...\n", name)
 				if err := waitForHealthy(ctx, node); err != nil {
@@ -505,6 +543,37 @@ func startHostProcess(ctx context.Context, n *Node) error {
 	fmt.Printf("  🚀 Starting %s: %s\n", n.Name, strings.Join(n.Command, " "))
 
 	return cmd.Start()
+}
+
+// waitForCompletion blocks until a one-shot task's process exits, returning an
+// error if it exits non-zero or exceeds its timeout. The timeout is the node's
+// healthcheck timeout when set, else a generous default — one-shot tasks like
+// data seeds can legitimately run for a while. Dependents are gated on this via
+// tier ordering: the task's tier is not considered ready until it completes.
+func waitForCompletion(ctx context.Context, n *Node) error {
+	if n.process == nil {
+		return fmt.Errorf("task was not started (no command?)")
+	}
+
+	timeout := n.Healthcheck.Timeout
+	if timeout == 0 {
+		timeout = 10 * time.Minute
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- n.process.Wait() }()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(timeout):
+		return fmt.Errorf("timed out after %s", timeout)
+	case err := <-done:
+		if err != nil {
+			return fmt.Errorf("exited with error: %w", err)
+		}
+		return nil
+	}
 }
 
 // waitForHealthy polls the healthcheck until it passes or context is cancelled.

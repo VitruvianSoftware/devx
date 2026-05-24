@@ -4,6 +4,79 @@ The `devx` ecosystem provides a unified execution and logging layer that effortl
 
 Rather than forcing every part of your application stack into a heavy Dockerfile from day one, `devx` introduces the **Process Bridge**.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of the Native Apps & Logs system.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        dev["Developer / AI Agent"]
+        cli["devx CLI"]
+        subgraph RunEngine ["devx run — Process Supervisor"]
+            spawner["Process Spawner\n(executes host command)"]
+            interceptor["Stream Interceptor\n(stdout/stderr capture)"]
+        end
+        subgraph LogsEngine ["devx logs — Unified Multiplexer"]
+            discovery["Source Discovery\n(native procs + containers)"]
+            mux["Log Multiplexer\n(merge all streams)"]
+            dlp["DLP Redactor\n(exact-match secret scrubbing)"]
+            tui["Bubble Tea TUI\n(color-coded prefixed output)"]
+            jsonOut["JSON Line Streamer\n(--json fallback)"]
+        end
+        vault["Secret Vault\n(known loaded secret values)"]
+    end
+
+    subgraph VM ["devx VM / Container Runtime"]
+        containers["Podman Containers\n(databases, services)"]
+    end
+
+    dev -->|"devx run --name my-api -- cmd"| cli
+    cli --> spawner
+    spawner -->|"executes natively"| interceptor
+    interceptor -->|"routes streams"| mux
+
+    dev -->|"devx logs"| cli
+    cli --> discovery
+    discovery -->|"native procs via devx run"| mux
+    discovery -->|"running containers"| containers
+    containers -->|"container logs"| mux
+
+    mux --> dlp
+    vault -->|"secret values (>5 chars)"| dlp
+    dlp -->|"--json flag"| jsonOut
+    dlp -->|"default"| tui
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    subgraph RunFlow ["devx run"]
+        RunStart(["devx run --name label -- cmd"]) --> Spawn["Spawn subprocess\n(native host execution)"]
+        Spawn --> Intercept["Intercept stdout/stderr\nstreams"]
+        Intercept --> Register["Register process with\ndevx log multiplexer"]
+        Register --> Running["Process running\n(streams routed to mux)"]
+    end
+
+    subgraph LogsFlow ["devx logs"]
+        LogStart(["devx logs"]) --> Discover["Auto-discover sources"]
+        Discover --> NativeProcs["Find native processes\n(started via devx run)"]
+        Discover --> ContainerProcs["Find running containers\n(inside devx VM)"]
+        NativeProcs --> Merge
+        ContainerProcs --> Merge
+        Merge["Merge all streams\ninto unified multiplexer"] --> Redact
+
+        Redact["DLP Redaction Pass\n(scrub known secrets >5 chars\nwith [REDACTED])"] --> OutputMode{"--json flag?"}
+        OutputMode -->|"Yes"| JSONStream(["Continuous JSON line output\n(machine-readable for AI agents)"])
+        OutputMode -->|"No"| TUIRender(["Bubble Tea TUI\n(color-coded, prefixed lines)"])
+    end
+
+    Running -->|"streams"| Merge
+```
+
 ## Native Execution (`devx run`)
 
 For APIs or frontends that you run natively on your machine (like `npm run dev` or `go run main.go`), you can prefix the command with `devx run`. 

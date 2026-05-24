@@ -25,6 +25,92 @@ devx audit
 ✗ 1 scan(s) found issues — review output above before pushing.
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx audit`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        dev["Developer / AI Agent"]
+        cli["devx CLI"]
+        resolver["Scanner Resolver"]
+        subgraph NativeMode ["Native Execution"]
+            gitleaksNative["Gitleaks (native binary)"]
+            trivyNative["Trivy (native binary)"]
+        end
+        subgraph ContainerMode ["Container Fallback"]
+            runtime["Container Runtime\n(podman / docker / nerdctl)"]
+            gitleaksContainer["Gitleaks Container\n(read-only, network-isolated)"]
+            trivyContainer["Trivy Container\n(read-only, network-isolated)"]
+        end
+        formatter["Report Formatter\n(human / --json)"]
+    end
+
+    subgraph Project ["Project Working Tree"]
+        source["Source Files & Git History"]
+        lockfiles["Lock Files\n(go.sum, package-lock.json, etc.)"]
+    end
+
+    dev -->|"devx audit"| cli
+    cli --> resolver
+    resolver -->|"in $PATH"| gitleaksNative
+    resolver -->|"in $PATH"| trivyNative
+    resolver -->|"not in $PATH"| runtime
+    runtime --> gitleaksContainer
+    runtime --> trivyContainer
+    gitleaksNative -->|"scans"| source
+    gitleaksContainer -->|"scans (ro mount)"| source
+    trivyNative -->|"scans"| lockfiles
+    trivyContainer -->|"scans (ro mount)"| lockfiles
+    gitleaksNative --> formatter
+    gitleaksContainer --> formatter
+    trivyNative --> formatter
+    trivyContainer --> formatter
+    formatter -->|"exit code 0 or 1"| cli
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx audit"]) --> ScopeFlag{"--secrets or\n--vulns flag?"}
+    ScopeFlag -->|"--secrets"| SecretsOnly["Run Gitleaks only"]
+    ScopeFlag -->|"--vulns"| VulnsOnly["Run Trivy only"]
+    ScopeFlag -->|"Neither (default)"| Both["Run both scanners"]
+
+    Both --> ResolveGL
+    SecretsOnly --> ResolveGL
+    VulnsOnly --> ResolveTrivy
+
+    ResolveGL["Resolve Gitleaks"] --> GLPath{"gitleaks\nin $PATH?"}
+    GLPath -->|"Yes"| GLNative["Run natively (~100ms)"]
+    GLPath -->|"No"| GLContainer["Pull image, run in\nephemeral container\n(-v ro, --network none)"]
+    GLNative --> GLResult
+    GLContainer --> GLResult
+    GLResult{"Secrets\nfound?"} -->|"Yes"| GLFail["Mark: FAIL"]
+    GLResult -->|"No"| GLPass["Mark: PASS"]
+
+    Both --> ResolveTrivy
+    ResolveTrivy["Resolve Trivy"] --> TrivyPath{"trivy\nin $PATH?"}
+    TrivyPath -->|"Yes"| TrivyNative["Run natively (~100ms)"]
+    TrivyPath -->|"No"| TrivyContainer["Pull image, run in\nephemeral container\n(-v ro, --network none)"]
+    TrivyNative --> TrivyResult
+    TrivyContainer --> TrivyResult
+    TrivyResult{"Vulnerabilities\nfound?"} -->|"Yes"| TrivyFail["Mark: FAIL"]
+    TrivyResult -->|"No"| TrivyPass["Mark: PASS"]
+
+    GLFail --> Aggregate
+    GLPass --> Aggregate
+    TrivyFail --> Aggregate
+    TrivyPass --> Aggregate
+    Aggregate["Aggregate Results"] --> AnyFail{"Any scanner\nfailed?"}
+    AnyFail -->|"Yes"| Exit1(["Exit 1\nIssues found"])
+    AnyFail -->|"No"| Exit0(["Exit 0\nAll scans passed"])
+```
+
 ## Commands
 
 | Command | Description |

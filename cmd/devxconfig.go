@@ -81,7 +81,7 @@ type DevxConfigMock struct {
 // DevxConfigDependsOn references a service/database dependency with a gating condition.
 type DevxConfigDependsOn struct {
 	Name      string `yaml:"name"`
-	Condition string `yaml:"condition"` // "service_healthy" or "service_started"
+	Condition string `yaml:"condition"` // "service_healthy", "service_started", or "service_completed_successfully" (one-shot tasks)
 }
 
 // DevxConfigHealthcheck defines how to verify a service is ready.
@@ -206,6 +206,7 @@ type DevxConfigService struct {
 	Healthcheck     DevxConfigHealthcheck             `yaml:"healthcheck"`
 	Port            int                               `yaml:"port"`
 	Env             map[string]string                 `yaml:"env"`                        // extra env vars
+	OneShot         bool                              `yaml:"oneshot,omitempty"`          // run-to-completion task (e.g. a seed); dependents use condition: service_completed_successfully
 	Sync            []DevxConfigSync                  `yaml:"sync,omitempty"`             // file sync mappings into containers
 	BridgeTarget    *DevxConfigServiceBridgeTarget    `yaml:"bridge_target,omitempty"`    // Idea 46.3: inline outbound bridge
 	BridgeIntercept *DevxConfigServiceBridgeIntercept `yaml:"bridge_intercept,omitempty"` // Idea 46.3: inline intercept

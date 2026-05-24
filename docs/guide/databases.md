@@ -2,6 +2,53 @@
 
 The `devx db` commands let you spin up ephemeral, persistent, or disposable databases for local development — no Docker Compose files needed.
 
+## Architecture & Workflows
+
+Below is the execution flowchart detailing the core database management workflows: **Spawn**, **Pull**, **Seed**, and **Snapshot**.
+
+```mermaid
+flowchart TD
+    subgraph Commands ["devx db CLI Surface"]
+        spawn[devx db spawn]
+        pull[devx db pull]
+        seed[devx db seed]
+        snapshot[devx db snapshot]
+    end
+
+    subgraph SpawnFlow ["Spawn Workflow"]
+        spawn --> CheckRunning{Container active?}
+        CheckRunning -- No --> CreateVol[Create named volume]
+        CreateVol --> RunContainer[Launch Podman/Docker container with port binding]
+        CheckRunning -- Yes --> PrintCreds[Print Connection URI & Credentials]
+        RunContainer --> PrintCreds
+    end
+
+    subgraph PullFlow ["Pull & Restore Workflow"]
+        pull --> VerifySvc[Verify container is running]
+        VerifySvc --> SelectFormat{Dump format?}
+        SelectFormat -- Plain SQL --> StreamSQL[Stream SQL command stdout straight to container psql/mysql]
+        SelectFormat -- PostgreSQL Custom --> StreamCustom[Stream dump to pg_restore with -j parallel workers]
+    end
+
+    subgraph SeedFlow ["Seed Workflow"]
+        seed --> InspectContainer[Inspect container to find actual mapped port]
+        InspectContainer --> InjectEnv[Inject DATABASE_URL & environment fragments]
+        InjectEnv --> ExecScript[Execute host seeding script]
+        ExecScript --> AuthError{Token expired / Auth error?}
+        AuthError -- Yes --> PromptAuth[Trigger auth login & retry seed]
+        AuthError -- No --> Success[Seeding Complete]
+        PromptAuth --> ExecScript
+    end
+
+    subgraph SnapshotFlow ["Snapshot Workflow"]
+        snapshot --> Action{Action?}
+        Action -- create --> StopDb[Temporarily pause container]
+        StopDb --> TarVolume[Create compressed tar of data volume]
+        TarVolume --> StartDb[Resume container]
+        Action -- restore --> RestoreTar[Extract tar to database volume]
+    end
+```
+
 ## Commands
 
 ### `devx db spawn`

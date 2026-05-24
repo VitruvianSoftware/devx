@@ -24,6 +24,48 @@ services:
       flags: ["--memory", "512Mi", "--cpu", "1"]   # optional: extra `gcloud run deploy` flags
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `runtime: cloud`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        dag["DAG Engine (internal/orchestrator)"]
+        crnode["CloudRunNode (cloudrun_node.go)"]
+        gcloud["gcloud CLI Wrapper"]
+    end
+
+    subgraph GCP ["Google Cloud Platform"]
+        cr["Cloud Run Service"]
+        registry["Artifact Registry (External Image)"]
+    end
+
+    cli -->|"invokes up"| dag
+    dag -->|"resolves & runs"| crnode
+    crnode -->|"executes deploy & delete"| gcloud
+    gcloud -->|"gcloud run deploy / delete"| cr
+    cr -->|"pulls container image"| registry
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start([devx up]) --> Validate[Validate gcloud CLI present]
+    Validate --> ConstructArgs[Construct gcloud run deploy arguments]
+    ConstructArgs --> Deploy[Execute gcloud run deploy --quiet]
+    Deploy --> GetURL[Query URL: gcloud run services describe]
+    GetURL --> Running([Service running & URL surfaced])
+    
+    Running --> CtrlC[Shutdown Triggered / Ctrl+C]
+    CtrlC --> Delete[Execute gcloud run services delete --quiet]
+    Delete --> End([Cleanup Completed])
+```
+
 ## What happens
 
 On `devx up`, for a `runtime: cloud` service devx:

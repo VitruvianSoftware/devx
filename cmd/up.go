@@ -390,6 +390,7 @@ var upCmd = &cobra.Command{
 					Command:      svc.Command,
 					Env:          svc.Env,
 					Dir:          svc.Dir,
+					OneShot:      svc.OneShot,
 					BridgeMode:   bridgeMode,
 					BridgeConfig: bridgeCfg,
 					Kube:         kubeCfg,
@@ -417,6 +418,11 @@ var upCmd = &cobra.Command{
 				return fmt.Errorf("service orchestration failed: %w", dagErr)
 			}
 			fmt.Printf("\n✅ All services are running and healthy.\n")
+
+			// Show the developer exactly what to hit: the forwarded service URLs.
+			if summary := dag.AccessSummary(); summary != "" {
+				fmt.Print(summary)
+			}
 
 			// Idea 46.3: Generate bridge.env for devx shell after all bridge services are healthy
 			if err := dag.WriteBridgeEnvFile(); err != nil {

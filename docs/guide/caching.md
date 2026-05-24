@@ -9,6 +9,82 @@ As your project grows, container rebuild times can silently erode your inner dev
 1. **Local Telemetry** — `devx` silently records build durations. When they cross the 60-second threshold, it proactively nudges you toward the solution.
 2. **Predictive Pre-Building** *(opt-in)* — A background file-watcher that pre-builds container images when dependency manifests change, so your next restart is instant.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Predictive Background Pre-Building.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        metricsStore["~/.devx/metrics.json"]
+        telemetry["Telemetry Tracker"]
+        buildTimer["Build Timer"]
+        nudge["Nudge Engine"]
+        otelExport["OTEL Span Exporter"]
+    end
+
+    subgraph Planned ["Planned Components (opt-in)"]
+        watcher["File Watcher"]
+        prebuilder["Pre-Builder"]
+    end
+
+    subgraph Runtime ["Container Runtime"]
+        podman["Podman / Docker"]
+    end
+
+    subgraph Observability ["Observability Backend (optional)"]
+        grafana["Grafana LGTM Stack"]
+    end
+
+    cli -->|"devx stats"| metricsStore
+    cli -->|"devx up / devx agent ship"| buildTimer
+    buildTimer -->|"records duration"| telemetry
+    telemetry -->|"persists event"| metricsStore
+    telemetry -->|"duration > 60s?"| nudge
+    nudge -->|"prints tip to enable predictive_build"| cli
+    telemetry -->|"exports spans"| otelExport
+    otelExport -->|"OTLP"| grafana
+
+    watcher -.->|"watches go.mod, package.json, etc."| prebuilder
+    prebuilder -.->|"background build"| podman
+    cli -.->|"devx up (predictive_build: true)"| watcher
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx stats / devx up / devx agent ship"]) --> IsStats{{"devx stats?"}}
+
+    IsStats -->|"Yes"| ReadMetrics["Read ~/.devx/metrics.json"]
+    ReadMetrics --> JsonFlag{{"--json flag?"}}
+    JsonFlag -->|"Yes"| OutputJSON["Output machine-readable JSON"]
+    JsonFlag -->|"No"| OutputTable["Output formatted table (P50/P90/P99)"]
+    OutputJSON --> Done([Done])
+    OutputTable --> Done
+
+    IsStats -->|"No (build operation)"| StartBuild["Start Build Timer"]
+    StartBuild --> RunBuild["Execute build (podman build / docker build)"]
+    RunBuild --> BuildResult{{"Build succeeded?"}}
+    BuildResult -->|"No"| RecordFailure["Record failure event to metrics.json"]
+    RecordFailure --> Done
+
+    BuildResult -->|"Yes"| RecordDuration["Record build duration to metrics.json"]
+    RecordDuration --> OTELCheck{{"Trace backend running?"}}
+    OTELCheck -->|"Yes"| ExportSpan["Export OTEL span to Grafana/Jaeger"]
+    OTELCheck -->|"No"| ThresholdCheck
+
+    ExportSpan --> ThresholdCheck{{"Duration > 60s?"}}
+    ThresholdCheck -->|"No"| Done
+    ThresholdCheck -->|"Yes"| SuppressCheck{{"--json mode?"}}
+    SuppressCheck -->|"Yes"| Done
+    SuppressCheck -->|"No"| Nudge["💡 Print predictive_build nudge tip"]
+    Nudge --> Done
+```
+
 ## Local Metrics
 
 `devx` records timing data for key operations (builds, startup) in `~/.devx/metrics.json`. This data never leaves your machine.

@@ -144,6 +144,19 @@ services:
       http: "http://localhost:3000"
       timeout: "60s"
 
+  # One-shot task (run-to-completion): devx runs the command, waits for it to
+  # exit 0, then unblocks dependents. Use for data seeds, migrations, and init
+  # hooks. Dependents wait with `condition: service_completed_successfully`.
+  # healthcheck.timeout bounds the run (default 10m). The k8s counterpart is a
+  # seed Job in your manifests (runtime: kubernetes).
+  - name: seed
+    runtime: host                 # or container
+    command: ["npm", "run", "seed"]
+    oneshot: true
+    depends_on:
+      - name: postgres
+        condition: service_healthy
+
   # Container-runtime service with smart file syncing (Idea 43).
   # Instead of slow VirtioFS volume mounts, 'devx sync up' creates a
   # high-performance Mutagen session that propagates file changes in milliseconds.
