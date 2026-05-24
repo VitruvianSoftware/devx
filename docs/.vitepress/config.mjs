@@ -6,9 +6,10 @@ export default withMermaid(defineConfig({
   title: "devx",
   description: "Advanced Agentic Coding Environment Orchestrator",
   server: { port: 5173 },
-  // Exclude internal planning and analysis docs from the public VitePress build.
-  // This prevents Vue template parser errors when plans contain Go templates (like {{.Host.OS}}).
-  srcExclude: ['plans/**', 'analysis/**'],
+  // Exclude internal planning, analysis, and design-spec docs from the public VitePress build.
+  // This prevents Vue template parser errors when plans contain Go templates (like {{.Host.OS}}),
+  // and dead-link errors from design specs under superpowers/ that link to source files.
+  srcExclude: ['plans/**', 'analysis/**', 'superpowers/**'],
   // localhost URLs in docs are intentional (they're local dev addresses, not broken links)
   ignoreDeadLinks: [/^http:\/\/localhost/],
   themeConfig: {
