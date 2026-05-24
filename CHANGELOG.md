@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.55.0](https://github.com/VitruvianSoftware/devx/compare/v0.54.0...v0.55.0) (2026-05-24)
+
+
+### Features
+
+* **orchestrator:** print service access URLs on up + teardown summary on exit ([#220](https://github.com/VitruvianSoftware/devx/issues/220)) ([9350682](https://github.com/VitruvianSoftware/devx/commit/93506821ddecad5d271dcbf62d9ef61b016b3af9))
+
 ## [0.54.0](https://github.com/VitruvianSoftware/devx/compare/v0.53.0...v0.54.0) (2026-05-23)
 
 
