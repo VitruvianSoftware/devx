@@ -73,6 +73,26 @@ type activeForward struct {
 	Port    int
 }
 
+// assignLocalPorts picks a distinct local port for each forward. resolve maps a
+// desired port to an OS-free one (network.ResolvePort in production). Because
+// kubectl forwards bind asynchronously, resolve alone can hand the same port to
+// two services that target the same port (e.g. several :8080 Deployments) — the
+// later binds then silently lose. So we also de-duplicate within the batch: a
+// port already claimed here is bumped and re-resolved until it's free and unique.
+func assignLocalPorts(fwds []serviceForward, resolve func(int) int) []activeForward {
+	claimed := map[int]bool{}
+	active := make([]activeForward, 0, len(fwds))
+	for _, f := range fwds {
+		local := resolve(f.Port)
+		for claimed[local] {
+			local = resolve(local + 1)
+		}
+		claimed[local] = true
+		active = append(active, activeForward{Local: local, Service: f.Service, Port: f.Port})
+	}
+	return active
+}
+
 // startPortForwards discovers the Services in ns (skaffold-style automatic
 // discovery) and starts a background `kubectl port-forward` for each port, mapping
 // it to a conflict-resolved local port. It returns the active forwards plus a cancel
@@ -93,19 +113,20 @@ func startPortForwards(parent context.Context, kubeconfig, kctx, ns string) ([]a
 	}
 
 	ctx, cancel := context.WithCancel(parent)
-	var active []activeForward
-	for _, f := range fwds {
-		local, _, _ := network.ResolvePort(f.Port)
+	active := assignLocalPorts(fwds, func(p int) int {
+		local, _, _ := network.ResolvePort(p)
+		return local
+	})
+	for _, f := range active {
 		cmd := exec.CommandContext(ctx, "kubectl",
 			kubectlArgs(kubeconfig, kctx, "port-forward", "-n", ns, "svc/"+f.Service,
-				fmt.Sprintf("%d:%d", local, f.Port))...)
+				fmt.Sprintf("%d:%d", f.Local, f.Port))...)
 		if err := cmd.Start(); err != nil {
 			cancel()
 			return nil, nil, fmt.Errorf("starting port-forward for svc/%s: %w", f.Service, err)
 		}
 		go func() { _ = cmd.Wait() }() // reap the process when it's killed on cancel
-		active = append(active, activeForward{Local: local, Service: f.Service, Port: f.Port})
-		fmt.Printf("  🔌 port-forward: localhost:%d → svc/%s:%d (ns/%s)\n", local, f.Service, f.Port, ns)
+		fmt.Printf("  🔌 port-forward: localhost:%d → svc/%s:%d (ns/%s)\n", f.Local, f.Service, f.Port, ns)
 	}
 	return active, cancel, nil
 }
