@@ -37,7 +37,7 @@ type LogLine struct {
 	Timestamp time.Time `json:"timestamp"`
 	Service   string    `json:"service"`
 	Message   string    `json:"message"`
-	Type      string    `json:"type"` // "container" or "host"
+	Type      string    `json:"type"` // "container" (live) or "service" (file-backed)
 }
 
 type Streamer struct {
@@ -63,6 +63,14 @@ func (s *Streamer) Start(ctx context.Context) {
 	go s.watchHostLogs(ctx)
 }
 
+func serviceNameFromContainer(name string) string {
+	return strings.TrimPrefix(name, "devx-svc-")
+}
+
+func serviceNameFromLogFile(filename string) string {
+	return strings.TrimSuffix(filename, ".log")
+}
+
 func (s *Streamer) watchContainers(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -82,6 +90,12 @@ func (s *Streamer) watchContainers(ctx context.Context) {
 				name = strings.TrimSpace(name)
 				if name == "" {
 					continue
+				}
+				svc := serviceNameFromContainer(name)
+				if svc != name { // devx-svc-* container
+					if _, err := os.Stat(ServiceLogPath(svc)); err == nil {
+						continue // file source is authoritative; avoid double display
+					}
 				}
 
 				s.mu.Lock()
@@ -161,8 +175,8 @@ func (s *Streamer) watchHostLogs(ctx context.Context) {
 			files, _ := os.ReadDir(logDir)
 			for _, f := range files {
 				if !f.IsDir() && strings.HasSuffix(f.Name(), ".log") {
-					name := strings.TrimSuffix(f.Name(), ".log")
-					serviceName := "host:" + name
+					name := serviceNameFromLogFile(f.Name())
+					serviceName := name
 
 					s.mu.Lock()
 					if _, exists := s.services[serviceName]; !exists {
@@ -194,7 +208,7 @@ func (s *Streamer) tailFile(ctx context.Context, name, path string) {
 		if s.Redactor != nil {
 			msg = s.Redactor.Redact(msg)
 		}
-		s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: msg, Type: "host"}
+		s.Lines <- LogLine{Timestamp: time.Now(), Service: name, Message: msg, Type: "service"}
 	}
 
 	s.mu.Lock()

@@ -43,18 +43,10 @@ var (
 		b.Left = "┤"
 		return titleStyle.BorderStyle(b)
 	}()
-	colorMap = map[string]lipgloss.Color{}
-	colors   = []string{"#FF5F87", "#FFF700", "#00FF00", "#00FFFF", "#FF00FF", "#8A2BE2", "#FFA500"}
-	colorIdx = 0
 )
 
 func getColor(service string) lipgloss.Color {
-	if c, ok := colorMap[service]; ok {
-		return c
-	}
-	colorMap[service] = lipgloss.Color(colors[colorIdx%len(colors)])
-	colorIdx++
-	return colorMap[service]
+	return defaultColorPicker.Color(service)
 }
 
 type Model struct {

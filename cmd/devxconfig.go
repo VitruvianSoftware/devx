@@ -179,6 +179,24 @@ type DevxConfigServiceCloudRun struct {
 	Flags                []string          `yaml:"flags,omitempty"`                 // extra `gcloud run deploy` flags (escape hatch)
 }
 
+// DevxConfigContainerBuild describes how to build a runtime: container image
+// from a local build context (compose-style `build:`). Reuses the same shape as
+// kubernetes.images but without a Name (the image is local, tagged after the service).
+type DevxConfigContainerBuild struct {
+	Context    string   `yaml:"context,omitempty"`    // build context dir (default ".")
+	Dockerfile string   `yaml:"dockerfile,omitempty"` // Dockerfile path relative to context (default "Dockerfile")
+	Tag        string   `yaml:"tag,omitempty"`        // image tag (default "dev")
+	Platforms  []string `yaml:"platforms,omitempty"`  // target platforms; empty = builder default
+}
+
+// DevxConfigServiceContainer defines a runtime: container service — a long-lived
+// container devx runs in the VM. Exactly one of Image or Build must be set.
+type DevxConfigServiceContainer struct {
+	Image string                    `yaml:"image,omitempty"` // pre-built image to run (mutually exclusive with build)
+	Build *DevxConfigContainerBuild `yaml:"build,omitempty"` // build from local context (mutually exclusive with image)
+	Args  []string                  `yaml:"args,omitempty"`  // extra flags appended to `<runtime> run`
+}
+
 // DevxConfigService defines a developer application in devx.yaml.
 type DevxConfigService struct {
 	Name            string                            `yaml:"name"`
@@ -194,7 +212,9 @@ type DevxConfigService struct {
 	BridgeIntercept *DevxConfigServiceBridgeIntercept `yaml:"bridge_intercept,omitempty"` // Idea 46.3: inline intercept
 	Kubernetes      *DevxConfigServiceKubernetes      `yaml:"kubernetes,omitempty"`       // runtime: kubernetes deploy spec
 	CloudRun        *DevxConfigServiceCloudRun        `yaml:"cloud_run,omitempty"`        // runtime: cloud (Cloud Run) deploy spec
+	Container       *DevxConfigServiceContainer       `yaml:"container,omitempty"`        // runtime: container deploy spec
 	Dir             string                            `yaml:"-"`                          // Internal: working directory (set by include resolver)
+	Logs            *bool                             `yaml:"logs,omitempty"`             // per-service log-streaming opt-in (overrides top-level)
 }
 
 // DevxConfigProfile defines a named overlay that merges additively onto the base config.
@@ -327,6 +347,7 @@ type DevxConfig struct {
 	State         *DevxConfigState                  `yaml:"state"`         // State replication settings (Idea 56)
 	Telemetry     *DevxConfigTelemetry              `yaml:"telemetry"`     // Telemetry export endpoints
 	Cron          []DevxConfigCron                  `yaml:"cron"`          // Named cron jobs runnable via `devx cron run` (Idea 66)
+	Logs          *bool                             `yaml:"logs,omitempty"`          // default log-streaming opt-in for all services
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────
