@@ -413,6 +413,11 @@ var upCmd = &cobra.Command{
 			}
 			fmt.Printf("\n✅ All services are running and healthy.\n")
 
+			// Show the developer exactly what to hit: the forwarded service URLs.
+			if summary := dag.AccessSummary(); summary != "" {
+				fmt.Print(summary)
+			}
+
 			// Idea 46.3: Generate bridge.env for devx shell after all bridge services are healthy
 			if err := dag.WriteBridgeEnvFile(); err != nil {
 				_, _ = fmt.Fprintf(os.Stderr, "⚠️  Could not write bridge.env: %v\n", err)

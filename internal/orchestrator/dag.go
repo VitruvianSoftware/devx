@@ -185,6 +185,7 @@ type Node struct {
 
 	// Runtime state for kubernetes port-forward discovery (stops forwards on shutdown)
 	pfCancel context.CancelFunc
+	forwards []activeForward // active port-forwards, surfaced in the access summary
 
 	// Runtime state
 	process     *exec.Cmd
@@ -301,6 +302,7 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 	var startedNodes []*Node
 
 	cleanupFn := func() {
+		tornDown := false
 		for i := len(startedNodes) - 1; i >= 0; i-- {
 			n := startedNodes[i]
 
@@ -317,10 +319,16 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				n.pfCancel()
 			}
 			if n.kubeApplied != nil {
+				// deleteKubernetesNode prints the removed resources (formatTeardown).
 				deleteKubernetesNode(n)
+				if len(n.forwards) > 0 {
+					fmt.Println("     🔌 port-forwards stopped")
+				}
+				tornDown = true
 			}
 			if n.crDeployed != nil {
 				deleteCloudRunNode(n)
+				tornDown = true
 			}
 
 			if n.cancel != nil {
@@ -329,6 +337,9 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			if n.process != nil && n.process.Process != nil {
 				_ = n.process.Process.Kill()
 			}
+		}
+		if tornDown {
+			fmt.Println("✅ Teardown complete.")
 		}
 	}
 
