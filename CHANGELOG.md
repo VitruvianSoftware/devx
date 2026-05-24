@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.56.0](https://github.com/VitruvianSoftware/devx/compare/v0.55.0...v0.56.0) (2026-05-24)
+
+
+### Features
+
+* **up:** opt-in log streaming across runtimes + container deployer ([#224](https://github.com/VitruvianSoftware/devx/issues/224)) ([27a9820](https://github.com/VitruvianSoftware/devx/commit/27a98200cf6799b96938b1f95ad288056268a6e1))
+
+
+### Bug Fixes
+
+* **docs:** exclude superpowers/ design specs from VitePress build ([#226](https://github.com/VitruvianSoftware/devx/issues/226)) ([72d5430](https://github.com/VitruvianSoftware/devx/commit/72d5430794120e95658f24ab53a891dfaf4d0151))
+
 ## [0.55.0](https://github.com/VitruvianSoftware/devx/compare/v0.54.0...v0.55.0) (2026-05-24)
 
 
