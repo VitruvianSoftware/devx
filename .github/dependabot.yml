@@ -20,14 +20,16 @@
 
 # Dependabot configuration for the devx repo.
 #
-# Three ecosystems are watched:
-#   1. gomod    — the main Go module (root)
-#   2. github-actions — every workflow under .github/workflows/
-#   3. npm      — the VitePress docs site (docs/)
+# Two ecosystems are watched HERE:
+#   1. github-actions — every workflow under .github/workflows/
+#   2. npm            — the VitePress docs site (docs/)
+# Go modules (gomod) are NOT watched here — they are centralized in the
+# vitruvian-core monorepo's root .github/dependabot.yml and fan out to this repo
+# via the Copybara export (see docs/copybara-bidi-sync.md).
 #
 # Strategy:
 #   - Minor + patch updates are grouped into a single weekly PR per ecosystem,
-#     so we get at most 3 grouped PRs/week (one per ecosystem) plus
+#     so we get at most 2 grouped PRs/week (one per ecosystem) plus
 #     individual PRs for any major-version bumps that need human review.
 #   - Commit messages use Conventional Commits style (chore(deps): ...) so
 #     release-please correctly categorises them and they don't pollute the
