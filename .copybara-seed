@@ -1,0 +1,3 @@
+Transient Copybara baseline-seed marker. Added in the monorepo and removed via
+the standalone so each sync direction has a real migration to anchor its rev-id
+baseline. This file is deleted again by the end of seeding.
