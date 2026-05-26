@@ -1,0 +1,34 @@
+name: Notify monorepo of changes
+
+# On push to main, mint a short-lived token from the vitruvian-copybara-sync
+# GitHub App and fire a repository_dispatch (devx-import) into
+# VitruvianSoftware/vitruvian-core, which triggers its Copybara import workflow.
+# This is the only Copybara-related machinery the standalone repo carries; the
+# Copybara config + sync workflows live centrally in vitruvian-core.
+on:
+    push:
+        branches: [main]
+
+# The workflow's own GITHUB_TOKEN is unused; the dispatch is authed by the App token.
+permissions: {}
+
+concurrency:
+    group: dispatch-to-monorepo
+    cancel-in-progress: false
+
+jobs:
+    dispatch:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Mint dispatch token from GitHub App
+              id: app-token
+              uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+              with:
+                app-id: ${{ secrets.DEVX_DISPATCH_APP_ID }}
+                private-key: ${{ secrets.DEVX_DISPATCH_APP_PRIVATE_KEY }}
+                owner: VitruvianSoftware
+                repositories: vitruvian-core
+            - name: repository_dispatch to vitruvian-core
+              env:
+                GH_TOKEN: ${{ steps.app-token.outputs.token }}
+              run: gh api -X POST repos/VitruvianSoftware/vitruvian-core/dispatches -f event_type=devx-import
