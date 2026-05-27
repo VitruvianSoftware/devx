@@ -42,7 +42,7 @@ jobs:
 
       - name: Check license headers
         run: |
-          go install github.com/google/addlicense@latest
+          go install github.com/google/addlicense@v1.2.0
           addlicense -check -c "VitruvianSoftware" -l mit -ignore "docs/**" -ignore "internal/scaffold/templates/**" .
 
       - name: golangci-lint
