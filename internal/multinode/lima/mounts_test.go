@@ -154,3 +154,30 @@ func TestMountsRewriteScript(t *testing.T) {
 		t.Errorf("opt-out script should append no mounts, got:\n%s", empty)
 	}
 }
+
+func TestGenerateConfig_Mounts(t *testing.T) {
+	m := &Manager{node: config.NodeConfig{VM: config.VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}}, vmName: "k8s-node"}
+
+	t.Run("default home mount when nil", func(t *testing.T) {
+		out := m.GenerateConfig("/sock", true, nil)
+		for _, want := range []string{`mountType: "virtiofs"`, "mounts:", `- location: "~"`, "writable: true"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("GenerateConfig missing %q in:\n%s", want, out)
+			}
+		}
+	})
+
+	t.Run("opt-out renders no mounts block", func(t *testing.T) {
+		out := m.GenerateConfig("/sock", true, []config.MountConfig{})
+		if strings.Contains(out, "mounts:") || strings.Contains(out, "mountType:") {
+			t.Errorf("opt-out should render no mounts/mountType, got:\n%s", out)
+		}
+	})
+
+	t.Run("docker socket still rendered alongside mounts", func(t *testing.T) {
+		out := m.GenerateConfig("/sock", true, nil)
+		if !strings.Contains(out, "/var/run/docker.sock") {
+			t.Errorf("expected docker portForward, got:\n%s", out)
+		}
+	})
+}

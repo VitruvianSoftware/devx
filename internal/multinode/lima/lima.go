@@ -99,9 +99,11 @@ func (m *Manager) Status(ctx context.Context) (VMStatus, error) {
 	return VMStatusNotCreated, nil
 }
 
-// GenerateConfig returns the Lima YAML config for this node.
-func (m *Manager) GenerateConfig(socketPath string, dockerEnabled bool) string {
-	config := fmt.Sprintf(`vmType: "vz"
+// GenerateConfig returns the Lima YAML config for this node. mounts is the raw
+// cluster mount set; it is resolved via ResolveMounts (nil -> default home mount,
+// empty -> none).
+func (m *Manager) GenerateConfig(socketPath string, dockerEnabled bool, mounts []config.MountConfig) string {
+	cfg := fmt.Sprintf(`vmType: "vz"
 images:
   - location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
     arch: "aarch64"
@@ -114,21 +116,23 @@ networks:
   - socket: "%s"
 `, m.node.VM.CPUs, m.node.VM.Memory, m.node.VM.Disk, socketPath)
 
+	cfg += renderMounts(ResolveMounts(mounts))
+
 	if dockerEnabled {
-		config += `portForwards:
+		cfg += `portForwards:
   - guestSocket: "/var/run/docker.sock"
     hostSocket: "{{.Dir}}/sock/docker.sock"
 `
 	}
 
-	config += fmt.Sprintf(`provision:
+	cfg += fmt.Sprintf(`provision:
   - mode: system
     script: |
       #!/bin/bash
       apt-get update -qq && apt-get install -y -qq %s
 `, NodePackages)
 	if dockerEnabled {
-		config += `      curl -fsSL https://get.docker.com | sh
+		cfg += `      curl -fsSL https://get.docker.com | sh
       # Add all interactive users (UID >= 1000 or UID == 501) to the docker group
       for u in $(awk -F: '$3 >= 1000 || $3 == 501 {print $1}' /etc/passwd); do
         usermod -aG docker "$u" || true
@@ -136,11 +140,11 @@ networks:
 `
 	}
 
-	return config
+	return cfg
 }
 
 // Provision creates and starts the Lima VM on the remote host.
-func (m *Manager) Provision(ctx context.Context, dockerEnabled bool) error {
+func (m *Manager) Provision(ctx context.Context, dockerEnabled bool, mounts []config.MountConfig) error {
 	status, err := m.Status(ctx)
 	if err != nil && status != VMStatusNotCreated {
 		return err
@@ -169,7 +173,7 @@ func (m *Manager) Provision(ctx context.Context, dockerEnabled bool) error {
 
 		// Write the config file to the remote host via base64 to avoid
 		// shell quoting issues with multiline content.
-		limaConfig := m.GenerateConfig(socketPath, dockerEnabled)
+		limaConfig := m.GenerateConfig(socketPath, dockerEnabled, mounts)
 		configPath := fmt.Sprintf("~/%s.yaml", m.vmName)
 		encoded := util.Base64Encode(limaConfig)
 		_, err = m.runner.Run(ctx, fmt.Sprintf("echo %s | base64 -d > %s", encoded, configPath))

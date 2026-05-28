@@ -84,7 +84,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 			runner := util.NewRunner(node)
 			mgr := lima.NewManager(runner, node)
 
-			if err := mgr.Provision(gctx, cfg.Cluster.Docker.Enabled); err != nil {
+			if err := mgr.Provision(gctx, cfg.Cluster.Docker.Enabled, cfg.Cluster.Mounts); err != nil {
 				return fmt.Errorf("[%s] provisioning VM: %w", node.Host, err)
 			}
 
@@ -287,7 +287,7 @@ func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 		}
 
 		// Ensure VM is provisioned.
-		if err := limaMgr.Provision(ctx, cfg.Cluster.Docker.Enabled); err != nil {
+		if err := limaMgr.Provision(ctx, cfg.Cluster.Docker.Enabled, cfg.Cluster.Mounts); err != nil {
 			return fmt.Errorf("[%s] provisioning: %w", node.Host, err)
 		}
 
