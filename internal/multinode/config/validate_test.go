@@ -20,7 +20,10 @@
 
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestValidate_Valid(t *testing.T) {
 	cfg := &Config{
@@ -178,5 +181,22 @@ func TestValidate_ZeroCPUs(t *testing.T) {
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("expected error for zero CPUs")
+	}
+}
+
+func TestValidate_EmptyMountLocation(t *testing.T) {
+	cfg := &Config{
+		Cluster: ClusterConfig{Name: "test"},
+		Nodes: []NodeConfig{
+			{Host: "a", Role: "server", Pool: "p1", VM: VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}},
+			{Host: "b", Role: "server", Pool: "p2", VM: VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}},
+			{Host: "c", Role: "server", Pool: "p3", VM: VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}},
+			{Host: "d", Role: "agent", Pool: "p4", VM: VMConfig{CPUs: 4, Memory: "8GiB", Disk: "50GiB"}},
+		},
+	}
+	cfg.Cluster.Mounts = []MountConfig{{Location: ""}}
+	err := cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "location") {
+		t.Fatalf("want error mentioning mount location, got %v", err)
 	}
 }
