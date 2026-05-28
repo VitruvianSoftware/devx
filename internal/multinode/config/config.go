@@ -44,7 +44,7 @@ type ClusterConfig struct {
 	MetalLB    MetalLBConfig   `yaml:"metallb"`
 	Tailscale  TailscaleConfig `yaml:"tailscale"`
 	Docker     DockerConfig    `yaml:"docker"`
-	Mounts     []MountConfig   `yaml:"mounts,omitempty"`
+	Mounts     []MountConfig   `yaml:"mounts"`
 }
 
 // TailscaleConfig holds configuration for Tailscale networking.
