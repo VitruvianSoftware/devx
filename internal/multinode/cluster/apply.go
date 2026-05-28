@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/multinode/config"
@@ -32,24 +33,27 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/multinode/util"
 )
 
-// Apply iterates over all nodes in the cluster, gracefully rolling updates
-// to VM configurations (CPUs, Memory) one at a time to ensure zero downtime.
-func Apply(ctx context.Context, cfg *config.Config, dryRun bool) error {
+// Apply iterates over all nodes, rolling VM config changes (CPUs, Memory, Disk,
+// and host mounts) one node at a time for zero downtime. A node is only
+// restarted when its live lima.yaml differs from the desired config, and the
+// destructive cycle is gated behind a confirmation unless nonInteractive is set.
+func Apply(ctx context.Context, cfg *config.Config, nonInteractive, dryRun bool) error {
 	slog.Info("applying rolling updates to cluster", "name", cfg.Cluster.Name, "dry_run", dryRun)
 
-	// We need the initNode to communicate with the control plane (for drain/uncordon).
 	initNode := cfg.InitNode()
 	initRunner := util.NewRunner(initNode)
 	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
 
-	// Wait for the cluster to be reachable first.
 	if err := initK3s.WaitForReady(ctx, 30*time.Second); err != nil {
 		return fmt.Errorf("control plane not reachable on %s: %w", initNode.Host, err)
 	}
 
+	desiredMounts := lima.ResolveMounts(cfg.Cluster.Mounts)
+
 	for _, node := range cfg.Nodes {
 		runner := util.NewRunner(node)
 		limaMgr := lima.NewManager(runner, node)
+		vm := node.GetVMName()
 
 		status, err := limaMgr.Status(ctx)
 		if err != nil || status == lima.VMStatusNotCreated {
@@ -57,63 +61,91 @@ func Apply(ctx context.Context, cfg *config.Config, dryRun bool) error {
 			continue
 		}
 
-		// Inspect current VM config.
-		// Use jq on the limactl list --json output. (Fallback to string extraction if jq isn't present,
-		// but since we are executing on the remote, it's easier to use a simple awk/grep or just python).
-		// Wait, Lima provides limactl list --json. We can extract cpus and memory natively in go!
-		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl list %s --json", node.GetVMName()))
+		// Read the live lima.yaml (the file devx itself wrote) and diff.
+		liveYAML, err := runner.RunShell(ctx, fmt.Sprintf("cat ~/.lima/%s/lima.yaml", vm))
 		if err != nil {
-			return fmt.Errorf("[%s] fetching lima properties: %w", node.Host, err)
+			return fmt.Errorf("[%s] reading lima.yaml: %w", node.Host, err)
+		}
+		spec, err := lima.ParseSpec(liveYAML)
+		if err != nil {
+			return fmt.Errorf("[%s] parsing lima.yaml: %w", node.Host, err)
 		}
 
-		slog.Info("node hardware config differs from requested config", "host", node.Host, "cpus", node.VM.CPUs, "memory", node.VM.Memory, "disk", node.VM.Disk)
-		fmt.Printf("\n🔄 Applying update to %s...\n", node.Host)
-		if dryRun {
-			fmt.Printf("  [DRY RUN] Would drain %s, stop VM, update CPUs/Memory/Disk to %d/%s/%s, and restart.\n", node.Host, node.VM.CPUs, node.VM.Memory, node.VM.Disk)
+		hwChanged := spec.CPUs != node.VM.CPUs || spec.Memory != node.VM.Memory || spec.Disk != node.VM.Disk
+		mountsChanged := !lima.MountsEqual(spec.Mounts, desiredMounts)
+
+		if !hwChanged && !mountsChanged {
+			fmt.Printf("  [%s] up to date, skipping\n", node.Host)
 			continue
 		}
 
-		// Step 1: Drain the node gracefully from the control plane.
+		fmt.Printf("\n🔄 Changes for %s:\n", node.Host)
+		if hwChanged {
+			fmt.Printf("    hardware: cpus=%d memory=%s disk=%s\n", node.VM.CPUs, node.VM.Memory, node.VM.Disk)
+		}
+		if mountsChanged {
+			fmt.Printf("    mounts:   %d configured (was %d)\n", len(desiredMounts), len(spec.Mounts))
+		}
+
+		if dryRun {
+			fmt.Printf("  [DRY RUN] Would drain %s, stop the VM, apply the above, and restart.\n", node.Host)
+			continue
+		}
+
+		if !nonInteractive {
+			fmt.Printf("  ⚠️  Applying restarts the VM and briefly disrupts Kubernetes on %s. Continue? [y/N] ", node.Host)
+			var confirm string
+			if _, err := fmt.Scanln(&confirm); err != nil || strings.ToLower(confirm) != "y" {
+				fmt.Printf("  [%s] Skipped.\n", node.Host)
+				continue
+			}
+		}
+
+		// Step 1: Drain.
 		fmt.Printf("  [%s] Draining Kubernetes node...\n", node.Host)
 		if err := initK3s.DrainNode(ctx, node.Host); err != nil {
 			slog.Warn("drain failed, but proceeding", "host", node.Host, "error", err)
 		}
 
-		// Step 2: Stop the Lima VM.
+		// Step 2: Stop.
 		fmt.Printf("  [%s] Stopping VM...\n", node.Host)
-		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl stop %s", node.GetVMName()))
-		if err != nil {
+		if _, err = runner.RunShell(ctx, fmt.Sprintf("limactl stop %s", vm)); err != nil {
 			return fmt.Errorf("[%s] stopping VM: %w", node.Host, err)
 		}
 
-		// Step 3: Apply the new limits to lima.yaml.
-		// We use standard sed. By modifying lima.yaml directly we avoid touching unmanaged nested settings.
-		fmt.Printf("  [%s] Applying new hardware limits (CPU=%d, Memory=%s, Disk=%s)...\n", node.Host, node.VM.CPUs, node.VM.Memory, node.VM.Disk)
-		sedCmd := fmt.Sprintf("sed -i.bak -e 's/^cpus: .*/cpus: %d/' -e 's/^memory: .*/memory: \"%s\"/' -e 's/^disk: .*/disk: \"%s\"/' ~/.lima/%s/lima.yaml",
-			node.VM.CPUs, node.VM.Memory, node.VM.Disk, node.GetVMName())
-		_, err = runner.RunShell(ctx, sedCmd)
-		if err != nil {
-			return fmt.Errorf("[%s] updating lima.yaml: %w", node.Host, err)
+		// Step 3a: Hardware limits (unchanged sed approach).
+		if hwChanged {
+			fmt.Printf("  [%s] Applying hardware limits (CPU=%d, Memory=%s, Disk=%s)...\n", node.Host, node.VM.CPUs, node.VM.Memory, node.VM.Disk)
+			sedCmd := fmt.Sprintf("sed -i.bak -e 's/^cpus: .*/cpus: %d/' -e 's/^memory: .*/memory: \"%s\"/' -e 's/^disk: .*/disk: \"%s\"/' ~/.lima/%s/lima.yaml",
+				node.VM.CPUs, node.VM.Memory, node.VM.Disk, vm)
+			if _, err = runner.RunShell(ctx, sedCmd); err != nil {
+				return fmt.Errorf("[%s] updating lima.yaml hardware: %w", node.Host, err)
+			}
+			fmt.Printf("  [%s] Resizing VM disk...\n", node.Host)
+			if _, err = runner.RunShell(ctx, fmt.Sprintf("limactl disk resize %s --size %s", vm, node.VM.Disk)); err != nil {
+				slog.Warn("disk resize failed", "host", node.Host, "error", err)
+			}
 		}
-		// Step 3.5: Resize disk using limactl disk resize if needed
-		fmt.Printf("  [%s] Resizing VM disk...\n", node.Host)
-		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl disk resize %s --size %s", node.GetVMName(), node.VM.Disk))
-		if err != nil {
-			// Don't fail the whole update just because disk resize failed (might not be supported on all versions)
-			slog.Warn("disk resize failed", "host", node.Host, "error", err)
+
+		// Step 3b: Mounts (base64-piped script to avoid quoting issues).
+		if mountsChanged {
+			fmt.Printf("  [%s] Applying host mounts...\n", node.Host)
+			script := lima.MountsRewriteScript(vm, desiredMounts)
+			cmd := fmt.Sprintf("echo %s | base64 -d | bash", util.Base64Encode(script))
+			if _, err = runner.RunShell(ctx, cmd); err != nil {
+				return fmt.Errorf("[%s] rewriting lima.yaml mounts: %w", node.Host, err)
+			}
 		}
-		// Step 4: Start the VM.		fmt.Printf("  [%s] Restarting VM...\n", node.Host)
-		_, err = runner.RunShell(ctx, fmt.Sprintf("limactl start %s", node.GetVMName()))
-		if err != nil {
+
+		// Step 4: Restart.
+		fmt.Printf("  [%s] Restarting VM...\n", node.Host)
+		if _, err = runner.RunShell(ctx, fmt.Sprintf("limactl start %s", vm)); err != nil {
 			return fmt.Errorf("[%s] starting VM: %w", node.Host, err)
 		}
 
-		// Wait for K3s to become active again on the node.
-		// We can poll the API server.
+		// Step 5: Wait + uncordon.
 		fmt.Printf("  [%s] Waiting for Kubernetes node to become ready...\n", node.Host)
-		time.Sleep(10 * time.Second) // generous startup buffer
-
-		// Step 5: Uncordon the node.
+		time.Sleep(10 * time.Second)
 		fmt.Printf("  [%s] Uncordoning node...\n", node.Host)
 		if err := initK3s.UncordonNode(ctx, node.Host); err != nil {
 			return fmt.Errorf("[%s] uncordoning node: %w", node.Host, err)
