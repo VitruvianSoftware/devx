@@ -78,3 +78,79 @@ func TestRenderMounts(t *testing.T) {
 		}
 	})
 }
+
+func TestParseSpec(t *testing.T) {
+	y := `vmType: "vz"
+cpus: 2
+memory: "4GiB"
+disk: "30GiB"
+mountType: "virtiofs"
+mounts:
+  - location: "~"
+    writable: true
+networks:
+  - socket: "/x"
+`
+	spec, err := ParseSpec(y)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.CPUs != 2 || spec.Memory != "4GiB" || spec.Disk != "30GiB" {
+		t.Fatalf("hw mismatch: %#v", spec)
+	}
+	if len(spec.Mounts) != 1 || spec.Mounts[0].Location != "~" || !spec.Mounts[0].Writable {
+		t.Fatalf("mounts mismatch: %#v", spec.Mounts)
+	}
+}
+
+func TestParseSpec_NoMounts(t *testing.T) {
+	spec, err := ParseSpec("cpus: 1\nmemory: \"2GiB\"\ndisk: \"10GiB\"\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(spec.Mounts) != 0 {
+		t.Fatalf("want no mounts, got %#v", spec.Mounts)
+	}
+}
+
+func TestMountsEqual(t *testing.T) {
+	home := []config.MountConfig{{Location: "~", Writable: true}}
+	cases := []struct {
+		name string
+		a, b []config.MountConfig
+		want bool
+	}{
+		{"both empty", nil, []config.MountConfig{}, true},
+		{"equal home", home, []config.MountConfig{{Location: "~", Writable: true}}, true},
+		{"empty mountPoint normalizes", []config.MountConfig{{Location: "/x"}}, []config.MountConfig{{Location: "/x", MountPoint: "/x"}}, true},
+		{"missing on live side", []config.MountConfig{}, home, false},
+		{"writable differs", []config.MountConfig{{Location: "~"}}, home, false},
+		{"length differs", home, append(home, config.MountConfig{Location: "/y"}), false},
+	}
+	for _, c := range cases {
+		if got := MountsEqual(c.a, c.b); got != c.want {
+			t.Errorf("%s: MountsEqual = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestMountsRewriteScript(t *testing.T) {
+	s := MountsRewriteScript("k8s-node", ResolveMounts(nil))
+	for _, want := range []string{
+		"cd ~/.lima/k8s-node",
+		"/^mounts:/ { inblock=1; next }",
+		"/^mountType:/ { next }",
+		"lima.yaml.devx.tmp",
+		`mountType: "virtiofs"`,
+		`- location: "~"`,
+		"mv lima.yaml.devx.tmp lima.yaml",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("MountsRewriteScript missing %q in:\n%s", want, s)
+		}
+	}
+	empty := MountsRewriteScript("k8s-node", []config.MountConfig{})
+	if strings.Contains(empty, "location:") {
+		t.Errorf("opt-out script should append no mounts, got:\n%s", empty)
+	}
+}
