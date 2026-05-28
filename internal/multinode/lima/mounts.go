@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Package lima — mount handling: resolving the configured mount set, rendering
-// it into lima.yaml, parsing it back, and producing a script to reconcile it on
-// an existing VM.
+// Mount handling for the lima package: resolving the configured mount set,
+// rendering it into lima.yaml, parsing it back, and producing a script to
+// reconcile it on an existing VM.
 package lima
 
 import (
@@ -132,16 +132,17 @@ func MountsEqual(a, b []config.MountConfig) bool {
 // and `mounts:` block in ~/.lima/<vmName>/lima.yaml with the rendered desired
 // set, leaving all other keys untouched. It is base64-piped to the host to avoid
 // quoting issues (see Provision). An empty mount set strips the block entirely.
+// The mount type is always (re)set to DefaultMountType.
 func MountsRewriteScript(vmName string, mounts []config.MountConfig) string {
 	block := renderMounts(mounts)
 	// awk drops the existing mountType: line and the entire mounts: block (the
-	// `mounts:` line plus its indented list items, which end at the next
-	// top-level key starting in column 0).
+	// `mounts:` line plus its indented list items), ending the block at the next
+	// top-level mapping key (a letter in column 0).
 	return fmt.Sprintf(`set -e
 cd ~/.lima/%s
 awk '
 /^mounts:/ { inblock=1; next }
-inblock && /^[^[:space:]-]/ { inblock=0 }
+inblock && /^[a-zA-Z]/ { inblock=0 }
 inblock { next }
 /^mountType:/ { next }
 { print }
