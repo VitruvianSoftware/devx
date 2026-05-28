@@ -44,6 +44,7 @@ type ClusterConfig struct {
 	MetalLB    MetalLBConfig   `yaml:"metallb"`
 	Tailscale  TailscaleConfig `yaml:"tailscale"`
 	Docker     DockerConfig    `yaml:"docker"`
+	Mounts     []MountConfig   `yaml:"mounts,omitempty"`
 }
 
 // TailscaleConfig holds configuration for Tailscale networking.
@@ -61,6 +62,19 @@ type MetalLBConfig struct {
 // DockerConfig holds configuration for Docker runtime integration.
 type DockerConfig struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+// MountConfig describes a host directory shared into the cluster VMs so that
+// containers launched by the in-VM Docker daemon (e.g. devcontainers) can see
+// host source files at the same path.
+//
+// Default-vs-opt-out is decided by presence: an omitted `mounts:` key
+// (nil slice) defaults to the host home dir; an explicit `mounts: []` opts out.
+// See lima.ResolveMounts.
+type MountConfig struct {
+	Location   string `yaml:"location"`             // host path; "~" is allowed and expanded on the target host
+	MountPoint string `yaml:"mountPoint,omitempty"` // guest path; defaults to the same path as Location
+	Writable   bool   `yaml:"writable,omitempty"`   // default false; the injected home-default sets this true
 }
 
 // NodeConfig describes a single node in the cluster.
