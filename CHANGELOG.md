@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.0](https://github.com/VitruvianSoftware/devx/compare/v0.57.0...v0.58.0) (2026-05-29)
+
+
+### Features
+
+* **config:** inject KUBECONFIG into run/action child commands from devx.yaml ([#231](https://github.com/VitruvianSoftware/devx/issues/231)) ([dc53dba](https://github.com/VitruvianSoftware/devx/commit/dc53dba6f497dec847c3064f83900fc4a02025a6))
+
+
+### Bug Fixes
+
+* **agent:** handle already-committed branches in review/ship ([#230](https://github.com/VitruvianSoftware/devx/issues/230)) ([227addf](https://github.com/VitruvianSoftware/devx/commit/227addff76957e72e30a8d12a7a86b33aa2d18e1))
+
 ## [0.57.0](https://github.com/VitruvianSoftware/devx/compare/v0.56.0...v0.57.0) (2026-05-29)
 
 
