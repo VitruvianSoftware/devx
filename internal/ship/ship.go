@@ -425,17 +425,51 @@ func runAutoDetectedPipeline(dir string, verbose bool) (*PreFlightResult, error)
 	return result, nil
 }
 
-// GitPush stages, commits, and pushes to a feature branch using --no-verify
-// to bypass our own pre-push hook.
-func GitPush(dir, commitMsg, branch string) error {
-	// Stage all changes
+// commitAll stages and commits all working-tree changes if there are any. It is
+// a no-op on a clean tree, so a branch whose work is already committed is pushed
+// as-is rather than getting an empty/duplicate commit.
+func commitAll(dir, commitMsg string) error {
+	if !HasStagedChanges(dir) {
+		return nil
+	}
 	if err := runCmd(dir, []string{"git", "add", "-A"}, false); err != nil {
 		return fmt.Errorf("git add: %w", err)
 	}
-
-	// Commit
 	if err := runCmd(dir, []string{"git", "commit", "-m", commitMsg}, false); err != nil {
 		return fmt.Errorf("git commit: %w", err)
+	}
+	return nil
+}
+
+// HasUnpushedCommits reports whether the current branch has commits that are not
+// present on baseRef (e.g. "origin/main"). This lets review/ship recognize
+// already-committed work that still needs pushing even when the working tree is
+// clean. Returns false if the comparison can't be made (e.g. baseRef missing).
+func HasUnpushedCommits(dir, baseRef string) bool {
+	out, err := runCmdOutput(dir, []string{"git", "rev-list", "--count", baseRef + "..HEAD"})
+	if err != nil {
+		return false
+	}
+	n := strings.TrimSpace(out)
+	return n != "" && n != "0"
+}
+
+// LatestCommitMessage returns the full message (subject + body) of HEAD's most
+// recent commit, trimmed. Used to derive a PR title/body for an already-committed
+// branch where there's no working-tree diff to summarize.
+func LatestCommitMessage(dir string) (string, error) {
+	out, err := runCmdOutput(dir, []string{"git", "log", "-1", "--pretty=%B"})
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// GitPush commits any working-tree changes (no-op if already committed) and
+// pushes to a feature branch using --no-verify to bypass our own pre-push hook.
+func GitPush(dir, commitMsg, branch string) error {
+	if err := commitAll(dir, commitMsg); err != nil {
+		return err
 	}
 
 	// Push with --no-verify to bypass our own pre-push hook
