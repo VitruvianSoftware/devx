@@ -95,29 +95,44 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		return installShipHook()
 	}
 
-	// Auto-generate commit message via AI if -m is not provided
-	if shipCommitMsg == "" {
-		generated, err := generateCommitMessage()
-		if err != nil {
-			return fmt.Errorf("commit message is required: devx agent ship -m \"your message\"\n  (auto-generate failed: %v)", err)
-		}
-		shipCommitMsg = generated
-	}
-
 	cwd, _ := os.Getwd()
 	result := &ship.Result{Phase: "init"}
 
+	if shipBaseBranch == "" {
+		shipBaseBranch = "main"
+	}
+
 	// ── Phase 0: Check for changes ──────────────────────────────────────
-	if !ship.HasStagedChanges(cwd) {
+	// Shippable work is either uncommitted changes OR commits already on this
+	// branch that aren't on origin/<base> yet (an already-committed branch).
+	hasUncommitted := ship.HasStagedChanges(cwd)
+	hasUnpushed := ship.HasUnpushedCommits(cwd, "origin/"+shipBaseBranch)
+	if !hasUncommitted && !hasUnpushed {
 		result.ExitCode = ship.ExitNothingToShip
 		result.Phase = "check"
-		result.Message = "nothing to ship — no uncommitted changes detected"
+		result.Message = "nothing to ship — no uncommitted changes or unpushed commits detected"
 		return exitWithResult(result)
 	}
 
 	branch := ship.CurrentBranch(cwd)
-	if shipBaseBranch == "" {
-		shipBaseBranch = "main"
+
+	// Resolve the commit/PR message. -m wins; otherwise generate from the diff
+	// when there are uncommitted changes, or reuse the latest commit's message
+	// for an already-committed branch (nothing to commit — just push + open PR).
+	if shipCommitMsg == "" {
+		if hasUncommitted {
+			generated, err := generateCommitMessage()
+			if err != nil {
+				return fmt.Errorf("commit message is required: devx agent ship -m \"your message\"\n  (auto-generate failed: %v)", err)
+			}
+			shipCommitMsg = generated
+		} else {
+			msg, err := ship.LatestCommitMessage(cwd)
+			if err != nil || strings.TrimSpace(msg) == "" {
+				return fmt.Errorf("could not derive a PR message from the latest commit (pass -m): %v", err)
+			}
+			shipCommitMsg = msg
+		}
 	}
 
 	if !outputJSON {
