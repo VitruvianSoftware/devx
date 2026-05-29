@@ -33,6 +33,15 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/multinode/util"
 )
 
+// nodeChanges reports whether a node's live lima.yaml spec differs from the
+// desired hardware (cpus/memory/disk) and/or the desired mount set. A node is
+// only restarted by Apply when at least one of these is true.
+func nodeChanges(spec lima.Spec, vm config.VMConfig, desiredMounts []config.MountConfig) (hwChanged, mountsChanged bool) {
+	hwChanged = spec.CPUs != vm.CPUs || spec.Memory != vm.Memory || spec.Disk != vm.Disk
+	mountsChanged = !lima.MountsEqual(spec.Mounts, desiredMounts)
+	return
+}
+
 // Apply iterates over all nodes, rolling VM config changes (CPUs, Memory, Disk,
 // and host mounts) one node at a time for zero downtime. A node is only
 // restarted when its live lima.yaml differs from the desired config, and the
@@ -71,8 +80,7 @@ func Apply(ctx context.Context, cfg *config.Config, nonInteractive, dryRun bool)
 			return fmt.Errorf("[%s] parsing lima.yaml: %w", node.Host, err)
 		}
 
-		hwChanged := spec.CPUs != node.VM.CPUs || spec.Memory != node.VM.Memory || spec.Disk != node.VM.Disk
-		mountsChanged := !lima.MountsEqual(spec.Mounts, desiredMounts)
+		hwChanged, mountsChanged := nodeChanges(spec, node.VM, desiredMounts)
 
 		if !hwChanged && !mountsChanged {
 			fmt.Printf("  [%s] up to date, skipping\n", node.Host)
