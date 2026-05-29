@@ -26,9 +26,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
+
+// snapshotDir is the directory where k3s writes etcd snapshots on a server node.
+const snapshotDir = "/var/lib/rancher/k3s/server/db/snapshots"
 
 // GetVersion returns the installed K3s version string.
 func (m *Manager) GetVersion(ctx context.Context) (string, error) {
@@ -93,19 +97,57 @@ func (m *Manager) UncordonNode(ctx context.Context, nodeName string) error {
 	return err
 }
 
-// CreateSnapshot creates an etcd snapshot and returns the snapshot name/path.
+// CreateSnapshot creates an etcd snapshot and returns the full path to the
+// resulting snapshot file on the remote VM.
 func (m *Manager) CreateSnapshot(ctx context.Context) (string, error) {
 	timestamp := time.Now().UTC().Format("20060102-150405")
 	snapshotName := fmt.Sprintf("cluster-snapshot-%s", timestamp)
 
 	slog.Info("creating etcd snapshot", "host", m.runner.Host, "name", snapshotName)
-	_, err := m.runner.LimaShellSudo(ctx, m.vmName,
-		fmt.Sprintf("k3s etcd-snapshot save --name %s", snapshotName))
+	if _, err := m.runner.LimaShellSudo(ctx, m.vmName,
+		fmt.Sprintf("k3s etcd-snapshot save --name %s", snapshotName)); err != nil {
+		return "", err
+	}
+
+	// k3s does not write a file named exactly snapshotName: it appends
+	// "-<node-name>-<unix-timestamp>" to the --name base (and ".zip" when
+	// compression is enabled). Resolve the real filename from the snapshot
+	// directory rather than assuming it, otherwise DownloadSnapshot reads a path
+	// that does not exist.
+	out, err := m.runner.LimaShellSudo(ctx, m.vmName,
+		fmt.Sprintf("ls -1 %s", snapshotDir))
+	if err != nil {
+		return "", fmt.Errorf("listing snapshots: %w", err)
+	}
+	fileName, err := findSnapshotFile(out, snapshotName)
 	if err != nil {
 		return "", err
 	}
 
-	return fmt.Sprintf("/var/lib/rancher/k3s/server/db/snapshots/%s", snapshotName), nil
+	return fmt.Sprintf("%s/%s", snapshotDir, fileName), nil
+}
+
+// findSnapshotFile returns the snapshot file name matching prefix from the
+// output of `ls -1 <snapshotDir>` (one file name per line). k3s appends
+// "-<node-name>-<unix-timestamp>" to the --name base (and ".zip" when
+// compression is enabled), so the on-disk file never equals the bare base
+// name. When more than one file matches (not expected, given the
+// second-resolution timestamp embedded in the base name), the
+// lexicographically greatest is returned, which corresponds to the most
+// recently written snapshot.
+func findSnapshotFile(lsOutput, prefix string) (string, error) {
+	var matches []string
+	for _, line := range strings.Split(lsOutput, "\n") {
+		name := strings.TrimSpace(line)
+		if name != "" && strings.HasPrefix(name, prefix) {
+			matches = append(matches, name)
+		}
+	}
+	if len(matches) == 0 {
+		return "", fmt.Errorf("no snapshot file matching prefix %q in %s", prefix, snapshotDir)
+	}
+	sort.Strings(matches)
+	return matches[len(matches)-1], nil
 }
 
 // DownloadSnapshot copies a snapshot from the remote VM to the local machine.
