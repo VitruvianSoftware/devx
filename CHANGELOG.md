@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.57.0](https://github.com/VitruvianSoftware/devx/compare/v0.56.0...v0.57.0) (2026-05-29)
+
+
+### Features
+
+* **cluster:** host workspace mounts for multi-node Lima VMs ([#227](https://github.com/VitruvianSoftware/devx/issues/227)) ([4803ca0](https://github.com/VitruvianSoftware/devx/commit/4803ca0a204923320a49e676a3484c8c64d523cf))
+
+
+### Bug Fixes
+
+* **agent:** steer agents to 'review' (open PR) vs 'ship' (merge) in push guardrail ([#228](https://github.com/VitruvianSoftware/devx/issues/228)) ([6afbaf3](https://github.com/VitruvianSoftware/devx/commit/6afbaf366fa7907bc264d62faae4656672cc09da))
+
 ## [0.56.0](https://github.com/VitruvianSoftware/devx/compare/v0.55.0...v0.56.0) (2026-05-24)
 
 
