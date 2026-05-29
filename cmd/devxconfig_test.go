@@ -23,6 +23,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -533,6 +534,90 @@ services:
 	if cfg.Services[0].BridgeTarget != nil || cfg.Services[0].BridgeIntercept != nil {
 		t.Error("non-bridge service should have nil bridge fields")
 	}
+}
+
+// TestResolveConfig_Kubeconfig verifies the top-level kubeconfig field parses.
+func TestResolveConfig_Kubeconfig(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: kc-proj
+kubeconfig: ~/.kube/cluster.yaml
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Kubeconfig != "~/.kube/cluster.yaml" {
+		t.Errorf("expected kubeconfig '~/.kube/cluster.yaml', got %q", cfg.Kubeconfig)
+	}
+}
+
+// findEnvVal returns the value of key within a KEY=VALUE environment slice.
+func findEnvVal(env []string, key string) (string, bool) {
+	prefix := key + "="
+	for _, e := range env {
+		if strings.HasPrefix(e, prefix) {
+			return strings.TrimPrefix(e, prefix), true
+		}
+	}
+	return "", false
+}
+
+// TestCommandEnv verifies KUBECONFIG injection precedence: a shell-provided
+// KUBECONFIG always wins, config injects only when the env is unset, and the
+// leading "~/" is expanded to the user's home directory.
+func TestCommandEnv(t *testing.T) {
+	orig, had := os.LookupEnv("KUBECONFIG")
+	t.Cleanup(func() {
+		if had {
+			_ = os.Setenv("KUBECONFIG", orig)
+		} else {
+			_ = os.Unsetenv("KUBECONFIG")
+		}
+	})
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir: %v", err)
+	}
+	wantExpanded := filepath.Join(home, ".kube", "cluster.yaml")
+
+	t.Run("nil config preserves shell KUBECONFIG", func(t *testing.T) {
+		_ = os.Setenv("KUBECONFIG", "/from/shell")
+		v, ok := findEnvVal(commandEnv(nil), "KUBECONFIG")
+		if !ok || v != "/from/shell" {
+			t.Fatalf("expected shell KUBECONFIG preserved, got %q (present=%v)", v, ok)
+		}
+	})
+
+	t.Run("injects expanded kubeconfig when env unset", func(t *testing.T) {
+		_ = os.Unsetenv("KUBECONFIG")
+		cfg := &DevxConfig{Kubeconfig: "~/.kube/cluster.yaml"}
+		v, ok := findEnvVal(commandEnv(cfg), "KUBECONFIG")
+		if !ok || v != wantExpanded {
+			t.Fatalf("expected KUBECONFIG=%q, got %q (present=%v)", wantExpanded, v, ok)
+		}
+	})
+
+	t.Run("shell KUBECONFIG wins over config", func(t *testing.T) {
+		_ = os.Setenv("KUBECONFIG", "/explicit/override")
+		cfg := &DevxConfig{Kubeconfig: "~/.kube/cluster.yaml"}
+		v, _ := findEnvVal(commandEnv(cfg), "KUBECONFIG")
+		if v != "/explicit/override" {
+			t.Fatalf("expected shell override to win, got %q", v)
+		}
+	})
+
+	t.Run("empty kubeconfig is a no-op", func(t *testing.T) {
+		_ = os.Unsetenv("KUBECONFIG")
+		if _, ok := findEnvVal(commandEnv(&DevxConfig{}), "KUBECONFIG"); ok {
+			t.Fatal("did not expect KUBECONFIG to be set")
+		}
+	})
 }
 
 func TestResolveConfig_ContainerRuntime_Image(t *testing.T) {

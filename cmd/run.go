@@ -88,6 +88,13 @@ Global flags are parsed before '--':
 
 		cwd, _ := os.Getwd()
 
+		// Resolve project config (best-effort) for env augmentation + telemetry.
+		// `devx run` may execute outside a devx project, so a missing config is fine.
+		var cfg *DevxConfig
+		if yamlPath, cfgErr := findDevxConfig(); cfgErr == nil {
+			cfg, _ = resolveConfig(yamlPath, "")
+		}
+
 		var outWriter, errWriter io.Writer
 		if logFile != nil {
 			outWriter = io.MultiWriter(os.Stdout, logFile)
@@ -108,6 +115,7 @@ Global flags are parsed before '--':
 			command.Stdout = outWriter
 			command.Stderr = errWriter
 			command.Stdin = os.Stdin
+			command.Env = commandEnv(cfg)
 
 			err = command.Start()
 			if err != nil {
@@ -137,10 +145,8 @@ Global flags are parsed before '--':
 
 		// ── Record telemetry ────────────────────────────────────────
 		projName := name
-		if yamlPath, cfgErr := findDevxConfig(); cfgErr == nil {
-			if cfg, err := resolveConfig(yamlPath, ""); err == nil && cfg.Name != "" {
-				projName = cfg.Name
-			}
+		if cfg != nil && cfg.Name != "" {
+			projName = cfg.Name
 		}
 
 		telemetry.RecordEvent("devx_run", duration,

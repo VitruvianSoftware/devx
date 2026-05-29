@@ -207,6 +207,7 @@ func runAction(_ *cobra.Command, args []string) error {
 		command.Stdout = outWriter
 		command.Stderr = errWriter
 		command.Stdin = os.Stdin
+		command.Env = commandEnv(cfg)
 
 		cmdStart := time.Now()
 		if err := command.Start(); err != nil {
