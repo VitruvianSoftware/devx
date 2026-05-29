@@ -53,6 +53,23 @@ cluster:
   docker:
     enabled: true
 
+  # Host directories shared into every VM. Containers launched by the in-VM
+  # Docker daemon (e.g. devcontainers) see these at the same path, so bind
+  # mounts of host paths resolve correctly.
+  #
+  # If this key is OMITTED, devx defaults to mounting the host home dir:
+  #     mounts:
+  #       - location: "~"
+  #         writable: true
+  # Set `mounts: []` to opt out entirely.
+  mounts:
+    - location: "~"        # host path; "~" expands on the target host and
+                           # mounts at the same path inside the guest
+      writable: true
+    # - location: "/data"
+    #   mountPoint: "/mnt/data"  # optional; defaults to the same path as location
+    #   writable: false
+
 
   # MetalLB provides LoadBalancer services on bare-metal/Lima setups.
   # The ipRange must be reachable on the LAN your nodes share — pick a

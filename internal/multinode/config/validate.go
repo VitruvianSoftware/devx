@@ -82,6 +82,12 @@ func (c *Config) Validate() error {
 		pools[n.Pool] = true
 	}
 
+	for i, m := range c.Cluster.Mounts {
+		if strings.TrimSpace(m.Location) == "" {
+			errs = append(errs, fmt.Sprintf("cluster.mounts[%d].location is required", i))
+		}
+	}
+
 	if len(errs) > 0 {
 		return fmt.Errorf("config validation failed:\n  - %s", strings.Join(errs, "\n  - "))
 	}

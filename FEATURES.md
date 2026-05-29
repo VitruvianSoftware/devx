@@ -459,6 +459,11 @@ The goal is to eliminate **all** onboarding friction by providing a single `devx
 * **The Solution:** The `devx cluster` suite (`init`, `join`, `apply`, `upgrade`, `remove`, `destroy`) automates the entire lifecycle based on a single declarative `cluster.yaml`. It seamlessly provisions Lima VMs on each defined host machine, wires up socket_vmnet for flat layer-2 network bridging, automatically discovers node IP addresses, exchanges tokens, configures etcd HA clustering on server nodes, and securely exports the final `kubeconfig`. Fully integrates with `devx doctor` for automatic prerequisite provisioning and validation of cross-node network matrix health.
 * **Key files:** `cmd/cluster_mgmt.go`, `internal/multinode/cluster/cluster.go`, `internal/multinode/k3s/k3s.go`, `internal/multinode/doctor/doctor.go`, `docs/guide/multinode.md`
 
+#### 49.1. Cluster-Wide VM Host Directory Mounts (DONE)
+* **The Problem:** Devcontainers and Docker bind mounts launched against the in-VM Docker daemon couldn't see host source files, because the guest filesystem was isolated from the Mac's home directory.
+* **The Solution:** Added a `mounts:` block to `cluster.yaml` (under `cluster:`). Each entry accepts `location` (host path; `~` expands on the target host and mounts at the same path inside the guest), an optional `mountPoint` (guest destination, defaults to `location`), and optional `writable` (default `false`). When the key is **omitted**, `devx` defaults to mounting the host home directory writable — the most common case with zero config. Set `mounts: []` to opt out entirely. `devx cluster apply` reconciles mount changes onto running VMs by restarting the affected node; the restart is gated behind `-y/--non-interactive` to prevent surprises.
+* **Key files:** `internal/multinode/config/config.go`, `internal/multinode/lima/lima.go`, `internal/multinode/cluster/cluster.go`, `cluster.yaml.example`
+
 ### 55. Instant PR Sandboxing (`devx preview`)
 * **Priority:** ✅ Shipped
 * **Effort:** High
