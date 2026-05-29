@@ -41,7 +41,93 @@ The `runtime` parameter gives development teams ultimate execution flexibility:
 
 ## Startup Sequence (DAG) Execution
 
-When running `devx up`, dependencies are resolved and grouped into parallel execution tiers. 
+When running `devx up`, dependencies are resolved and grouped into parallel execution tiers.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph CLI ["User / Agent Interface"]
+        user["User / AI Agent"]
+        cli["devx CLI"]
+    end
+
+    subgraph Core ["Orchestration Engine (internal/orchestrator)"]
+        config["Config Parser & Profiles Manager"]
+        dag["DAG Scheduler & Resolver"]
+        portres["Port Conflict Resolver"]
+        diag["Diagnostics Engine (Crash logs)"]
+    end
+
+    subgraph NodeTypes ["Runner Nodes (DAG execution)"]
+        hostnode["HostNode (Local Subprocesses)"]
+        bridgenode["BridgeNode (K8s Tunnels & Intercepts)"]
+        kubenode["KubeNode (Helm / Kubectl manifests)"]
+        cloudnode["CloudRunNode (Cloud Run services)"]
+    end
+
+    user -->|"runs devx up"| cli
+    cli --> config
+    config -->|"parses devx.yaml + overrides"| dag
+    dag -->|"resolves ports"| portres
+    dag -->|"tier execution"| NodeTypes
+    NodeTypes -->|"on failure"| diag
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start([devx up]) --> Config[Parse devx.yaml & Merge Profile Overrides]
+    Config --> ValidateGraph{Circular dependencies?}
+    ValidateGraph -- Yes --> Fail[Fail: Circular Graph Error]
+    ValidateGraph -- No --> ResolvePorts[Resolve Port Conflicts & Auto-Shift]
+    ResolvePorts --> BuildTiers[Build Execution Tiers 1..N]
+    
+    BuildTiers --> LoopTiers{For each Tier}
+    LoopTiers -->|"Next Tier"| StartTier[Execute all tier nodes in parallel]
+    
+    StartTier --> WaitNode{Wait for readiness condition}
+    
+    WaitNode -- service_healthy --> PollHealth[HTTP/TCP Healthcheck Polling]
+    WaitNode -- service_completed_successfully --> WaitOneShot[Wait for exit 0 of task]
+    
+    PollHealth --> CheckNodeStatus{Status ok?}
+    WaitOneShot --> CheckNodeStatus
+    
+    CheckNodeStatus -- Yes --> AllNodesReady{All tier nodes ready?}
+    CheckNodeStatus -- No / Timeout --> TailLogs[Extract last 50 lines of logs & Show Crash Card]
+    TailLogs --> TearDownStarted[Tear down already started tiers in reverse order]
+    TearDownStarted --> Fail
+    
+    AllNodesReady -- Yes --> MoreTiers{More Tiers?}
+    AllNodesReady -- No --> WaitNode
+    
+    MoreTiers -- Yes --> LoopTiers
+    MoreTiers -- No --> Running([All services running & healthy])
+    
+    Running --> CtrlC[Shutdown Triggered / Ctrl+C]
+    CtrlC --> ReverseTiers[Stop services in reverse tier order N..1]
+    ReverseTiers --> End([Cleanup Completed])
+```
+
+### Service Lifecycle States
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending
+    Pending --> WaitingOnDeps : dependencies not ready
+    WaitingOnDeps --> Starting : all deps healthy
+    Pending --> Starting : no dependencies
+    Starting --> HealthChecking : process spawned
+    HealthChecking --> Healthy : healthcheck passes
+    HealthChecking --> Failed : healthcheck timeout / retries exhausted
+    Healthy --> ShuttingDown : Ctrl+C / devx down
+    Failed --> ShuttingDown : cleanup triggered
+    ShuttingDown --> Stopped
+    Stopped --> [*]
+```
+ 
 
 ![DAG Execution Output Screenshot] 
 ```text
@@ -68,6 +154,54 @@ $ devx up
 
 🎉 All services are now explicitly available worldwide! Press Ctrl+C to stop
 ```
+
+---
+
+## One-shot tasks (run-to-completion)
+
+Not every node is a long-running server. Data seeds, schema migrations, and other init steps need to **run once, finish, and gate whatever depends on them**. Mark such a node `oneshot: true`: devx runs its command, waits for the process to exit, and treats **exit 0** as "ready" — instead of polling a healthcheck. Dependents express the wait with `condition: service_completed_successfully`.
+
+```yaml
+services:
+  # Populate the local object store, then exit.
+  - name: seed
+    runtime: host                       # or container
+    command: ["node", "seed-local.mjs"]
+    oneshot: true
+    depends_on:
+      - name: fake-gcs
+        condition: service_healthy
+    healthcheck:
+      timeout: "5m"                     # optional: bound the run (default 10m)
+
+  # Doesn't start until the seed has completed successfully.
+  - name: offer
+    runtime: host
+    command: ["npm", "run", "dev:offer"]
+    port: 8080
+    depends_on:
+      - name: seed
+        condition: service_completed_successfully
+```
+
+```text
+📋 Starting tier 2: seed
+  🚀 Starting seed: node seed-local.mjs
+  ⏳ Waiting for seed to complete...
+  ✅ seed completed
+
+📋 Starting tier 3: offer
+  🚀 Starting offer: npm run dev:offer
+  ✅ offer is healthy
+```
+
+Semantics:
+
+* **Success = exit 0.** A non-zero exit fails `devx up` (with the task's crash logs tailed inline), so dependents never start against a half-prepared environment.
+* **Bounded.** A one-shot is given `healthcheck.timeout` to finish (default 10m); exceeding it is treated as a failure.
+* **Tier-ordered.** Because dependents `depends_on` the task, it lands in an earlier tier — the next tier only starts once it has completed.
+
+This is the local-dev counterpart to a Kubernetes seed `Job`: in a [`runtime: kubernetes`](kubernetes-deploy.md) deploy the seed ships as a `Job` inside your manifests, while `oneshot` covers the `host`/`container` path.
 
 ---
 

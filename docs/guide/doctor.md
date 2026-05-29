@@ -10,6 +10,100 @@ devx doctor install    # install missing tools
 devx doctor auth       # guided credential setup
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx doctor`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        dev["Developer / AI Agent"]
+        cli["devx CLI"]
+        subgraph AuditEngine ["Doctor Audit Engine"]
+            sysInfo["System Info Detector\n(OS, arch, package manager)"]
+            toolChecker["CLI Tool Checker\n(binary existence & version)"]
+            credChecker["Credential Checker\n(auth sessions & API tokens)"]
+            aiLandscape["AI Landscape Checker\n(Ollama, LM Studio, API keys, agents)"]
+            featureMatrix["Feature Readiness Matrix\n(tool + cred → command mapping)"]
+        end
+        subgraph InstallEngine ["Install Engine"]
+            planBuilder["Install Plan Builder"]
+            pkgManager["Package Manager\n(brew / apt / dnf / pacman / etc.)"]
+        end
+        subgraph AuthEngine ["Auth Engine"]
+            authWalker["Auth Step Walker\n(interactive guided setup)"]
+        end
+        output["Output Formatter\n(human TUI / --json)"]
+    end
+
+    subgraph ExternalServices ["External Services"]
+        ghAuth["GitHub (gh auth)"]
+        cfAuth["Cloudflare (cloudflared login)"]
+        vaultAuth["Vault (op / bw / gcloud)"]
+    end
+
+    dev -->|"devx doctor"| cli
+    cli --> sysInfo
+    sysInfo --> toolChecker
+    toolChecker --> credChecker
+    credChecker --> aiLandscape
+    aiLandscape --> featureMatrix
+    featureMatrix --> output
+
+    dev -->|"devx doctor install"| cli
+    cli --> planBuilder
+    planBuilder -->|"missing tools"| toolChecker
+    planBuilder -->|"installs via"| pkgManager
+
+    dev -->|"devx doctor auth"| cli
+    cli --> authWalker
+    authWalker -->|"gh auth login"| ghAuth
+    authWalker -->|"cloudflared login"| cfAuth
+    authWalker -->|"op/bw/gcloud signin"| vaultAuth
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx doctor [subcommand]"]) --> Subcommand{"Subcommand?"}
+
+    Subcommand -->|"(none) — full audit"| SysInfo["Detect OS, arch,\npackage manager"]
+    SysInfo --> ToolScan["Scan CLI tools in $PATH\n(podman, gh, aws, gcloud, etc.)"]
+    ToolScan --> CredScan["Check credential sessions\n(cert.pem, gh auth, .env tokens)"]
+    CredScan --> AIScan["Check AI landscape\n(Ollama, LM Studio, API keys, agents)"]
+    AIScan --> FeatureReady["Build feature readiness matrix\n(map tools + creds → devx commands)"]
+    FeatureReady --> JsonFlag{"--json?"}
+    JsonFlag -->|"Yes"| JsonOut(["Output JSON report"])
+    JsonFlag -->|"No"| HumanOut(["Render TUI report\nwith ✓/⚠️/✗ status"])
+
+    Subcommand -->|"install"| DetectMissing["Detect missing tools\nfrom tool checker"]
+    DetectMissing --> AllFlag{"--all flag?"}
+    AllFlag -->|"Yes"| IncludeOptional["Include optional\nfeature tools"]
+    AllFlag -->|"No"| CoreOnly["Core tools only"]
+    IncludeOptional --> BuildPlan
+    CoreOnly --> BuildPlan
+    BuildPlan["Build install plan\n(tool → brew/apt command)"] --> AutoConfirm{"-y flag?"}
+    AutoConfirm -->|"Yes"| RunInstall
+    AutoConfirm -->|"No"| Confirm{"User confirms\ninstall plan?"}
+    Confirm -->|"No"| Cancel(["Cancelled"])
+    Confirm -->|"Yes"| RunInstall["Execute package manager\ninstall commands"]
+    RunInstall --> InstallResult{"All installs\nsucceeded?"}
+    InstallResult -->|"Yes"| InstallDone(["Exit 0\nTools installed"])
+    InstallResult -->|"No"| InstallFail(["Exit 1\nSome installs failed"])
+
+    Subcommand -->|"auth"| WalkAuth["Walk through auth steps\n(skip already-configured)"]
+    WalkAuth --> AuthStep{"More auth\nsteps?"}
+    AuthStep -->|"Yes"| CheckExisting{"Already\nauthenticated?"}
+    CheckExisting -->|"Yes ✅"| SkipStep["Skip (show ✅)"]
+    CheckExisting -->|"No ❌"| PromptAuth["Interactive prompt\n(browser login / paste token)"]
+    SkipStep --> AuthStep
+    PromptAuth --> AuthStep
+    AuthStep -->|"No"| AuthDone(["Auth setup complete"])
+```
+
 ## `devx doctor`
 
 Runs a full environment audit with four sections:

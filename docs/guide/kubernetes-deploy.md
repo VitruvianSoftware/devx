@@ -22,6 +22,93 @@ A `runtime: kubernetes` service points at a directory of manifests and a rendere
 
 Because devx shells out to `kubectl`, kustomize is built in — no extra tooling to install.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `runtime: kubernetes`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        dag["DAG Engine (internal/orchestrator)"]
+        kubenode["KubeNode (kubernetes_node.go)"]
+        builder["Image Builder (image/buildload.go)"]
+        helm["Helm Deployer (helm.go)"]
+        kubectl["Kubectl Wrapper"]
+        pf["Port Forwarder (kubernetes_portforward.go)"]
+        sync["Sync Watcher (kubernetes_sync.go)"]
+        docker["Local Container Engine (Docker/Podman)"]
+    end
+
+    subgraph Cluster ["Target Kubernetes Cluster"]
+        registry["In-Cluster Registry (devx-registry/registry:2)"]
+        workloads["Workload Pods & Services (Target Namespace)"]
+    end
+
+    cli -->|"invokes up"| dag
+    dag -->|"resolves & runs"| kubenode
+    kubenode -->|"1. Build & Load"| builder
+    builder -->|"triggers build"| docker
+    builder -->|"pushes image"| registry
+    kubenode -->|"2. Render & Deploy (Helm)"| helm
+    kubenode -->|"2. Render & Deploy (Kustomize/Raw)"| kubectl
+    helm -->|"helm upgrade"| workloads
+    kubectl -->|"kubectl apply"| workloads
+    workloads -->|"pulls images"| registry
+    kubenode -->|"3. Port-Forward (Background)"| pf
+    pf -->|"kubectl port-forward"| workloads
+    kubenode -->|"4. Pod File Sync (Background)"| sync
+    sync -->|"kubectl cp"| workloads
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start([devx up]) --> Validate[Validate Kubeconfig & Context]
+    Validate --> NamespaceExists{Namespace Exists?}
+    NamespaceExists -- No --> CreateNamespace[Create Namespace Idempotently]
+    NamespaceExists -- Yes --> CheckImages{Images to Build?}
+    CreateNamespace --> CheckImages
+    
+    CheckImages -- Yes --> EnsureRegistry[Ensure In-Cluster Registry Ready]
+    EnsureRegistry --> BuildImage[Build Container Image locally]
+    BuildImage --> PushImage[Push Image to In-Cluster Registry]
+    PushImage --> CheckRenderer{Check Renderer}
+    CheckImages -- No --> CheckRenderer
+    
+    CheckRenderer -- helm --> HelmDeploy[Run helm upgrade --install]
+    CheckRenderer -- kustomize --> KustomizeDeploy[Run kubectl apply -k]
+    CheckRenderer -- raw --> RawDeploy[Run kubectl apply -f]
+    
+    HelmDeploy --> WaitReady[Wait for deployments to be Available]
+    KustomizeDeploy --> WaitReady
+    RawDeploy --> WaitReady
+    
+    WaitReady --> CheckSync{Sync configured?}
+    WaitReady --> CheckPF{Port-forward true?}
+    
+    CheckSync -- Yes --> StartSync[Start background Pod Sync watchers]
+    CheckPF -- Yes --> DiscoverSvc[Discover Services & start port-forwards]
+    
+    StartSync --> Running([Service Running & Healthy])
+    DiscoverSvc --> Running
+    CheckSync -- No --> Running
+    CheckPF -- No --> Running
+    
+    Running --> CtrlC[Shutdown Triggered / Ctrl+C]
+    CtrlC --> StopPF[Tear down Port-forwards & Syncs]
+    StopPF --> DeleteWorkloads{Tear down Workloads?}
+    
+    DeleteWorkloads -- helm --> HelmUninstall[Run helm uninstall]
+    DeleteWorkloads -- kustomize/raw --> KubectlDelete[Run kubectl delete]
+    
+    HelmUninstall --> End([Cleanup Completed])
+    KubectlDelete --> End
+```
+
 ## Prerequisites
 
 - `kubectl` installed and on your PATH

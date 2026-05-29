@@ -2,6 +2,97 @@
 
 The `devx tunnel` commands give you **ngrok-like port exposure** backed by Cloudflare's global edge network. Expose any local port to the internet with a public HTTPS URL — no port forwarding, no firewall rules, no SSL certificates to manage.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of Cloudflare Tunnels.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / VM"]
+        cli["devx CLI"]
+        cloudflared["cloudflared.service (systemd)"]
+        localapp["Local Service (e.g. port 3000)"]
+        tunnelcfg["Tunnel Config (ingress rules)"]
+    end
+
+    subgraph Cloudflare ["Cloudflare Edge Network"]
+        edge["Cloudflare Edge"]
+        dns["DNS CNAME Record"]
+        tls["TLS Termination"]
+    end
+
+    subgraph External ["External"]
+        publicurl["Public URL (*.ipv1337.dev)"]
+        browser["Browser / Webhook Sender"]
+    end
+
+    cli -->|"tunnel expose / unexpose"| cloudflared
+    cli -->|"create DNS CNAME via API"| dns
+    cli -->|"add/remove ingress rule"| tunnelcfg
+    cloudflared -->|"read ingress rules"| tunnelcfg
+    cloudflared -->|"encrypted tunnel"| edge
+    edge -->|"resolve CNAME"| dns
+    edge -->|"TLS terminates at edge"| tls
+    tls -->|"route to tunnel"| cloudflared
+    cloudflared -->|"forward traffic"| localapp
+    browser -->|"HTTPS request"| publicurl
+    publicurl --> edge
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx tunnel expose &lt;port&gt;"]) --> CheckTunnel{"cloudflared.service running?"}
+    CheckTunnel -->|No| ErrTunnel["Error: tunnel not initialized (run devx vm init)"]
+    CheckTunnel -->|Yes| CheckPort{"Local port listening?"}
+    CheckPort -->|No| WarnPort["Warn: port not yet listening (will forward when ready)"]
+    WarnPort --> CreateDNS
+    CheckPort -->|Yes| CreateDNS["Create DNS CNAME via Cloudflare API"]
+    CreateDNS -->|API error| ErrDNS["Error: DNS record creation failed"]
+    CreateDNS -->|OK| AddIngress["Add ingress rule to tunnel config"]
+    AddIngress --> ReloadTunnel["Reload cloudflared (no restart needed)"]
+    ReloadTunnel --> SurfaceURL["Print public URL: https://name.user.ipv1337.dev"]
+    SurfaceURL --> Active["✓ Tunnel active — traffic flowing"]
+
+    Active --> Unexpose(["devx tunnel unexpose"])
+    Unexpose --> RemoveIngress["Remove ingress rules"]
+    RemoveIngress --> RemoveDNS["Delete DNS CNAME records"]
+    RemoveDNS --> ReloadClean["Reload cloudflared"]
+    ReloadClean --> Done["✓ All tunnels cleaned up"]
+```
+
+### Network Path
+
+```mermaid
+graph LR
+    subgraph LocalMachine ["Local Machine (plain HTTP)"]
+        app["Local App\n(:3000)"]
+        cloudflared["cloudflared.service\n(systemd in VM)"]
+    end
+
+    subgraph CloudflareNetwork ["Cloudflare Network"]
+        edge["Cloudflare Edge\n(TLS termination)"]
+        dns["DNS CNAME\n(*.user.ipv1337.dev)"]
+    end
+
+    subgraph Internet ["Internet"]
+        publicurl["Public URL\n(https://app.user.ipv1337.dev)"]
+        browser["Browser"]
+    end
+
+    app -->|"HTTP traffic\n(no TLS)"| cloudflared
+    cloudflared -->|"Encrypted Tunnel\n(outbound connection)"| edge
+    edge -->|"resolve hostname"| dns
+    dns -->|"route to tunnel"| edge
+    browser -->|"HTTPS request"| publicurl
+    publicurl -->|"TLS terminated\nat edge"| edge
+    edge -->|"decrypted traffic\nvia tunnel"| cloudflared
+    cloudflared -->|"forward to\nlocalhost:3000"| app
+```
+
 ## Commands
 
 ### `devx tunnel expose`

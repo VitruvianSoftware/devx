@@ -23,9 +23,12 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
+
+	"github.com/VitruvianSoftware/devx/internal/logs"
 )
 
 // startCloudRunNode deploys a runtime: cloud service to Google Cloud Run via the
@@ -59,6 +62,7 @@ func startCloudRunNode(ctx context.Context, n *Node) error {
 		fmt.Printf("  🌐 %s available at %s\n", n.Name, url)
 	}
 	fmt.Printf("  ✅ %s deployed\n", n.Name)
+	streamCloudRunLogs(ctx, n, c, service)
 	return nil
 }
 
@@ -124,6 +128,33 @@ func cloudRunURL(ctx context.Context, project, region, service string) (string, 
 		return "", err
 	}
 	return strings.TrimSpace(out), nil
+}
+
+// cloudRunLogsTailArgs builds the gcloud command to stream a Cloud Run service's
+// logs. NOTE: `gcloud beta run services logs tail` is a beta surface — verify it
+// against the installed gcloud during integration; if unavailable, fall back to
+// `gcloud logging tail` with a `resource.type=cloud_run_revision` filter.
+func cloudRunLogsTailArgs(project, region, service string) []string {
+	return []string{"beta", "run", "services", "logs", "tail", service,
+		"--project", project, "--region", region}
+}
+
+// streamCloudRunLogs tails a deployed Cloud Run service's logs into the sink.
+func streamCloudRunLogs(ctx context.Context, n *Node, c *CloudRunNodeConfig, service string) {
+	if n.LogMode == LogOff {
+		return
+	}
+	w, closeFn, err := logs.BuildSink(n.Name, sinkMode(n.LogMode), os.Stdout, logs.ColorEnabled(), nil)
+	if err != nil {
+		return
+	}
+	n.logCloser = closeFn
+	logCtx, cancel := context.WithCancel(ctx)
+	n.logWatchCancel = cancel
+	cmd := exec.CommandContext(logCtx, "gcloud", cloudRunLogsTailArgs(c.Project, c.Region, service)...)
+	cmd.Stdout = w
+	cmd.Stderr = w
+	go func() { _ = cmd.Run() }()
 }
 
 func runGcloud(ctx context.Context, args ...string) (string, error) {

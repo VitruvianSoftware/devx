@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/VitruvianSoftware/devx/internal/multinode/config"
 	"github.com/VitruvianSoftware/devx/internal/multinode/lima"
 )
 
@@ -55,5 +56,33 @@ func TestNodePackagesIncludesSocat(t *testing.T) {
 	// dropped from the baseline.
 	if !strings.Contains(lima.NodePackages, "socat") {
 		t.Errorf("lima.NodePackages = %q, must include socat for port-forward/bridge", lima.NodePackages)
+	}
+}
+
+func TestNodeChanges(t *testing.T) {
+	vm := config.VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}
+	matchingSpec := lima.Spec{CPUs: 2, Memory: "4GiB", Disk: "30GiB", Mounts: []config.MountConfig{{Location: "~", Writable: true}}}
+	desiredHome := lima.ResolveMounts(nil) // [{~ writable}]
+
+	cases := []struct {
+		name              string
+		spec              lima.Spec
+		vm                config.VMConfig
+		desired           []config.MountConfig
+		wantHW, wantMount bool
+	}{
+		{"all equal -> no change", matchingSpec, vm, desiredHome, false, false},
+		{"cpu differs", lima.Spec{CPUs: 4, Memory: "4GiB", Disk: "30GiB", Mounts: desiredHome}, vm, desiredHome, true, false},
+		{"memory differs", lima.Spec{CPUs: 2, Memory: "8GiB", Disk: "30GiB", Mounts: desiredHome}, vm, desiredHome, true, false},
+		{"disk differs", lima.Spec{CPUs: 2, Memory: "4GiB", Disk: "50GiB", Mounts: desiredHome}, vm, desiredHome, true, false},
+		// The reported bug: an existing VM with NO mounts vs the default home mount.
+		{"no mounts vs default home", lima.Spec{CPUs: 2, Memory: "4GiB", Disk: "30GiB", Mounts: nil}, vm, desiredHome, false, true},
+		{"both hw and mounts differ", lima.Spec{CPUs: 1, Memory: "2GiB", Disk: "10GiB", Mounts: nil}, vm, desiredHome, true, true},
+	}
+	for _, c := range cases {
+		hw, mounts := nodeChanges(c.spec, c.vm, c.desired)
+		if hw != c.wantHW || mounts != c.wantMount {
+			t.Errorf("%s: nodeChanges = (hw=%v, mounts=%v), want (hw=%v, mounts=%v)", c.name, hw, mounts, c.wantHW, c.wantMount)
+		}
 	}
 }

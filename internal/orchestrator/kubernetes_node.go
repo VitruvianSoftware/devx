@@ -198,12 +198,20 @@ func startKubernetesNode(ctx context.Context, n *Node) error {
 
 	// Auto-discover the namespace's Services and port-forward them to localhost.
 	if k.PortForward {
-		_, cancelPF, err := startPortForwards(ctx, kubeconfig, k.Context, ns)
+		forwards, cancelPF, err := startPortForwards(ctx, kubeconfig, k.Context, ns)
 		if err != nil {
 			return fmt.Errorf("service %q: %w", n.Name, err)
 		}
 		n.pfCancel = cancelPF
+		n.forwards = forwards
 	}
+
+	// Stream pod logs (inline + ~/.devx/logs/) when opted in.
+	cancelLogs, err := startKubernetesLogs(ctx, n, kubeconfig, k.Context, ns)
+	if err != nil {
+		return fmt.Errorf("service %q: starting log stream: %w", n.Name, err)
+	}
+	n.logWatchCancel = cancelLogs
 	return nil
 }
 
@@ -218,9 +226,12 @@ func deleteKubernetesNode(n *Node) {
 		if release == "" {
 			release = n.Name
 		}
-		if out, err := helmUninstall(context.Background(), k.Kubeconfig, k.Context, k.Namespace, release); err != nil {
+		out, err := helmUninstall(context.Background(), k.Kubeconfig, k.Context, k.Namespace, release)
+		if err != nil {
 			fmt.Printf("  ⚠️  cleanup: helm uninstall for %s failed: %s\n", n.Name, strings.TrimSpace(out))
+			return
 		}
+		fmt.Print(formatTeardown(release, k.Namespace, out))
 		return
 	}
 	// The renderer was validated at apply time (kubeApplied is only set after a
@@ -230,7 +241,10 @@ func deleteKubernetesNode(n *Node) {
 		flag = "-k"
 	}
 	args := kubectlArgs(k.Kubeconfig, k.Context, "delete", "-n", k.Namespace, flag, k.Manifests, "--ignore-not-found")
-	if out, err := runKubectl(context.Background(), args...); err != nil {
+	out, err := runKubectl(context.Background(), args...)
+	if err != nil {
 		fmt.Printf("  ⚠️  cleanup: kubectl delete for %s failed: %s\n", n.Name, strings.TrimSpace(out))
+		return
 	}
+	fmt.Print(formatTeardown(n.Name, k.Namespace, out))
 }

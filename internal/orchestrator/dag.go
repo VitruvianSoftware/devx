@@ -25,12 +25,10 @@ package orchestrator
 import (
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -101,6 +99,16 @@ type CloudRunNodeConfig struct {
 	Flags                []string          // extra `gcloud run deploy` flags
 }
 
+// ContainerNodeConfig holds runtime: container configuration for a DAG node:
+// devx runs a long-lived container in the VM via the provider runtime. Exactly
+// one of Image or Build is set.
+type ContainerNodeConfig struct {
+	Image        string      // pre-built image to run (empty when Build is set)
+	Build        *image.Spec // build-from-context spec (nil when Image is set)
+	Args         []string    // extra flags appended to `<runtime> run`
+	ProviderName string      // container provider to resolve the runtime (e.g. "lima")
+}
+
 // HealthcheckConfig defines how to verify a service is ready.
 type HealthcheckConfig struct {
 	// HTTP endpoint to poll (e.g., "http://localhost:8080/health")
@@ -115,10 +123,21 @@ type HealthcheckConfig struct {
 	Retries int `yaml:"retries"`
 }
 
+// Dependency conditions accepted on DependsOnEntry.Condition. Gating is
+// tier-based: a dependent starts only once every node it depends on has reached
+// readiness for its tier — a normal service when its healthcheck passes (or it
+// has started, if it declares none), and a one-shot task when its process exits
+// successfully (use ConditionServiceCompletedSuccessfully for that case).
+const (
+	ConditionServiceHealthy               = "service_healthy"
+	ConditionServiceStarted               = "service_started"
+	ConditionServiceCompletedSuccessfully = "service_completed_successfully"
+)
+
 // DependsOnEntry references another node and a readiness condition.
 type DependsOnEntry struct {
 	Name      string `yaml:"name"`
-	Condition string `yaml:"condition"` // "service_healthy" or "service_started"
+	Condition string `yaml:"condition"` // one of the Condition* constants
 }
 
 // ServiceConfig defines a developer application in devx.yaml.
@@ -130,6 +149,7 @@ type ServiceConfig struct {
 	Healthcheck HealthcheckConfig `yaml:"healthcheck"`
 	Port        int               `yaml:"port"`
 	Env         map[string]string `yaml:"env"`
+	OneShot     bool              `yaml:"oneshot"`
 }
 
 // NodeType categorises a DAG node.
@@ -152,6 +172,7 @@ type Node struct {
 	Command     []string
 	Env         map[string]string
 	Dir         string // Working directory for host process execution (set by include resolver for multirepo)
+	OneShot     bool   // run-to-completion task: gate dependents on exit 0 instead of a healthcheck
 
 	// Bridge-specific fields (Idea 46.3)
 	BridgeMode   BridgeMode        // for RuntimeBridge nodes
@@ -170,13 +191,25 @@ type Node struct {
 	CloudRun   *CloudRunNodeConfig
 	crDeployed *CloudRunNodeConfig
 
+	// Container deploy field (runtime: container) + whether we started it, for cleanup
+	Container        *ContainerNodeConfig
+	containerStarted bool
+
 	// Runtime state for kubernetes port-forward discovery (stops forwards on shutdown)
 	pfCancel context.CancelFunc
+	forwards []activeForward // active port-forwards, surfaced in the access summary
+
+	// Runtime state for kubernetes log watcher (stops pod watch + container tails on shutdown)
+	logWatchCancel context.CancelFunc
+
+	// Log mode resolved from flag/config for this node.
+	LogMode LogMode // how this node's logs are surfaced (resolved in the cmd layer)
 
 	// Runtime state
 	process     *exec.Cmd
 	cancel      context.CancelFunc
 	bridgeState *BridgeNodeState // runtime state for bridge cleanup
+	logCloser   func() error     // closes the log sink on cleanup
 }
 
 // DAG is a directed acyclic graph of nodes.
@@ -288,6 +321,7 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 	var startedNodes []*Node
 
 	cleanupFn := func() {
+		tornDown := false
 		for i := len(startedNodes) - 1; i >= 0; i-- {
 			n := startedNodes[i]
 
@@ -303,11 +337,23 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			if n.pfCancel != nil {
 				n.pfCancel()
 			}
+			if n.logWatchCancel != nil {
+				n.logWatchCancel()
+			}
 			if n.kubeApplied != nil {
+				// deleteKubernetesNode prints the removed resources (formatTeardown).
 				deleteKubernetesNode(n)
+				if len(n.forwards) > 0 {
+					fmt.Println("     🔌 port-forwards stopped")
+				}
+				tornDown = true
 			}
 			if n.crDeployed != nil {
 				deleteCloudRunNode(n)
+				tornDown = true
+			}
+			if n.containerStarted {
+				_ = removeContainerNode(n)
 			}
 
 			if n.cancel != nil {
@@ -316,6 +362,12 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 			if n.process != nil && n.process.Process != nil {
 				_ = n.process.Process.Kill()
 			}
+			if n.logCloser != nil {
+				_ = n.logCloser()
+			}
+		}
+		if tornDown {
+			fmt.Println("✅ Teardown complete.")
 		}
 	}
 
@@ -347,6 +399,11 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 					case RuntimeCloud:
 						if err := startCloudRunNode(ctx, n); err != nil {
 							errCh <- fmt.Errorf("failed to deploy Cloud Run service %q: %w", n.Name, err)
+							return
+						}
+					case RuntimeContainer:
+						if err := startContainerNode(ctx, n); err != nil {
+							errCh <- fmt.Errorf("failed to start container service %q: %w", n.Name, err)
 							return
 						}
 					default:
@@ -415,6 +472,20 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				continue
 			}
 
+			// One-shot task: gate the next tier on the process exiting 0 (e.g. a
+			// data seed that must finish before dependents start), rather than on
+			// a long-running healthcheck.
+			if node.Type == NodeService && node.OneShot {
+				fmt.Printf("  \u23f3 Waiting for %s to complete...\n", name)
+				if err := waitForCompletion(ctx, node); err != nil {
+					logs.TailHostCrashLogs(node.Name, 50)
+					cleanupFn()
+					return nil, fmt.Errorf("one-shot task %q failed: %w", name, err)
+				}
+				fmt.Printf("  \u2705 %s completed\n", name)
+				continue
+			}
+
 			if node.Healthcheck.HTTP != "" || node.Healthcheck.TCP != "" {
 				fmt.Printf("  \u23f3 Waiting for %s to become healthy...\n", name)
 				if err := waitForHealthy(ctx, node); err != nil {
@@ -445,21 +516,18 @@ func startHostProcess(ctx context.Context, n *Node) error {
 	if n.Dir != "" {
 		cmd.Dir = n.Dir
 	}
-	// Setup logging to ~/.devx/logs/<name>.log
-	logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
-	_ = os.MkdirAll(logDir, 0755)
-
-	logFile, err := os.OpenFile(
-		filepath.Join(logDir, n.Name+".log"),
-		os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644,
-	)
+	// Setup logging via BuildHostSink: routes output per LogMode (raw → stdout/stderr
+	// + file preserving today's stderr separation, prefixed → unified prefixed view +
+	// file, off → file only). Truncates the log file fresh each run (intentional:
+	// stale content gone, devx logs sees live output).
+	outW, errW, closeFn, err := logs.BuildHostSink(n.Name, sinkMode(n.LogMode), os.Stdout, os.Stderr, logs.ColorEnabled(), nil)
 	if err != nil {
 		cancel()
-		return fmt.Errorf("opening log file: %w", err)
+		return fmt.Errorf("opening log sink: %w", err)
 	}
-
-	cmd.Stdout = io.MultiWriter(os.Stdout, logFile)
-	cmd.Stderr = io.MultiWriter(os.Stderr, logFile)
+	n.logCloser = closeFn
+	cmd.Stdout = outW
+	cmd.Stderr = errW
 
 	// Inject environment variables
 	cmd.Env = os.Environ()
@@ -475,6 +543,37 @@ func startHostProcess(ctx context.Context, n *Node) error {
 	fmt.Printf("  🚀 Starting %s: %s\n", n.Name, strings.Join(n.Command, " "))
 
 	return cmd.Start()
+}
+
+// waitForCompletion blocks until a one-shot task's process exits, returning an
+// error if it exits non-zero or exceeds its timeout. The timeout is the node's
+// healthcheck timeout when set, else a generous default — one-shot tasks like
+// data seeds can legitimately run for a while. Dependents are gated on this via
+// tier ordering: the task's tier is not considered ready until it completes.
+func waitForCompletion(ctx context.Context, n *Node) error {
+	if n.process == nil {
+		return fmt.Errorf("task was not started (no command?)")
+	}
+
+	timeout := n.Healthcheck.Timeout
+	if timeout == 0 {
+		timeout = 10 * time.Minute
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- n.process.Wait() }()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(timeout):
+		return fmt.Errorf("timed out after %s", timeout)
+	case err := <-done:
+		if err != nil {
+			return fmt.Errorf("exited with error: %w", err)
+		}
+		return nil
+	}
 }
 
 // waitForHealthy polls the healthcheck until it passes or context is cancelled.

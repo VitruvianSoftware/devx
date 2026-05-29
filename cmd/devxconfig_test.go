@@ -619,3 +619,68 @@ func TestCommandEnv(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveConfig_ContainerRuntime_Image(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: test-proj
+services:
+  - name: api
+    runtime: container
+    container:
+      image: myorg/api:dev
+    port: 8080
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	svc := cfg.Services[0]
+	if svc.Runtime != "container" {
+		t.Errorf("expected runtime container, got %q", svc.Runtime)
+	}
+	if svc.Container == nil {
+		t.Fatal("expected Container config, got nil")
+	}
+	if svc.Container.Image != "myorg/api:dev" {
+		t.Errorf("expected image myorg/api:dev, got %q", svc.Container.Image)
+	}
+	if svc.Container.Build != nil {
+		t.Errorf("expected nil Build, got %+v", svc.Container.Build)
+	}
+}
+
+func TestResolveConfig_ContainerRuntime_Build(t *testing.T) {
+	dir := t.TempDir()
+	yamlPath := filepath.Join(dir, "devx.yaml")
+	if err := os.WriteFile(yamlPath, []byte(`
+name: test-proj
+services:
+  - name: web
+    runtime: container
+    container:
+      build:
+        context: ./web
+        dockerfile: Dockerfile.dev
+        tag: local
+    port: 3000
+`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveConfig(yamlPath, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	b := cfg.Services[0].Container.Build
+	if b == nil {
+		t.Fatal("expected Build config, got nil")
+	}
+	if b.Context != "./web" || b.Dockerfile != "Dockerfile.dev" || b.Tag != "local" {
+		t.Errorf("unexpected build config: %+v", b)
+	}
+}

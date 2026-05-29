@@ -6,6 +6,84 @@ We found that developers spend too much time copying arbitrary terminal logs and
 
 `devx state` provides unified, observable solutions for both sharing diagnostic context and performing literal time-travel debugging.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx state`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host / Environment"]
+        cli["devx CLI"]
+        doctor["devx doctor Audit Engine"]
+        bundler["Diagnostic Bundler"]
+        criu["CRIU Checkpointer"]
+        snapshotStore["Local Snapshot Store"]
+    end
+
+    subgraph Runtime ["Container Runtime (Podman)"]
+        containers["devx-managed Containers"]
+        volumes["Volumes & Filesystem State"]
+        ram["Process RAM State"]
+    end
+
+    cli -->|"devx state dump"| bundler
+    cli -->|"devx state checkpoint"| criu
+    cli -->|"devx state restore"| criu
+    bundler -->|"Runs health audit"| doctor
+    bundler -->|"Reads logs from stopped/exited"| containers
+    bundler -->|"Reads & redacts"| envFiles[".env / devx.yaml"]
+    criu -->|"Snapshots RAM, volumes, processes"| containers
+    criu -->|"Writes checkpoint archives"| snapshotStore
+    criu -->|"Restores from archive"| snapshotStore
+    snapshotStore -->|"Replaces running topology"| containers
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx state &lt;subcommand&gt;"]) --> Route{Which subcommand?}
+
+    Route -->|"dump"| DumpScan["Scan topology via devx doctor engine"]
+    DumpScan --> DumpVM["Capture VM topology & Tailscale status"]
+    DumpVM --> DumpLogs["Detect stopped/exited containers"]
+    DumpLogs --> PullLogs["Pull last 25 lines of crash logs"]
+    PullLogs --> RedactEnv["Read .env & devx.yaml, redact secrets"]
+    RedactEnv --> OutputFmt{"--json flag?"}
+    OutputFmt -->|Yes| JSONOut["Output structured JSON"]
+    OutputFmt -->|No| FileFmt{"--file flag?"}
+    FileFmt -->|Yes| FileOut["Write Markdown to file"]
+    FileFmt -->|No| StdOut["Print Markdown to stdout"]
+    JSONOut --> DumpDone([Done])
+    FileOut --> DumpDone
+    StdOut --> DumpDone
+
+    Route -->|"checkpoint"| CheckProvider{"Provider is Podman?"}
+    CheckProvider -->|No| ProviderErr(["Error: CRIU requires --provider=podman"])
+    CheckProvider -->|Yes| FreezeTopo["Freeze all running containers via CRIU"]
+    FreezeTopo --> SnapRAM["Snapshot RAM, volumes, and processes"]
+    SnapRAM --> WriteArchive["Write checkpoint archive to Snapshot Store"]
+    WriteArchive --> CheckDone([Checkpoint created])
+
+    Route -->|"restore"| FindSnap{"Snapshot exists?"}
+    FindSnap -->|No| SnapErr(["Error: Checkpoint not found"])
+    FindSnap -->|Yes| StopRunning["Terminate all currently running containers"]
+    StopRunning --> RestoreArchive["Restore topology from CRIU archive"]
+    RestoreArchive --> StartContainers["Start restored containers"]
+    StartContainers --> RestoreDone([Topology restored])
+
+    Route -->|"list"| ListSnaps["Read Snapshot Store directory"]
+    ListSnaps --> PrintTable["Output name, container count, size, timestamp"]
+    PrintTable --> ListDone([Done])
+
+    Route -->|"rm"| ConfirmRm{"User confirms deletion?"}
+    ConfirmRm -->|No| RmAbort([Aborted])
+    ConfirmRm -->|Yes| DeleteSnap["Remove checkpoint directory & archives"]
+    DeleteSnap --> RmDone([Checkpoint removed])
+```
+
 ## Shareable Diagnostic Dumps 
 
 The `devx state dump` command securely snapshots the running topology, failing container logs, and redacted `.env` state into a structured diagnostic report.

@@ -77,7 +77,8 @@ const PrePushHookContent = `#!/bin/sh
 # This hook is installed by 'devx agent ship --install-hook'.
 # It performs two functions:
 #   1. Runs devx audit (secrets + vulnerability scanning)
-#   2. Blocks direct 'git push' and forces AI agents to use 'devx agent ship'
+#   2. Blocks direct 'git push' and steers AI agents to 'devx agent review'
+#      (open a PR for human review) or 'devx agent ship' (merge after CI)
 #
 # Humans can bypass this hook at any time with: git push --no-verify
 # ═══════════════════════════════════════════════════════════════════════════
@@ -90,13 +91,15 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Step 2: Block direct push (agents must use devx agent ship)
+# Step 2: Block direct push (agents must use devx agent review/ship)
 echo ""
 echo "╭──────────────────────────────────────────────────────────────────╮"
 echo "│  ✋ Direct 'git push' is blocked by devx.                         │"
 echo "│                                                                  │"
-echo "│  AI Agents MUST use:   devx agent ship -m \"commit message\"       │"
-echo "│  Humans can bypass:    git push --no-verify                      │"
+echo "│  AI agents, choose by intent:                                    │"
+echo "│    Open a PR for review:  devx agent review -m \"msg\"             │"
+echo "│    Merge after CI passes: devx agent ship   -m \"msg\"             │"
+echo "│  Humans can bypass:       git push --no-verify                   │"
 echo "│                                                                  │"
 echo "│  This guardrail ensures pre-flight checks and CI verification    │"
 echo "│  are never skipped.                                              │"

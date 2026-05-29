@@ -90,6 +90,101 @@ Each tool has a typed input schema (engine names, port numbers, etc.) so the age
 │ (Claude/etc) │                    │   serve      │ ←─ stdout  ──── │ --json   │
 └──────────────┘                    └──────────────┘                 └──────────┘
 ```
+ 
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph LR
+    subgraph Host ["IDE / Agent Host Environment"]
+        agent["AI Agent Host (Claude Code / Cursor / Zed)"]
+        subgraph DevxServer ["devx MCP Process (devx mcp serve)"]
+            rpc["JSON-RPC 2.0 Handler"]
+            reg["Tools Registry"]
+        end
+        cli["devx CLI Binary (devx ... --json)"]
+    end
+
+    agent -->|"1. stdin / stdout (JSON-RPC)"| rpc
+    rpc -->|"2. lookup tool"| reg
+    rpc -->|"3. executes command (subprocess)"| cli
+    cli -->|"4. returns stdout"| rpc
+    rpc -->|"5. sends result back"| agent
+```
+
+### Tool Execution Flowchart
+
+```mermaid
+flowchart TD
+    Start([Host sends tools/call request]) --> Parse[Parse arguments & lookup tool handler]
+    Parse --> Found{Tool registered?}
+    Found -- No --> Err[Return invalid params / method not found error]
+    Found -- Yes --> Construct[Map tool args to devx CLI command args]
+    
+    Construct --> Spawn[Spawn devx binary subprocess with --json]
+    Spawn --> Capture[Capture subprocess stdout and stderr]
+    
+    Capture --> WaitExit{Subprocess exits?}
+    WaitExit -- Exit 0 --> Success[Format JSON output as tool content]
+    WaitExit -- Exit Non-Zero --> Failure[Format stderr as tool error output]
+    
+    Success --> Respond[Send JSON-RPC tools/call response over stdout]
+    Failure --> Respond
+    Respond --> End([Done])
+```
+
+### Tool Call Sequence
+
+```mermaid
+sequenceDiagram
+    actor Agent as AI Agent (Gemini / Claude / Cursor)
+    participant Client as MCP Client (stdio transport)
+    participant Server as devx MCP Server (devx mcp serve)
+    participant Infra as Local Infrastructure (containers / DBs / tunnels)
+
+    Note over Agent, Infra: Tool Discovery Phase
+
+    Agent->>Client: initialize (MCP handshake)
+    Client->>Server: initialize request (JSON-RPC over stdin)
+    Server-->>Client: initialize response (capabilities)
+    Client-->>Agent: Connection established
+
+    Agent->>Client: tools/list
+    Client->>Server: tools/list (JSON-RPC over stdin)
+    Server-->>Client: Tool schemas (~18 devx_* tools with typed inputs)
+    Client-->>Agent: Available tools + input schemas
+
+    Note over Agent, Infra: Tool Execution Phase (e.g. devx_db_list)
+
+    Agent->>Client: tools/call devx_db_list {engine: "postgres"}
+    Client->>Server: tools/call (JSON-RPC over stdin)
+    activate Server
+    Server->>Server: Lookup tool handler in registry
+    Server->>Server: Map args → devx db list --engine postgres --json
+    Server->>Infra: Spawn subprocess: devx db list --engine postgres --json
+    activate Infra
+    Infra-->>Server: JSON result (stdout) + exit code
+    deactivate Infra
+    alt Exit code 0
+        Server-->>Client: tools/call response (JSON content)
+    else Exit code non-zero
+        Server-->>Client: tools/call error (stderr content)
+    end
+    deactivate Server
+    Client-->>Agent: Structured result / error
+
+    Note over Agent, Infra: Destructive Tool (host prompts user)
+
+    Agent->>Client: tools/call devx_db_rm {name: "mydb"}
+    Client-->>Agent: destructiveHint: true — prompt user
+    Agent->>Client: User confirmed, proceed
+    Client->>Server: tools/call (JSON-RPC over stdin)
+    activate Server
+    Server->>Infra: Spawn subprocess: devx db rm mydb --json -y
+    Infra-->>Server: Result + exit code
+    deactivate Server
+    Server-->>Client: tools/call response
+    Client-->>Agent: Structured result
+```
 
 ## Manual install (advanced)
 

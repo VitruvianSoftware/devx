@@ -12,6 +12,76 @@ Rebuilding full container images just to inject a one-line code change is even w
 
 `devx sync` wraps [Mutagen](https://mutagen.io/) to create a high-performance, bidirectional file sync between your host machine and running containers. Changes propagate in **milliseconds**, not seconds.
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flow of `devx sync`.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI"]
+        yaml["devx.yaml (sync config)"]
+        mutagenDaemon["Mutagen Daemon"]
+        hostFS["Host Filesystem (src paths)"]
+    end
+
+    subgraph Runtime ["Container Runtime (Docker / Podman)"]
+        container["Target Container"]
+        containerFS["Container Filesystem (dest paths)"]
+        podmanSocket["Podman Docker-Compatible Socket"]
+    end
+
+    cli -->|"devx sync up"| yaml
+    yaml -->|"Reads sync blocks"| cli
+    cli -->|"Creates sync sessions"| mutagenDaemon
+    cli -->|"Detects --runtime=podman"| podmanSocket
+    podmanSocket -->|"Injects DOCKER_HOST"| mutagenDaemon
+    mutagenDaemon -->|"Watches file changes"| hostFS
+    mutagenDaemon -->|"Pushes changes (ms latency)"| containerFS
+    containerFS -->|"Bidirectional sync"| mutagenDaemon
+    mutagenDaemon -->|"Reconnects on restart"| container
+```
+
+### Execution Lifecycle Flowchart
+
+```mermaid
+flowchart TD
+    Start(["devx sync &lt;subcommand&gt;"]) --> Route{Which subcommand?}
+
+    Route -->|"up"| ParseYAML["Parse sync blocks from devx.yaml"]
+    ParseYAML --> HasBlocks{"Sync blocks found?"}
+    HasBlocks -->|No| NoBlocksErr(["Error: No sync blocks configured"])
+    HasBlocks -->|Yes| CheckMutagen{"Mutagen installed?"}
+    CheckMutagen -->|No| MutagenErr(["Error: mutagen not installed — run devx doctor install --all"])
+    CheckMutagen -->|Yes| DryRun{"--dry-run flag?"}
+    DryRun -->|Yes| PrintPlan["Print planned sync sessions & exit"]
+    PrintPlan --> DryDone([Done])
+    DryRun -->|No| DetectRuntime{"--runtime=podman?"}
+    DetectRuntime -->|Yes| InjectHost["Inject DOCKER_HOST for Podman socket"]
+    DetectRuntime -->|No| SkipInject["Use default Docker socket"]
+    InjectHost --> CheckContainers
+    SkipInject --> CheckContainers
+    CheckContainers{"Target containers running?"}
+    CheckContainers -->|No| ContainerErr(["Error: Container not running — start with devx up"])
+    CheckContainers -->|Yes| ApplyIgnores["Apply default + custom ignore patterns"]
+    ApplyIgnores --> CreateSessions["Create Mutagen sync sessions (src ↔ dest)"]
+    CreateSessions --> WatchSync["Daemon watches for file changes"]
+    WatchSync --> BiSync["Bidirectional sync at millisecond latency"]
+    BiSync --> Persistent(["Sessions persist in background"])
+
+    Route -->|"list"| ListSessions["Query Mutagen daemon for active sessions"]
+    ListSessions --> PrintList["Print session status table"]
+    PrintList --> ListDone([Done])
+
+    Route -->|"rm"| HasArg{"Service name provided?"}
+    HasArg -->|Yes| RmOne["Terminate specific sync session"]
+    HasArg -->|No| RmAll["Terminate all sync sessions"]
+    RmOne --> RmDone([Sessions removed])
+    RmAll --> RmDone
+```
+
 ## Quick Start
 
 ### 1. Add sync blocks to `devx.yaml`

@@ -11,10 +11,10 @@ require (
 	github.com/hashicorp/yamux v0.1.2
 	github.com/joho/godotenv v1.5.1
 	github.com/magefile/mage v1.17.2
-	github.com/mark3labs/mcp-go v0.54.0
+	github.com/mark3labs/mcp-go v0.54.1
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.51.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -49,6 +49,6 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 )

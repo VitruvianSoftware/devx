@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.57.0](https://github.com/VitruvianSoftware/devx/compare/v0.56.0...v0.57.0) (2026-05-29)
+
+
+### Features
+
+* **cluster:** host workspace mounts for multi-node Lima VMs ([#227](https://github.com/VitruvianSoftware/devx/issues/227)) ([4803ca0](https://github.com/VitruvianSoftware/devx/commit/4803ca0a204923320a49e676a3484c8c64d523cf))
+
+
+### Bug Fixes
+
+* **agent:** steer agents to 'review' (open PR) vs 'ship' (merge) in push guardrail ([#228](https://github.com/VitruvianSoftware/devx/issues/228)) ([6afbaf3](https://github.com/VitruvianSoftware/devx/commit/6afbaf366fa7907bc264d62faae4656672cc09da))
+
+## [0.56.0](https://github.com/VitruvianSoftware/devx/compare/v0.55.0...v0.56.0) (2026-05-24)
+
+
+### Features
+
+* **up:** opt-in log streaming across runtimes + container deployer ([#224](https://github.com/VitruvianSoftware/devx/issues/224)) ([27a9820](https://github.com/VitruvianSoftware/devx/commit/27a98200cf6799b96938b1f95ad288056268a6e1))
+
+
+### Bug Fixes
+
+* **docs:** exclude superpowers/ design specs from VitePress build ([#226](https://github.com/VitruvianSoftware/devx/issues/226)) ([72d5430](https://github.com/VitruvianSoftware/devx/commit/72d5430794120e95658f24ab53a891dfaf4d0151))
+
+## [0.55.0](https://github.com/VitruvianSoftware/devx/compare/v0.54.0...v0.55.0) (2026-05-24)
+
+
+### Features
+
+* **orchestrator:** print service access URLs on up + teardown summary on exit ([#220](https://github.com/VitruvianSoftware/devx/issues/220)) ([9350682](https://github.com/VitruvianSoftware/devx/commit/93506821ddecad5d271dcbf62d9ef61b016b3af9))
+
+## [0.54.0](https://github.com/VitruvianSoftware/devx/compare/v0.53.0...v0.54.0) (2026-05-23)
+
+
+### Features
+
+* **orchestrator:** add one-shot (run-to-completion) tasks ([#213](https://github.com/VitruvianSoftware/devx/issues/213)) ([f6fb72f](https://github.com/VitruvianSoftware/devx/commit/f6fb72fa9109adfed1c1f5ce2652c76743300676))
+
 ## [0.53.0](https://github.com/VitruvianSoftware/devx/compare/v0.52.0...v0.53.0) (2026-05-23)
 
 

@@ -80,6 +80,217 @@ echo $BRIDGE_PAYMENTS_API_URL  # http://127.0.0.1:9501
 curl $BRIDGE_PAYMENTS_API_URL/health
 ```
 
+## Architecture & Execution Flow
+
+Below are the architectural component structure and the step-by-step execution flows of the Hybrid Bridge feature.
+
+### Component Diagram (C4 Level 2)
+
+```mermaid
+graph TD
+    subgraph Host ["Developer Host"]
+        cli["devx CLI"]
+        bridgemgr["Bridge Manager"]
+        envfile["~/.devx/bridge.env"]
+        shell["devx shell"]
+    end
+
+    subgraph K8s ["Remote Kubernetes Cluster"]
+        apiserver["K8s API Server"]
+        svc["Target Service"]
+        pods["Application Pods"]
+        agent["Agent Job / Pod"]
+    end
+
+    subgraph Tunnel ["Tunnel Layer"]
+        pf["kubectl port-forward"]
+        yamux["Yamux Multiplexed Tunnel"]
+    end
+
+    cli -->|"bridge connect / intercept"| bridgemgr
+    bridgemgr -->|"validate kubeconfig & context"| apiserver
+    bridgemgr -->|"outbound: start port-forward"| pf
+    pf -->|"TCP tunnel to Service port"| svc
+    svc --> pods
+
+    bridgemgr -->|"intercept: deploy agent Job"| agent
+    bridgemgr -->|"intercept: patch selector"| svc
+    svc -->|"traffic redirected"| agent
+    agent -->|"Yamux stream"| yamux
+    yamux -->|"via port-forward"| pf
+    pf -->|"proxied to localhost"| cli
+
+    bridgemgr -->|"write BRIDGE_* vars"| envfile
+    shell -->|"auto-inject env vars"| envfile
+```
+
+### Execution Lifecycle — Outbound Connect
+
+```mermaid
+flowchart TD
+    Start(["devx bridge connect"]) --> ParseConfig["Parse devx.yaml / CLI flags"]
+    ParseConfig --> DryRun{"--dry-run?"}
+    DryRun -->|Yes| PrintPlan["Print planned bridges & exit"]
+    DryRun -->|No| ValidateKube["Validate kubeconfig exists"]
+    ValidateKube -->|Not found| ErrKube["Exit 60: KubeconfigNotFound"]
+    ValidateKube -->|Found| TestContext["Test cluster reachability"]
+    TestContext -->|Unreachable| ErrCtx["Exit 61: ContextUnreachable"]
+    TestContext -->|OK| ResolveNS["Resolve target namespace"]
+    ResolveNS -->|Not found| ErrNS["Exit 62: NamespaceNotFound"]
+    ResolveNS -->|OK| ResolveSvc["Resolve target Service"]
+    ResolveSvc -->|Not found| ErrSvc["Exit 63: ServiceNotFound"]
+    ResolveSvc -->|Found| StartPF["Start kubectl port-forward"]
+    StartPF -->|Port in use| AutoShift["Auto-shift to free local port"]
+    AutoShift --> StartPF
+    StartPF -->|Failed after 3 retries| ErrPF["Exit 64: PortForwardFailed"]
+    StartPF -->|Success| WriteEnv["Write BRIDGE_* vars to ~/.devx/bridge.env"]
+    WriteEnv --> Healthy["✓ Bridge active — tunnels healthy"]
+    Healthy --> WaitLoop["Wait for Ctrl+C or tunnel drop"]
+    WaitLoop -->|Tunnel drops| Reconnect["Exponential backoff retry (1s/2s/4s)"]
+    Reconnect -->|Recovered| WaitLoop
+    Reconnect -->|3 retries exhausted| ErrPF
+    WaitLoop -->|Ctrl+C| Cleanup["Kill port-forward processes & clean session"]
+```
+
+### Execution Lifecycle — Inbound Intercept
+
+```mermaid
+flowchart TD
+    Start(["devx bridge intercept &lt;service&gt; --steal"]) --> ParseFlags["Parse flags & validate --steal"]
+    ParseFlags --> DryRun{"--dry-run?"}
+    DryRun -->|Yes| Preview["Print intercept plan & exit"]
+    DryRun -->|No| CheckActive{"Service already intercepted?"}
+    CheckActive -->|Yes| ErrActive["Exit 69: InterceptActive"]
+    CheckActive -->|No| CheckSvc["Resolve Service & validate selector"]
+    CheckSvc -->|ExternalName / no selector| ErrType["Exit 72: ServiceNotInterceptable"]
+    CheckSvc -->|UDP port| ErrProto["Exit 70: UnsupportedProtocol"]
+    CheckSvc -->|OK| CheckRBAC["Verify RBAC permissions"]
+    CheckRBAC -->|Insufficient| ErrRBAC["Exit 68: RBACInsufficient"]
+    CheckRBAC -->|OK| DeployAgent["Deploy Agent Job (mirror ports)"]
+    DeployAgent -->|Failed| ErrDeploy["Exit 65: AgentDeployFailed"]
+    DeployAgent -->|OK| HealthCheck["Wait for Agent health"]
+    HealthCheck -->|Timeout| ErrHealth["Exit 66: AgentHealthFailed"]
+    HealthCheck -->|Healthy| PatchSelector["Patch Service selector → Agent Pod"]
+    PatchSelector -->|Failed| ErrPatch["Exit 67: SelectorPatchFailed"]
+    PatchSelector -->|OK| StartTunnel["Start port-forward + Yamux session"]
+    StartTunnel -->|Failed| ErrTunnel["Exit 71: TunnelFailed"]
+    StartTunnel -->|OK| Intercept["✓ Intercepting — traffic flows to localhost"]
+    Intercept --> WaitLoop["Wait for Ctrl+C or tunnel drop"]
+    WaitLoop -->|Ctrl+C| Restore["Restore original selector"]
+    Restore --> RemoveAgent["Delete Agent Job & ServiceAccount"]
+    RemoveAgent --> Done["✓ Cleanup complete"]
+    WaitLoop -->|"Crash / disconnect"| SelfHeal["Agent detects tunnel drop → auto-restores selector"]
+```
+
+### Intercept Handshake Sequence
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant CLI as devx CLI
+    participant API as K8s API Server
+    participant Agent as Agent Job (ephemeral Pod)
+    participant Svc as Target Service
+    participant Yamux as Yamux Tunnel
+
+    Dev->>CLI: devx bridge intercept <service> --steal
+    CLI->>CLI: Parse flags & validate --steal
+
+    Note over CLI, API: Phase 1 — RBAC Setup
+    CLI->>API: Create ServiceAccount (devx-bridge-agent-<svc>)
+    API-->>CLI: ServiceAccount created
+    CLI->>API: Create Role (scoped to update target Service)
+    API-->>CLI: Role created
+    CLI->>API: Create RoleBinding
+    API-->>CLI: RoleBinding created
+
+    Note over CLI, Agent: Phase 2 — Agent Deployment
+    CLI->>API: Create Job (mirror target ports, activeDeadlineSeconds=4h)
+    API-->>CLI: Job created
+    API->>Agent: Schedule Pod on node
+    CLI->>API: Poll Pod status (get pods)
+    Agent-->>API: Pod Running
+    API-->>CLI: Pod phase = Running
+
+    Note over CLI, Agent: Phase 3 — Health Gate
+    CLI->>API: kubectl port-forward to Agent control port
+    CLI->>Agent: GET /healthz (via port-forward)
+    Agent-->>CLI: 200 OK — agent ready
+
+    Note over CLI, Svc: Phase 4 — Traffic Redirect
+    CLI->>API: GET Service (save original selector)
+    API-->>CLI: selector: {app: payments-api}
+    CLI->>API: PATCH Service selector → {devx-bridge-agent: <session-id>}
+    API-->>CLI: Selector patched
+    Svc-->>Agent: All inbound traffic now routes to Agent Pod
+
+    Note over Agent, Yamux: Phase 5 — Tunnel Establishment
+    Agent->>Agent: Start Yamux listener on control port
+    CLI->>Yamux: Establish Yamux client session (over port-forward)
+    Yamux-->>CLI: Session established
+    CLI-->>Dev: ✓ Intercepting — traffic flows to localhost
+
+    Note over Svc, Dev: Phase 6 — Live Traffic Flow
+    Svc->>Agent: Cluster client request
+    Agent->>Yamux: Open new Yamux stream
+    Yamux->>CLI: Forward stream via port-forward
+    CLI->>Dev: Proxy to localhost:<local-port>
+    Dev-->>CLI: Response from local app
+    CLI-->>Yamux: Response back through tunnel
+    Yamux-->>Agent: Response via stream
+    Agent-->>Svc: Response to cluster client
+
+    Note over Dev, Agent: Phase 7 — Graceful Shutdown
+    Dev->>CLI: Ctrl+C (SIGINT)
+    CLI->>Agent: Signal tunnel closing
+    Agent->>API: PATCH Service selector → restore original {app: payments-api}
+    API-->>Agent: Selector restored
+    Agent->>API: Delete own Job + ServiceAccount + Role + RoleBinding
+    API-->>Agent: Resources deleted
+    Agent-->>CLI: Cleanup confirmed
+    CLI-->>Dev: ✓ Cleanup complete
+```
+
+### Network Topology
+
+```mermaid
+graph LR
+    subgraph DevMachine ["Developer Machine"]
+        LocalApp["Local App"]
+        CLI["devx CLI"]
+        PF["kubectl port-forward"]
+    end
+
+    subgraph K8sCluster ["Kubernetes Cluster"]
+        APIServer["K8s API Server"]
+        subgraph SvcLayer ["Service Layer"]
+            TargetSvc["Target Service\n(ClusterIP)"]
+        end
+        subgraph Pods ["Workloads"]
+            AppPod["Application Pod"]
+            AgentPod["Agent Pod\n(intercept only)"]
+        end
+    end
+
+    ExtClient["External / Cluster Client"]
+
+    %% Outbound path (devx bridge connect)
+    LocalApp -->|"localhost:localPort"| PF
+    PF -->|"port-forward tunnel"| APIServer
+    APIServer -->|"proxy to Pod"| TargetSvc
+    TargetSvc -->|"selector match"| AppPod
+
+    %% Inbound path (devx bridge intercept --steal)
+    ExtClient -->|"request to Service ClusterIP:port"| TargetSvc
+    TargetSvc -->|"selector patched → agent"| AgentPod
+    AgentPod -->|"Yamux stream over\ncontrol port"| PF
+    PF -->|"localhost:localPort"| LocalApp
+
+    %% Styling
+    linkStyle 0,1,2,3 stroke:#2196F3,stroke-width:2px
+    linkStyle 4,5,6,7 stroke:#FF9800,stroke-width:2px
+```
+
 ## Commands
 
 ### `devx bridge connect`
