@@ -44,6 +44,13 @@ domain: mycompany.dev
 # Supported: auto, podman, lima, colima, orbstack, docker
 provider: auto
 
+# Optional: inject KUBECONFIG into the child commands run by `devx run` and
+# `devx action` (e.g. kubectl/helm/pulumi), so they target this project's
+# cluster without you exporting KUBECONFIG by hand. A leading ~/ is expanded.
+# A KUBECONFIG already present in your shell always wins, so this never
+# clobbers a deliberate override.
+# kubeconfig: ~/.kube/cluster.yaml
+
 # Define remote and local secret vaults to securely inject environment variables 
 # directly into your `devx shell` without writing plaintext .env files to disk.
 env:

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -310,22 +311,54 @@ type DevxConfigCron struct {
 
 // DevxConfig is the root devx.yaml schema.
 type DevxConfig struct {
-	Name          string                            `yaml:"name"`          // Project name
-	Domain        string                            `yaml:"domain"`        // Custom domain (BYOD)
-	Env           []string                          `yaml:"env"`           // Vault sources for secret injection
-	Include       []DevxConfigInclude               `yaml:"include"`       // External devx.yaml files to compose (Idea 44)
-	Tunnels       []DevxConfigTunnel                `yaml:"tunnels"`       // List of ports to expose
-	Databases     []DevxConfigDatabase              `yaml:"databases"`     // List of databases to provision
-	Services      []DevxConfigService               `yaml:"services"`      // List of applications to orchestrate
-	Test          DevxConfigTest                    `yaml:"test"`          // Test configuration
-	Mocks         []DevxConfigMock                  `yaml:"mocks"`         // List of OpenAPI mock servers to provision
-	Profiles      map[string]DevxConfigProfile      `yaml:"profiles"`      // Named environment overlays
-	Pipeline      *DevxConfigPipeline               `yaml:"pipeline"`      // Explicit pipeline stages (Idea 45.2)
-	CustomActions map[string]DevxConfigCustomAction `yaml:"customActions"` // Named tasks (scaffolded for Idea 45.3)
-	Bridge        *DevxConfigBridge                 `yaml:"bridge"`        // Hybrid edge-to-local routing (Idea 46.1)
-	State         *DevxConfigState                  `yaml:"state"`         // State replication settings (Idea 56)
-	Telemetry     *DevxConfigTelemetry              `yaml:"telemetry"`     // Telemetry export endpoints
-	Cron          []DevxConfigCron                  `yaml:"cron"`          // Named cron jobs runnable via `devx cron run` (Idea 66)
+	Name          string                            `yaml:"name"`                 // Project name
+	Domain        string                            `yaml:"domain"`               // Custom domain (BYOD)
+	Kubeconfig    string                            `yaml:"kubeconfig,omitempty"` // KUBECONFIG to inject into run/action child commands
+	Env           []string                          `yaml:"env"`                  // Vault sources for secret injection
+	Include       []DevxConfigInclude               `yaml:"include"`              // External devx.yaml files to compose (Idea 44)
+	Tunnels       []DevxConfigTunnel                `yaml:"tunnels"`              // List of ports to expose
+	Databases     []DevxConfigDatabase              `yaml:"databases"`            // List of databases to provision
+	Services      []DevxConfigService               `yaml:"services"`             // List of applications to orchestrate
+	Test          DevxConfigTest                    `yaml:"test"`                 // Test configuration
+	Mocks         []DevxConfigMock                  `yaml:"mocks"`                // List of OpenAPI mock servers to provision
+	Profiles      map[string]DevxConfigProfile      `yaml:"profiles"`             // Named environment overlays
+	Pipeline      *DevxConfigPipeline               `yaml:"pipeline"`             // Explicit pipeline stages (Idea 45.2)
+	CustomActions map[string]DevxConfigCustomAction `yaml:"customActions"`        // Named tasks (scaffolded for Idea 45.3)
+	Bridge        *DevxConfigBridge                 `yaml:"bridge"`               // Hybrid edge-to-local routing (Idea 46.1)
+	State         *DevxConfigState                  `yaml:"state"`                // State replication settings (Idea 56)
+	Telemetry     *DevxConfigTelemetry              `yaml:"telemetry"`            // Telemetry export endpoints
+	Cron          []DevxConfigCron                  `yaml:"cron"`                 // Named cron jobs runnable via `devx cron run` (Idea 66)
+}
+
+// commandEnv builds the environment for child processes launched by
+// `devx run` and `devx action`. It starts from the parent environment and,
+// when the project's devx.yaml sets a top-level `kubeconfig`, injects
+// KUBECONFIG so kubectl/helm/pulumi target the project's cluster without the
+// developer exporting it by hand.
+//
+// A KUBECONFIG already present in the environment always wins — an explicit
+// developer override is never clobbered.
+func commandEnv(cfg *DevxConfig) []string {
+	env := os.Environ()
+	if cfg == nil || cfg.Kubeconfig == "" {
+		return env
+	}
+	if _, ok := os.LookupEnv("KUBECONFIG"); ok {
+		return env
+	}
+	return append(env, "KUBECONFIG="+expandHome(cfg.Kubeconfig))
+}
+
+// expandHome turns a leading "~/" into the user's home directory; paths
+// without that prefix are returned unchanged. Mirrors the convention in
+// internal/bridge/kube.go so kubeconfig paths behave consistently.
+func expandHome(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, path[2:])
+		}
+	}
+	return path
 }
 
 // ─── Config Resolution ────────────────────────────────────────────────────────
