@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.1](https://github.com/VitruvianSoftware/devx/compare/v0.58.0...v0.58.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* **cluster:** resolve real etcd snapshot filename on backup download ([#233](https://github.com/VitruvianSoftware/devx/issues/233)) ([b6d7a7f](https://github.com/VitruvianSoftware/devx/commit/b6d7a7f824d3588232f9e50458581f4eab2695fb))
+
 ## [0.58.0](https://github.com/VitruvianSoftware/devx/compare/v0.57.0...v0.58.0) (2026-05-29)
 
 
