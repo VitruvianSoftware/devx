@@ -61,7 +61,10 @@ func commitCountT(t *testing.T, dir string) int {
 // and repo-local identity/signing config so plain `git commit` works.
 func initRepoWithBase(t *testing.T, dir string) {
 	t.Helper()
-	gitT(t, dir, "init", "-b", "main")
+	gitT(t, dir, "init")
+	// `git init -b main` needs git >= 2.28; set the initial branch via symbolic-ref
+	// instead so the test also runs on older git (e.g. the RBE executor's).
+	gitT(t, dir, "symbolic-ref", "HEAD", "refs/heads/main")
 	gitT(t, dir, "config", "user.name", "test")
 	gitT(t, dir, "config", "user.email", "test@example.com")
 	gitT(t, dir, "config", "commit.gpgsign", "false")
