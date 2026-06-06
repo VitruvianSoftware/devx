@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.60.0](https://github.com/VitruvianSoftware/devx/compare/v0.59.0...v0.60.0) (2026-06-06)
+
+
+### Features
+
+* **cluster:** boot any laptop into a self-joining node via Ventoy USB ([#239](https://github.com/VitruvianSoftware/devx/issues/239)) ([156562b](https://github.com/VitruvianSoftware/devx/commit/156562b3b8a6d474a7aa9a5a874fbf3a18f55786))
+
 ## [0.59.0](https://github.com/VitruvianSoftware/devx/compare/v0.58.1...v0.59.0) (2026-06-04)
 
 
