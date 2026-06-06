@@ -45,6 +45,28 @@ type ClusterConfig struct {
 	Tailscale  TailscaleConfig `yaml:"tailscale"`
 	Docker     DockerConfig    `yaml:"docker"`
 	Mounts     []MountConfig   `yaml:"mounts"`
+	USB        USBConfig       `yaml:"usb"`
+}
+
+// USBConfig holds defaults for `devx cluster usb`, which builds a Ventoy USB that
+// boots a bare-metal laptop into a self-joining node. All fields are optional;
+// command-line flags override them.
+type USBConfig struct {
+	Renderers        []string   `yaml:"renderers,omitempty"`        // subset of fcos|ubuntu|baked; empty = all
+	NodeNamePrefix   string     `yaml:"nodeNamePrefix,omitempty"`   // default "usb"
+	Pool             string     `yaml:"pool,omitempty"`             // node pool label; default "usb"
+	AgentToken       string     `yaml:"agentToken,omitempty"`       // dedicated least-privilege k3s agent token
+	TailnetServerURL string     `yaml:"tailnetServerURL,omitempty"` // explicit tailnet API URL override
+	Scratch          string     `yaml:"scratch,omitempty"`          // none|existing:<src>|free-space
+	NodeTTL          string     `yaml:"nodeTTL,omitempty"`          // e.g. "30m"; prune NotReady ephemeral nodes older than this
+	WiFi             WiFiConfig `yaml:"wifi,omitempty"`             // optional Wi-Fi creds baked into the boot config
+}
+
+// WiFiConfig carries optional Wi-Fi credentials for renderers that support them
+// (notably Ubuntu), so a laptop with no Ethernet can still reach the cluster.
+type WiFiConfig struct {
+	SSID string `yaml:"ssid,omitempty"`
+	PSK  string `yaml:"psk,omitempty"`
 }
 
 // TailscaleConfig holds configuration for Tailscale networking.
