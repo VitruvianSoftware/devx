@@ -197,9 +197,9 @@ func assembleAndFlash(ctx context.Context, f assembleFlags) error {
 		BootSizeMB:  bootMB,
 		TotalSizeMB: totalMB,
 		ISOs:        usb.DefaultISOSpecs(f.isoList),
-		ButaneVM:    "/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
-		PayloadVM:   "/tmp/devx/payload",
-		ImageVM:     "/tmp/devx/devx-usb.img",
+		ButaneVM:    "/var/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
+		PayloadVM:   "/var/tmp/devx/payload",
+		ImageVM:     "/var/tmp/devx/devx-usb.img",
 	}
 	b := usb.NewBuilder(f.builderVM)
 	fmt.Printf("🔧 Provisioning builder VM %q...\n", f.builderVM)

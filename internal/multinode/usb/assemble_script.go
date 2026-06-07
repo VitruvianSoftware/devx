@@ -114,15 +114,22 @@ func RenderAssemblyScript(p AssemblyParams) (string, error) {
 		}
 	}
 
+	// Work dir (scratch + image) sits next to the image, on the persistent root
+	// disk (NOT tmpfs) so the multi-GB sparse image + ISO copy have room.
+	w("\nIMG=%q\nWORK=$(dirname \"$IMG\")\nmkdir -p \"$WORK\"\n\n", p.ImageVM)
+
 	// --- Compile Butane → Ignition and embed into a copy of the FCOS ISO ---
-	w("\nbutane --strict -o /tmp/devx-node.ign %q\n", p.ButaneVM)
-	w("cp \"$CACHE/%s\" /tmp/fcos-devx.iso\n", fcos.Filename)
-	w("podman run --rm --privileged -v /tmp:/data %s iso ignition embed -f -i /data/devx-node.ign /data/fcos-devx.iso\n\n", CoreosInstallerImage)
+	w("butane --strict -o \"$WORK/devx-node.ign\" %q\n", p.ButaneVM)
+	w("cp \"$CACHE/%s\" \"$WORK/fcos-devx.iso\"\n", fcos.Filename)
+	w("podman run --rm --privileged -v \"$WORK\":/data %s iso ignition embed -f -i /data/devx-node.ign /data/fcos-devx.iso\n\n", CoreosInstallerImage)
 
 	// --- Sparse image + loop + Ventoy install (reserve the storage tail) ---
-	w("rm -f %q\ntruncate -s %dM %q\nLOOP=$(losetup --show -f -P %q)\n", p.ImageVM, p.TotalSizeMB, p.ImageVM, p.ImageVM)
+	w("rm -f \"$IMG\"\ntruncate -s %dM \"$IMG\"\nLOOP=$(losetup --show -f -P \"$IMG\")\n", p.TotalSizeMB)
 	b.WriteString("trap 'umount /mnt/vtoy 2>/dev/null || true; [ -n \"${LOOP:-}\" ] && losetup -d \"$LOOP\" 2>/dev/null || true' EXIT\n")
-	w("yes | bash /opt/ventoy/Ventoy2Disk.sh -I -r %d \"$LOOP\"\n\n", reserve)
+	// Confirmations via heredoc, not `yes |` — a pipe makes `yes` take SIGPIPE
+	// when Ventoy stops reading, which fails the pipeline under `set -o pipefail`
+	// even on a successful install.
+	w("bash /opt/ventoy/Ventoy2Disk.sh -I -r %d \"$LOOP\" <<'VTEOF'\ny\ny\nVTEOF\n\n", reserve)
 
 	// --- Storage partition: fill Ventoy's reserved tail, derived at runtime ---
 	b.WriteString(`# Start = end of Ventoy's last partition (so the exFAT storage exactly fills the
@@ -139,7 +146,7 @@ mkfs.exfat -L DEVXDATA "${LOOP}p3"
 
 	// --- Copy ISOs + payloads onto the Ventoy data partition (p1) ---
 	w("mkdir -p /mnt/vtoy\nmount \"${LOOP}p1\" /mnt/vtoy\n")
-	w("cp /tmp/fcos-devx.iso /mnt/vtoy/%s\n", fcos.Filename)
+	w("cp \"$WORK/fcos-devx.iso\" /mnt/vtoy/%s\n", fcos.Filename)
 	for _, iso := range p.ISOs {
 		if iso.EmbedIgnition {
 			continue
@@ -149,6 +156,7 @@ mkfs.exfat -L DEVXDATA "${LOOP}p3"
 	w("mkdir -p /mnt/vtoy/ventoy\ncp %q/ventoy/ventoy.json /mnt/vtoy/ventoy/ventoy.json\n", p.PayloadVM)
 	// Ubuntu cloud-init seed (referenced by ventoy.json auto_install as /ubuntu/.../user-data).
 	w("if [ -d %q/ubuntu ]; then cp -r %q/ubuntu /mnt/vtoy/ubuntu; fi\n", p.PayloadVM, p.PayloadVM)
-	w("sync\numount /mnt/vtoy\necho \"devx: image ready at %s\"\n", p.ImageVM)
+	w("rm -f \"$WORK/fcos-devx.iso\" \"$WORK/devx-node.ign\"\n") // free ~1GB of scratch
+	b.WriteString("sync\numount /mnt/vtoy\necho \"devx: image ready at $IMG\"\n")
 	return b.String(), nil
 }

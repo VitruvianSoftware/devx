@@ -74,9 +74,9 @@ func TestAssembleIntegration(t *testing.T) {
 	params := AssemblyParams{
 		BootSizeMB: 3072, TotalSizeMB: 5120,
 		ISOs:      DefaultISOSpecs([]string{"fcos"}),
-		ButaneVM:  "/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
-		PayloadVM: "/tmp/devx/payload",
-		ImageVM:   "/tmp/devx/devx-usb.img",
+		ButaneVM:  "/var/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
+		PayloadVM: "/var/tmp/devx/payload",
+		ImageVM:   "/var/tmp/devx/devx-usb.img",
 	}
 	img, err := b.BuildImage(ctx, params, staging)
 	if err != nil {
@@ -86,9 +86,15 @@ func TestAssembleIntegration(t *testing.T) {
 		t.Fatalf("image %s missing or too small: %v", img, err)
 	}
 
-	// Inspect the layout inside the VM (macOS can't read Linux partitions).
+	// BuildImage reclaims the image inside the VM, so copy the produced image back
+	// in to inspect its Linux partitions (macOS can't read them).
+	const inspectImg = "/var/tmp/inspect.img"
+	if out, err := exec.CommandContext(ctx, "limactl", "copy", img, "devx-usb-itest:"+inspectImg).CombinedOutput(); err != nil {
+		t.Fatalf("copy image into VM for inspection: %v\n%s", err, out)
+	}
+
 	out, err := exec.CommandContext(ctx, "limactl", "shell", "devx-usb-itest", "sudo", "bash", "-c",
-		"L=$(losetup --show -f -P "+params.ImageVM+"); parted -s $L print; blkid; losetup -d $L").CombinedOutput()
+		"L=$(losetup --show -f -P "+inspectImg+"); parted -s $L print; blkid; losetup -d $L").CombinedOutput()
 	if err != nil {
 		t.Fatalf("inspect image: %v\n%s", err, out)
 	}
@@ -97,10 +103,13 @@ func TestAssembleIntegration(t *testing.T) {
 		t.Errorf("expected an exFAT DEVXDATA storage partition; got:\n%s", got)
 	}
 
-	// Confirm the embedded Ignition is readable from the FCOS ISO on the boot partition.
+	// Confirm the embedded Ignition is readable from the FCOS ISO on the boot
+	// partition. coreos-installer ships no binary, so read it via the container.
 	isoName := filepath.Base(DefaultISOSpecs([]string{"fcos"})[0].Filename)
 	ign, err := exec.CommandContext(ctx, "limactl", "shell", "devx-usb-itest", "sudo", "bash", "-c",
-		"L=$(losetup --show -f -P "+params.ImageVM+"); mount ${L}p1 /mnt/i 2>/dev/null; coreos-installer iso ignition show /mnt/i/"+isoName+"; umount /mnt/i; losetup -d $L").CombinedOutput()
+		"set -e; L=$(losetup --show -f -P "+inspectImg+"); mkdir -p /mnt/i; mount ${L}p1 /mnt/i; "+
+			"podman run --rm -v /mnt/i:/data "+CoreosInstallerImage+" iso ignition show /data/"+isoName+"; "+
+			"umount /mnt/i; losetup -d $L").CombinedOutput()
 	if err != nil || !strings.Contains(string(ign), "devx-join") {
 		t.Errorf("embedded Ignition not found on FCOS ISO: %v\n%s", err, ign)
 	}

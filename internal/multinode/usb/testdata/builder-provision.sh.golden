@@ -1,14 +1,25 @@
 #!/bin/bash
-# devx usb builder provisioning — GENERATED.
+# devx usb builder provisioning — GENERATED. Idempotent; run via limactl shell.
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq wget jq parted exfatprogs dosfstools util-linux ca-certificates butane podman
+# apt-get update can race first-boot networking; retry briefly.
+for i in 1 2 3 4 5; do apt-get update -qq && break; sleep 5; done
+apt-get install -y -qq wget jq parted exfatprogs dosfstools util-linux ca-certificates podman
 
-# Ventoy (Linux installer)
-if [ ! -d /opt/ventoy ]; then
+# Ventoy (Linux installer). The tarball nests everything under a versioned dir
+# (with a ./ prefix), so extract then flatten so Ventoy2Disk.sh lands at
+# /opt/ventoy/. Guard on the binary (not the dir) so a partial extract retries.
+if [ ! -x /opt/ventoy/Ventoy2Disk.sh ]; then
+  rm -rf /opt/ventoy && mkdir -p /opt/ventoy
   wget -qO /tmp/ventoy.tar.gz https://github.com/ventoy/Ventoy/releases/download/v1.0.99/ventoy-1.0.99-linux.tar.gz
-  mkdir -p /opt/ventoy
-  tar -xzf /tmp/ventoy.tar.gz -C /opt/ventoy --strip-components=1
+  tar -xzf /tmp/ventoy.tar.gz -C /opt/ventoy
+  d=$(find /opt/ventoy -mindepth 1 -maxdepth 1 -type d -name 'ventoy-*' | head -1)
+  if [ -n "$d" ]; then mv "$d"/* /opt/ventoy/ && rmdir "$d"; fi
+fi
+
+# Butane (Ignition compiler) — not in apt, but ships a static Linux binary.
+if ! command -v butane >/dev/null 2>&1; then
+  wget -qO /usr/local/bin/butane https://github.com/coreos/butane/releases/download/v0.23.0/butane-$(uname -m)-unknown-linux-gnu
+  chmod 0755 /usr/local/bin/butane
 fi
 echo "devx: builder provisioned"

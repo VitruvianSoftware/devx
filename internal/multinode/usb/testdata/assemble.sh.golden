@@ -8,15 +8,22 @@ mkdir -p "$CACHE"
 if [ ! -f "$CACHE/fcos.iso" ]; then wget -q -O "$CACHE/fcos.iso.part" "https://example/fcos.iso" && mv "$CACHE/fcos.iso.part" "$CACHE/fcos.iso"; fi
 if [ ! -f "$CACHE/ubuntu.iso" ]; then wget -q -O "$CACHE/ubuntu.iso.part" "https://example/ubuntu.iso" && mv "$CACHE/ubuntu.iso.part" "$CACHE/ubuntu.iso"; fi
 
-butane --strict -o /tmp/devx-node.ign "/tmp/devx/payload/fcos.ign"
-cp "$CACHE/fcos.iso" /tmp/fcos-devx.iso
-podman run --rm --privileged -v /tmp:/data quay.io/coreos/coreos-installer:release iso ignition embed -f -i /data/devx-node.ign /data/fcos-devx.iso
+IMG="/tmp/devx/devx-usb.img"
+WORK=$(dirname "$IMG")
+mkdir -p "$WORK"
 
-rm -f "/tmp/devx/devx-usb.img"
-truncate -s 117000M "/tmp/devx/devx-usb.img"
-LOOP=$(losetup --show -f -P "/tmp/devx/devx-usb.img")
+butane --strict -o "$WORK/devx-node.ign" "/tmp/devx/payload/fcos.ign"
+cp "$CACHE/fcos.iso" "$WORK/fcos-devx.iso"
+podman run --rm --privileged -v "$WORK":/data quay.io/coreos/coreos-installer:release iso ignition embed -f -i /data/devx-node.ign /data/fcos-devx.iso
+
+rm -f "$IMG"
+truncate -s 117000M "$IMG"
+LOOP=$(losetup --show -f -P "$IMG")
 trap 'umount /mnt/vtoy 2>/dev/null || true; [ -n "${LOOP:-}" ] && losetup -d "$LOOP" 2>/dev/null || true' EXIT
-yes | bash /opt/ventoy/Ventoy2Disk.sh -I -r 100616 "$LOOP"
+bash /opt/ventoy/Ventoy2Disk.sh -I -r 100616 "$LOOP" <<'VTEOF'
+y
+y
+VTEOF
 
 # Start = end of Ventoy's last partition (so the exFAT storage exactly fills the
 # reserved tail). DEVXDATA is general-purpose storage, intentionally left empty.
@@ -30,11 +37,12 @@ mkfs.exfat -L DEVXDATA "${LOOP}p3"
 
 mkdir -p /mnt/vtoy
 mount "${LOOP}p1" /mnt/vtoy
-cp /tmp/fcos-devx.iso /mnt/vtoy/fcos.iso
+cp "$WORK/fcos-devx.iso" /mnt/vtoy/fcos.iso
 cp "$CACHE/ubuntu.iso" /mnt/vtoy/ubuntu.iso
 mkdir -p /mnt/vtoy/ventoy
 cp "/tmp/devx/payload"/ventoy/ventoy.json /mnt/vtoy/ventoy/ventoy.json
 if [ -d "/tmp/devx/payload"/ubuntu ]; then cp -r "/tmp/devx/payload"/ubuntu /mnt/vtoy/ubuntu; fi
+rm -f "$WORK/fcos-devx.iso" "$WORK/devx-node.ign"
 sync
 umount /mnt/vtoy
-echo "devx: image ready at /tmp/devx/devx-usb.img"
+echo "devx: image ready at $IMG"

@@ -64,7 +64,7 @@ func TestRenderAssemblyScript_Invariants(t *testing.T) {
 	}
 	for _, want := range []string{
 		"wget -q -O",
-		"butane --strict -o /tmp/devx-node.ign",
+		`butane --strict -o "$WORK/devx-node.ign"`,
 		"iso ignition embed",            // via the coreos-installer container
 		"Ventoy2Disk.sh -I -r 100616",   // reserve = total-boot = 117000-16384
 		"mkfs.exfat -L DEVXDATA",        // exFAT storage with the right label flag
