@@ -35,9 +35,9 @@ func sampleAssembly() AssemblyParams {
 			{Name: "fcos", URL: "https://example/fcos.iso", Filename: "fcos.iso", EmbedIgnition: true},
 			{Name: "ubuntu", URL: "https://example/ubuntu.iso", Filename: "ubuntu.iso"},
 		},
-		IgnitionVM: "/tmp/devx/payload/fcos.ign",
-		PayloadVM:  "/tmp/devx/payload",
-		ImageVM:    "/tmp/devx/devx-usb.img",
+		ButaneVM:  "/tmp/devx/payload/fcos.ign",
+		PayloadVM: "/tmp/devx/payload",
+		ImageVM:   "/tmp/devx/devx-usb.img",
 	}
 }
 
@@ -64,6 +64,7 @@ func TestRenderAssemblyScript_Invariants(t *testing.T) {
 	}
 	for _, want := range []string{
 		"wget -q -O",
+		"butane --strict -o /tmp/devx-node.ign",
 		"coreos-installer iso ignition embed",
 		"Ventoy2Disk.sh -I -r 100616", // reserve = total-boot = 117000-16384
 		"mkfs.exfat",
@@ -100,7 +101,7 @@ func TestDefaultISOSpecs(t *testing.T) {
 	// The FCOS empty-URL path must emit the stream-resolution + jq.
 	got, err := RenderAssemblyScript(AssemblyParams{
 		BootSizeMB: 1024, TotalSizeMB: 4096, ISOs: specs,
-		IgnitionVM: "/i.ign", PayloadVM: "/p", ImageVM: "/o.img",
+		ButaneVM: "/i.ign", PayloadVM: "/p", ImageVM: "/o.img",
 	})
 	if err != nil {
 		t.Fatal(err)

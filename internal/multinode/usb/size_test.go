@@ -25,14 +25,14 @@ import "testing"
 func TestParseSizeMB(t *testing.T) {
 	ok := map[string]int{"16G": 16384, "16GiB": 16384, "16GB": 16384, "512M": 512, "1g": 1024}
 	for in, want := range ok {
-		got, err := parseSizeMB(in)
+		got, err := ParseSizeMB(in)
 		if err != nil || got != want {
-			t.Errorf("parseSizeMB(%q) = %d, %v; want %d", in, got, err, want)
+			t.Errorf("ParseSizeMB(%q) = %d, %v; want %d", in, got, err, want)
 		}
 	}
 	for _, bad := range []string{"", "16", "16K", "abc", "-4G", "0G"} {
-		if _, err := parseSizeMB(bad); err == nil {
-			t.Errorf("parseSizeMB(%q) should error", bad)
+		if _, err := ParseSizeMB(bad); err == nil {
+			t.Errorf("ParseSizeMB(%q) should error", bad)
 		}
 	}
 }

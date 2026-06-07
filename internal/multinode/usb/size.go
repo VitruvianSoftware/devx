@@ -26,9 +26,9 @@ import (
 	"strings"
 )
 
-// parseSizeMB parses a size like "16G", "16GiB", "512M" into mebibytes
+// ParseSizeMB parses a size like "16G", "16GiB", "512M" into mebibytes
 // (G = 1024 MiB). It requires an explicit M or G unit.
-func parseSizeMB(s string) (int, error) {
+func ParseSizeMB(s string) (int, error) {
 	u := strings.ToUpper(strings.TrimSpace(s))
 	u = strings.TrimSuffix(u, "IB")
 	u = strings.TrimSuffix(u, "B")

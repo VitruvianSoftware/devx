@@ -8,9 +8,10 @@ mkdir -p "$CACHE"
 if [ ! -f "$CACHE/fcos.iso" ]; then wget -q -O "$CACHE/fcos.iso.part" "https://example/fcos.iso" && mv "$CACHE/fcos.iso.part" "$CACHE/fcos.iso"; fi
 if [ ! -f "$CACHE/ubuntu.iso" ]; then wget -q -O "$CACHE/ubuntu.iso.part" "https://example/ubuntu.iso" && mv "$CACHE/ubuntu.iso.part" "$CACHE/ubuntu.iso"; fi
 
-# Embed Ignition into a copy of the FCOS ISO
+# Compile Butane → Ignition, then embed into a copy of the FCOS ISO
+butane --strict -o /tmp/devx-node.ign "/tmp/devx/payload/fcos.ign"
 cp "$CACHE/fcos.iso" /tmp/fcos-devx.iso
-coreos-installer iso ignition embed -f -i "/tmp/devx/payload/fcos.ign" /tmp/fcos-devx.iso
+coreos-installer iso ignition embed -f -i /tmp/devx-node.ign /tmp/fcos-devx.iso
 
 # Sparse image + loop
 rm -f "/tmp/devx/devx-usb.img"
@@ -34,8 +35,8 @@ mount "${LOOP}p1" /mnt/vtoy
 cp /tmp/fcos-devx.iso /mnt/vtoy/fcos.iso
 cp "$CACHE/ubuntu.iso" /mnt/vtoy/ubuntu.iso
 mkdir -p /mnt/vtoy/ventoy
-cp "/tmp/devx/payload"/ventoy.json /mnt/vtoy/ventoy/ventoy.json
-cp -r "/tmp/devx/payload"/seed /mnt/vtoy/ 2>/dev/null || true
+cp "/tmp/devx/payload"/ventoy/ventoy.json /mnt/vtoy/ventoy/ventoy.json
+cp -r "/tmp/devx/payload"/ubuntu /mnt/vtoy/ubuntu 2>/dev/null || true
 sync
 umount /mnt/vtoy
 losetup -d "$LOOP"

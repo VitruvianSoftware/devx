@@ -21,9 +21,12 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -66,41 +69,71 @@ func newClusterUSBBuildCmd(configFile *string) *cobra.Command {
 		modeFlags []string
 		role      string
 		timeout   time.Duration
+		device    string
+		assemble  bool
+		bootSize  string
+		totalSize string
+		imageOut  string
+		isoList   []string
+		assumeYes bool
+		builderVM string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "build",
-		Short: "Generate boot artifacts and ventoy.json into an output directory",
-		Long: `build resolves this cluster's join coordinates (server URL + token, reusing
-the same healthy-server discovery as 'cluster join'), then renders the selected
-renderers across the selected modes into --output, alongside a ventoy.json and a
-MANIFEST.md. Use --dry-run to print the boot-menu plan without touching the
-cluster or writing files.`,
+		Short: "Generate boot artifacts, or assemble + flash a bootable Ventoy USB",
+		Long: `build resolves this cluster's join coordinates (reusing the same healthy-server
+discovery as 'cluster join') and renders the boot payloads (Ignition, cloud-init,
+join script, ventoy.json) into --output.
+
+With --device or --assemble it goes further: it spins up a Lima builder VM that
+downloads the OS ISOs, embeds the Ignition into the FCOS ISO, installs Ventoy on
+a disk image (a --boot-size Ventoy partition + the rest as exFAT storage), copies
+the payloads in, and produces a flashable .img. With --device it then flashes that
+image to the (removable-only) device after confirmation. Assembled sticks are
+ephemeral-only, so booting one can never format a host laptop's internal disk.
+
+The builder VM (--builder-vm) is kept between runs to cache the ISOs; remove it
+with 'limactl delete <name>' when you no longer need it.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(*configFile)
 			if err != nil {
 				return fmt.Errorf("loading config: %w", err)
 			}
+			if role != "" && role != string(usb.RoleAgent) && role != string(usb.RoleServer) {
+				return fmt.Errorf("invalid --role %q (want agent or server)", role)
+			}
+			assembling := device != "" || assemble
+
 			modes, err := parseModes(modeFlags)
 			if err != nil {
 				return err
 			}
-			if role != "" && role != string(usb.RoleAgent) && role != string(usb.RoleServer) {
-				return fmt.Errorf("invalid --role %q (want agent or server)", role)
+			buildRenderers, buildModes := renderers, modes
+			if assembling {
+				// Assembled sticks are ephemeral-only (host-disk-safe) with the requested ISOs.
+				buildRenderers = isoList
+				buildModes = []usb.Mode{usb.ModeEphemeral}
 			}
 
 			ctx := contextWithSignal(cmd.Context(), timeout)
 			res, err := usb.Build(ctx, cfg, usb.BuildOptions{
 				OutputDir: outputDir,
-				Renderers: renderers,
-				Modes:     modes,
+				Renderers: buildRenderers,
+				Modes:     buildModes,
 				Role:      usb.Role(role),
 				DryRun:    DryRun,
 			})
 			if err != nil {
 				return err
 			}
-			return printUSBBuildResult(res)
+			if !assembling {
+				return printUSBBuildResult(res)
+			}
+			return assembleAndFlash(ctx, assembleFlags{
+				outputDir: outputDir, device: device, bootSize: bootSize, totalSize: totalSize,
+				imageOut: imageOut, isoList: isoList, assumeYes: assumeYes, builderVM: builderVM,
+			})
 		},
 	}
 
@@ -108,8 +141,118 @@ cluster or writing files.`,
 	cmd.Flags().StringSliceVar(&renderers, "renderer", nil, "renderers to build (fcos,ubuntu,baked); default all/config")
 	cmd.Flags().StringSliceVar(&modeFlags, "mode", nil, "lifecycle modes (ephemeral,install); default both")
 	cmd.Flags().StringVar(&role, "role", "agent", "k3s role for install entries (agent or server)")
-	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "maximum time to resolve cluster coordinates")
+	cmd.Flags().DurationVar(&timeout, "timeout", 30*time.Minute, "maximum time for the operation")
+	cmd.Flags().StringVar(&device, "device", "", "flash the assembled image to this removable device (e.g. /dev/disk4)")
+	cmd.Flags().BoolVar(&assemble, "assemble", false, "assemble a bootable image via a Lima builder VM (implied by --device)")
+	cmd.Flags().StringVar(&bootSize, "boot-size", "16G", "Ventoy boot partition size; remainder becomes exFAT storage")
+	cmd.Flags().StringVar(&totalSize, "total-size", "", "total image size (defaults to the --device size, else 32G)")
+	cmd.Flags().StringVar(&imageOut, "image-out", "devx-usb.img", "where to write the assembled image when --device is not set")
+	cmd.Flags().StringSliceVar(&isoList, "isos", []string{"fcos", "ubuntu"}, "ISOs to include (ephemeral)")
+	cmd.Flags().BoolVar(&assumeYes, "yes", false, "skip the destructive-write confirmation")
+	cmd.Flags().StringVar(&builderVM, "builder-vm", "devx-usb-builder", "name of the Lima builder VM (kept between runs to cache ISOs)")
 	return cmd
+}
+
+type assembleFlags struct {
+	outputDir, device, bootSize, totalSize, imageOut, builderVM string
+	isoList                                                     []string
+	assumeYes                                                   bool
+}
+
+// assembleAndFlash builds the Ventoy image in a Lima VM and, when a device is
+// given, flashes it. Staging into outputDir has already happened.
+func assembleAndFlash(ctx context.Context, f assembleFlags) error {
+	bootMB, err := usb.ParseSizeMB(f.bootSize)
+	if err != nil {
+		return err
+	}
+	totalMB := 32 * 1024
+	switch {
+	case f.totalSize != "":
+		if totalMB, err = usb.ParseSizeMB(f.totalSize); err != nil {
+			return err
+		}
+	case f.device != "":
+		out, _ := exec.CommandContext(ctx, "diskutil", "info", f.device).CombinedOutput()
+		if d := usb.ParseDiskutilInfo(string(out)); d.SizeBytes > 0 {
+			totalMB = int(d.SizeBytes / (1024 * 1024))
+		}
+	}
+	if totalMB <= bootMB {
+		return fmt.Errorf("total size (%dM) must exceed boot size (%dM)", totalMB, bootMB)
+	}
+
+	if DryRun {
+		fmt.Printf("📋 Dry-run: would assemble a %dM image (%dM Ventoy boot + %dM exFAT storage) from ISOs %v in VM %q\n",
+			totalMB, bootMB, totalMB-bootMB, f.isoList, f.builderVM)
+		if f.device != "" {
+			fmt.Printf("           then flash to %s (after confirmation)\n", f.device)
+		}
+		return nil
+	}
+
+	params := usb.AssemblyParams{
+		BootSizeMB:  bootMB,
+		TotalSizeMB: totalMB,
+		ISOs:        usb.DefaultISOSpecs(f.isoList),
+		ButaneVM:    "/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
+		PayloadVM:   "/tmp/devx/payload",
+		ImageVM:     "/tmp/devx/devx-usb.img",
+	}
+	b := usb.NewBuilder(f.builderVM)
+	fmt.Printf("🔧 Provisioning builder VM %q...\n", f.builderVM)
+	if err := b.EnsureBuilderVM(ctx); err != nil {
+		return err
+	}
+	fmt.Println("📦 Assembling Ventoy image in the VM (download ISOs + embed Ignition + install Ventoy)...")
+	img, err := b.BuildImage(ctx, params, f.outputDir)
+	if err != nil {
+		return err
+	}
+
+	if f.device == "" {
+		if err := moveFile(img, f.imageOut); err != nil {
+			return err
+		}
+		fmt.Printf("✅ Assembled image written to %s\n", f.imageOut)
+		return nil
+	}
+	confirm := func() bool {
+		if f.assumeYes {
+			return true
+		}
+		fmt.Printf("⚠️  About to ERASE %s and flash the Ventoy image. Type 'yes' to continue: ", f.device)
+		var s string
+		_, _ = fmt.Scanln(&s)
+		return s == "yes"
+	}
+	if err := usb.Flash(ctx, img, f.device, confirm); err != nil {
+		return err
+	}
+	fmt.Printf("✅ Flashed bootable Ventoy stick to %s\n", f.device)
+	return nil
+}
+
+// moveFile copies src to dst then removes src (rename can fail across filesystems).
+func moveFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = in.Close() }()
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		_ = out.Close()
+		return err
+	}
+	if err := out.Close(); err != nil {
+		return err
+	}
+	_ = os.Remove(src)
+	return nil
 }
 
 func newClusterUSBPruneCmd(configFile *string) *cobra.Command {

@@ -47,7 +47,7 @@ type AssemblyParams struct {
 	BootSizeMB  int
 	TotalSizeMB int
 	ISOs        []ISOSpec
-	IgnitionVM  string // path inside the VM to the .ign to embed
+	ButaneVM    string // path inside the VM to the FCOS Butane (.bu) to compile + embed
 	PayloadVM   string // path inside the VM to staged ventoy.json + seeds
 	ImageVM     string // path inside the VM for the output .img
 }
@@ -100,8 +100,10 @@ func RenderAssemblyScript(p AssemblyParams) (string, error) {
 				iso.Filename, iso.Filename, iso.URL, iso.Filename, iso.Filename)
 		}
 	}
-	w("\n# Embed Ignition into a copy of the FCOS ISO\ncp \"$CACHE/%s\" /tmp/fcos-devx.iso\n", fcos.Filename)
-	w("coreos-installer iso ignition embed -f -i %q /tmp/fcos-devx.iso\n\n", p.IgnitionVM)
+	w("\n# Compile Butane → Ignition, then embed into a copy of the FCOS ISO\n")
+	w("butane --strict -o /tmp/devx-node.ign %q\n", p.ButaneVM)
+	w("cp \"$CACHE/%s\" /tmp/fcos-devx.iso\n", fcos.Filename)
+	b.WriteString("coreos-installer iso ignition embed -f -i /tmp/devx-node.ign /tmp/fcos-devx.iso\n\n")
 	w("# Sparse image + loop\nrm -f %q\ntruncate -s %dM %q\nLOOP=$(losetup --show -f -P %q)\n\n", p.ImageVM, p.TotalSizeMB, p.ImageVM, p.ImageVM)
 	w("# Install Ventoy (force, reserve the storage tail)\nyes | bash /opt/ventoy/Ventoy2Disk.sh -I -r %d \"$LOOP\"\npartprobe \"$LOOP\" || true\nsleep 2\n\n", reserve)
 	w("# Storage partition in the reserved tail → exFAT (3rd primary in free space)\n")
@@ -114,8 +116,9 @@ func RenderAssemblyScript(p AssemblyParams) (string, error) {
 		}
 		w("cp \"$CACHE/%s\" /mnt/vtoy/%s\n", iso.Filename, iso.Filename)
 	}
-	w("mkdir -p /mnt/vtoy/ventoy\ncp %q/ventoy.json /mnt/vtoy/ventoy/ventoy.json\n", p.PayloadVM)
-	w("cp -r %q/seed /mnt/vtoy/ 2>/dev/null || true\n", p.PayloadVM)
+	w("mkdir -p /mnt/vtoy/ventoy\ncp %q/ventoy/ventoy.json /mnt/vtoy/ventoy/ventoy.json\n", p.PayloadVM)
+	// Ubuntu cloud-init seed (referenced by ventoy.json auto_install as /ubuntu/.../user-data).
+	w("cp -r %q/ubuntu /mnt/vtoy/ubuntu 2>/dev/null || true\n", p.PayloadVM)
 	w("sync\numount /mnt/vtoy\nlosetup -d \"$LOOP\"\necho \"devx: image ready at %s\"\n", p.ImageVM)
 	return b.String(), nil
 }
