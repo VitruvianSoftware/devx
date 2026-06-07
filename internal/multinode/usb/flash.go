@@ -61,27 +61,48 @@ func ParseDiskutilInfo(out string) DiskInfo {
 		Internal:   strings.EqualFold(kv["Internal"], "Yes"),
 		Protocol:   kv["Protocol"],
 	}
-	rm := strings.ToLower(kv["Removable Media"])
-	d.Removable = strings.Contains(rm, "removable") || strings.EqualFold(kv["Ejectable"], "Yes")
+	// Gate strictly on "Removable Media: Removable" — do NOT infer removability
+	// from Ejectable. External SSDs/HDDs (a Time Machine drive, a portable SSD)
+	// are Ejectable but report "Fixed"; erasing one would be data loss.
+	d.Removable = strings.EqualFold(strings.TrimSpace(kv["Removable Media"]), "Removable")
 	if m := diskSizeBytesRE.FindStringSubmatch(kv["Disk Size"]); m != nil {
 		d.SizeBytes, _ = strconv.ParseInt(m[1], 10, 64)
 	}
 	return d
 }
 
-// ValidateFlashTarget refuses any target that is not clearly a removable,
-// non-system, non-internal disk.
+// wholeDiskRE matches a whole-disk identifier ("disk4"), not a partition
+// ("disk4s2") — flashing a whole-disk image into a partition would corrupt it.
+var wholeDiskRE = regexp.MustCompile(`^disk[0-9]+$`)
+
+// ValidateFlashTarget refuses any target that is not positively identified as a
+// removable, non-system, whole USB/SD stick. Unknown/unparseable attributes are
+// treated as unsafe (fail closed).
 func ValidateFlashTarget(d DiskInfo) error {
+	if !wholeDiskRE.MatchString(d.Identifier) {
+		return fmt.Errorf("refusing to flash %q: not a whole disk (pass /dev/diskN, not a partition)", d.Identifier)
+	}
 	if d.Identifier == "disk0" {
 		return fmt.Errorf("refusing to flash %s: that is the system disk", d.Identifier)
 	}
 	if d.Internal {
 		return fmt.Errorf("refusing to flash %s (%s): internal disk", d.Identifier, d.MediaName)
 	}
+	if d.SizeBytes == 0 {
+		return fmt.Errorf("refusing to flash %s: could not confirm it is a removable stick (no size from diskutil)", d.Identifier)
+	}
 	if !d.Removable {
 		return fmt.Errorf("refusing to flash %s (%s): not removable media", d.Identifier, d.MediaName)
 	}
+	if !isRemovableProtocol(d.Protocol) {
+		return fmt.Errorf("refusing to flash %s (%s): protocol %q is not USB/SD", d.Identifier, d.MediaName, d.Protocol)
+	}
 	return nil
+}
+
+func isRemovableProtocol(p string) bool {
+	p = strings.ToUpper(p)
+	return strings.Contains(p, "USB") || strings.Contains(p, "SECURE DIGITAL")
 }
 
 // Flash validates the target device and writes imagePath to it. confirm is
@@ -106,16 +127,19 @@ func flashWith(ctx context.Context, run runFunc, imagePath, device string, confi
 	if err := ValidateFlashTarget(info); err != nil {
 		return err
 	}
+	// Echo the resolved target so the operator can cross-check before confirming.
+	fmt.Printf("  Target: /dev/%s — %s, %.1f GB, %s\n",
+		info.Identifier, info.MediaName, float64(info.SizeBytes)/1e9, info.Protocol)
 	if confirm != nil && !confirm() {
 		return fmt.Errorf("flash aborted by user")
 	}
-	if _, err := run(ctx, "diskutil", "unmountDisk", device); err != nil {
-		return fmt.Errorf("unmount %s: %w", device, err)
+	if _, err := run(ctx, "diskutil", "unmountDisk", "/dev/"+info.Identifier); err != nil {
+		return fmt.Errorf("unmount %s: %w", info.Identifier, err)
 	}
-	raw := strings.Replace(device, "/dev/disk", "/dev/rdisk", 1) // raw device = much faster
+	raw := "/dev/r" + info.Identifier // raw device (/dev/rdiskN) — derived from the validated whole-disk id
 	if _, err := run(ctx, "dd", "if="+imagePath, "of="+raw, "bs=4m"); err != nil {
 		return fmt.Errorf("dd to %s: %w", raw, err)
 	}
-	_, _ = run(ctx, "diskutil", "eject", device)
+	_, _ = run(ctx, "diskutil", "eject", "/dev/"+info.Identifier)
 	return nil
 }

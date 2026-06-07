@@ -3,18 +3,12 @@
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq wget jq parted exfatprogs dosfstools util-linux ca-certificates butane
+apt-get install -y -qq wget jq parted exfatprogs dosfstools util-linux ca-certificates butane podman
 
 # Ventoy (Linux installer)
 if [ ! -d /opt/ventoy ]; then
   wget -qO /tmp/ventoy.tar.gz https://github.com/ventoy/Ventoy/releases/download/v1.0.99/ventoy-1.0.99-linux.tar.gz
   mkdir -p /opt/ventoy
   tar -xzf /tmp/ventoy.tar.gz -C /opt/ventoy --strip-components=1
-fi
-
-# coreos-installer (static binary)
-if ! command -v coreos-installer >/dev/null 2>&1; then
-  wget -qO /usr/local/bin/coreos-installer https://github.com/coreos/coreos-installer/releases/download/v0.21.0/coreos-installer-$(uname -m)-unknown-linux-gnu
-  chmod 0755 /usr/local/bin/coreos-installer
 fi
 echo "devx: builder provisioned"

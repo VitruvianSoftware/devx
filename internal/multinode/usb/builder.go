@@ -24,15 +24,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
-// VentoyVersion / CoreosInstallerVersion pin the tools fetched into the builder VM.
-const (
-	VentoyVersion          = "1.0.99"
-	CoreosInstallerVersion = "0.21.0"
-)
+// VentoyVersion pins the Ventoy Linux installer fetched into the builder VM.
+const VentoyVersion = "1.0.99"
 
 // runFunc is an injectable command runner so orchestration command-construction
 // can be unit-tested without executing anything. The production runner is execRun.
@@ -40,25 +36,21 @@ type runFunc func(ctx context.Context, name string, args ...string) (string, err
 
 // RenderBuilderProvision returns the Lima provision script that installs the
 // Linux tooling needed to assemble the Ventoy image. Deterministic (golden).
+// coreos-installer is NOT installed here — it ships no Linux binary on GitHub, so
+// the assembly script runs its official container via podman.
 func RenderBuilderProvision() string {
 	return `#!/bin/bash
 # devx usb builder provisioning — GENERATED.
 set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq wget jq parted exfatprogs dosfstools util-linux ca-certificates butane
+apt-get install -y -qq wget jq parted exfatprogs dosfstools util-linux ca-certificates butane podman
 
 # Ventoy (Linux installer)
 if [ ! -d /opt/ventoy ]; then
   wget -qO /tmp/ventoy.tar.gz https://github.com/ventoy/Ventoy/releases/download/v` + VentoyVersion + `/ventoy-` + VentoyVersion + `-linux.tar.gz
   mkdir -p /opt/ventoy
   tar -xzf /tmp/ventoy.tar.gz -C /opt/ventoy --strip-components=1
-fi
-
-# coreos-installer (static binary)
-if ! command -v coreos-installer >/dev/null 2>&1; then
-  wget -qO /usr/local/bin/coreos-installer https://github.com/coreos/coreos-installer/releases/download/v` + CoreosInstallerVersion + `/coreos-installer-$(uname -m)-unknown-linux-gnu
-  chmod 0755 /usr/local/bin/coreos-installer
 fi
 echo "devx: builder provisioned"
 `
@@ -76,11 +68,23 @@ func NewBuilder(vmName string) *Builder {
 }
 
 // EnsureBuilderVM creates and starts the builder VM (provisioned via
-// RenderBuilderProvision) if it is not already running. Idempotent.
+// RenderBuilderProvision) if needed. It resumes a stopped-but-existing VM and
+// only generates a fresh config when the VM is absent. Idempotent.
 func (b *Builder) EnsureBuilderVM(ctx context.Context) error {
-	if out, err := b.run(ctx, "limactl", "list", b.VMName, "--format", "{{.Status}}"); err == nil && strings.Contains(out, "Running") {
+	out, _ := b.run(ctx, "limactl", "list", b.VMName, "--format", "{{.Status}}")
+	switch strings.TrimSpace(out) {
+	case "Running":
+		return nil
+	case "":
+		// Absent — create below.
+	default:
+		// Exists but stopped — resume without re-passing a config.
+		if _, err := b.run(ctx, "limactl", "start", b.VMName); err != nil {
+			return fmt.Errorf("resuming builder VM %s: %w", b.VMName, err)
+		}
 		return nil
 	}
+
 	yaml := fmt.Sprintf(`images:
   - location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
     arch: "x86_64"
@@ -111,34 +115,62 @@ provision:
 	return nil
 }
 
-// BuildImage copies the staging payloads + a generated assembly script into the
-// builder VM, runs it, and copies the resulting image back to a host temp file.
+// BuildImage tars the staging payloads, copies them + a generated assembly script
+// into the builder VM, runs it, and copies the resulting image back to a unique
+// host temp file (the caller owns its cleanup). Tarring avoids limactl-copy
+// directory-nesting ambiguity and the need for a recursive copy flag.
 func (b *Builder) BuildImage(ctx context.Context, p AssemblyParams, stagingDir string) (string, error) {
 	script, err := RenderAssemblyScript(p)
 	if err != nil {
 		return "", err
 	}
-	tmp, err := os.CreateTemp("", "devx-assemble-*.sh")
+
+	scriptF, err := os.CreateTemp("", "devx-assemble-*.sh")
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = os.Remove(tmp.Name()) }()
-	if _, err := tmp.WriteString(script); err != nil {
+	defer func() { _ = os.Remove(scriptF.Name()) }()
+	if _, err := scriptF.WriteString(script); err != nil {
 		return "", err
 	}
-	_ = tmp.Close()
+	_ = scriptF.Close()
 
-	if _, err := b.run(ctx, "limactl", "copy", stagingDir, b.VMName+":/tmp/devx/payload"); err != nil {
-		return "", fmt.Errorf("copy staging into VM: %w", err)
+	tarF, err := os.CreateTemp("", "devx-staging-*.tgz")
+	if err != nil {
+		return "", err
 	}
-	if _, err := b.run(ctx, "limactl", "copy", tmp.Name(), b.VMName+":/tmp/devx/assemble.sh"); err != nil {
+	tarPath := tarF.Name()
+	_ = tarF.Close()
+	defer func() { _ = os.Remove(tarPath) }()
+	if _, err := b.run(ctx, "tar", "czf", tarPath, "-C", stagingDir, "."); err != nil {
+		return "", fmt.Errorf("tarring staging dir: %w", err)
+	}
+
+	// Stage inside the VM as the lima user (writable), extract, then run as root.
+	if _, err := b.run(ctx, "limactl", "shell", b.VMName, "mkdir", "-p", "/tmp/devx/payload"); err != nil {
+		return "", fmt.Errorf("mkdir in VM: %w", err)
+	}
+	if _, err := b.run(ctx, "limactl", "copy", tarPath, b.VMName+":/tmp/devx/payload.tgz"); err != nil {
+		return "", fmt.Errorf("copy staging tarball: %w", err)
+	}
+	if _, err := b.run(ctx, "limactl", "shell", b.VMName, "tar", "xzf", "/tmp/devx/payload.tgz", "-C", "/tmp/devx/payload"); err != nil {
+		return "", fmt.Errorf("extract staging in VM: %w", err)
+	}
+	if _, err := b.run(ctx, "limactl", "copy", scriptF.Name(), b.VMName+":/tmp/devx/assemble.sh"); err != nil {
 		return "", fmt.Errorf("copy assembly script: %w", err)
 	}
 	if _, err := b.run(ctx, "limactl", "shell", b.VMName, "sudo", "bash", "/tmp/devx/assemble.sh"); err != nil {
 		return "", fmt.Errorf("run assembly: %w", err)
 	}
-	hostImg := filepath.Join(os.TempDir(), "devx-usb.img")
+
+	imgF, err := os.CreateTemp("", "devx-usb-*.img")
+	if err != nil {
+		return "", err
+	}
+	hostImg := imgF.Name()
+	_ = imgF.Close()
 	if _, err := b.run(ctx, "limactl", "copy", b.VMName+":"+p.ImageVM, hostImg); err != nil {
+		_ = os.Remove(hostImg)
 		return "", fmt.Errorf("copy image out: %w", err)
 	}
 	return hostImg, nil

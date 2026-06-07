@@ -173,10 +173,12 @@ func assembleAndFlash(ctx context.Context, f assembleFlags) error {
 			return err
 		}
 	case f.device != "":
-		out, _ := exec.CommandContext(ctx, "diskutil", "info", f.device).CombinedOutput()
-		if d := usb.ParseDiskutilInfo(string(out)); d.SizeBytes > 0 {
-			totalMB = int(d.SizeBytes / (1024 * 1024))
+		out, derr := exec.CommandContext(ctx, "diskutil", "info", f.device).CombinedOutput()
+		d := usb.ParseDiskutilInfo(string(out))
+		if derr != nil || d.SizeBytes == 0 {
+			return fmt.Errorf("could not read the size of %s via diskutil (pass --total-size): %v", f.device, derr)
 		}
+		totalMB = int(d.SizeBytes / (1024 * 1024))
 	}
 	if totalMB <= bootMB {
 		return fmt.Errorf("total size (%dM) must exceed boot size (%dM)", totalMB, bootMB)
@@ -209,6 +211,7 @@ func assembleAndFlash(ctx context.Context, f assembleFlags) error {
 	if err != nil {
 		return err
 	}
+	defer func() { _ = os.Remove(img) }() // multi-GB temp; remove after flash/move
 
 	if f.device == "" {
 		if err := moveFile(img, f.imageOut); err != nil {
@@ -233,8 +236,12 @@ func assembleAndFlash(ctx context.Context, f assembleFlags) error {
 	return nil
 }
 
-// moveFile copies src to dst then removes src (rename can fail across filesystems).
+// moveFile moves src to dst, trying a fast rename first and falling back to a
+// copy when src and dst are on different filesystems (the common temp→cwd case).
 func moveFile(src, dst string) error {
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	}
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -246,6 +253,7 @@ func moveFile(src, dst string) error {
 	}
 	if _, err := io.Copy(out, in); err != nil {
 		_ = out.Close()
+		_ = os.Remove(dst) // don't leave a partial image behind
 		return err
 	}
 	if err := out.Close(); err != nil {

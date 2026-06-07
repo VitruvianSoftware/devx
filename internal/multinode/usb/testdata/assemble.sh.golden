@@ -8,36 +8,33 @@ mkdir -p "$CACHE"
 if [ ! -f "$CACHE/fcos.iso" ]; then wget -q -O "$CACHE/fcos.iso.part" "https://example/fcos.iso" && mv "$CACHE/fcos.iso.part" "$CACHE/fcos.iso"; fi
 if [ ! -f "$CACHE/ubuntu.iso" ]; then wget -q -O "$CACHE/ubuntu.iso.part" "https://example/ubuntu.iso" && mv "$CACHE/ubuntu.iso.part" "$CACHE/ubuntu.iso"; fi
 
-# Compile Butane → Ignition, then embed into a copy of the FCOS ISO
 butane --strict -o /tmp/devx-node.ign "/tmp/devx/payload/fcos.ign"
 cp "$CACHE/fcos.iso" /tmp/fcos-devx.iso
-coreos-installer iso ignition embed -f -i /tmp/devx-node.ign /tmp/fcos-devx.iso
+podman run --rm --privileged -v /tmp:/data quay.io/coreos/coreos-installer:release iso ignition embed -f -i /data/devx-node.ign /data/fcos-devx.iso
 
-# Sparse image + loop
 rm -f "/tmp/devx/devx-usb.img"
 truncate -s 117000M "/tmp/devx/devx-usb.img"
 LOOP=$(losetup --show -f -P "/tmp/devx/devx-usb.img")
-
-# Install Ventoy (force, reserve the storage tail)
+trap 'umount /mnt/vtoy 2>/dev/null || true; [ -n "${LOOP:-}" ] && losetup -d "$LOOP" 2>/dev/null || true' EXIT
 yes | bash /opt/ventoy/Ventoy2Disk.sh -I -r 100616 "$LOOP"
-partprobe "$LOOP" || true
-sleep 2
 
-# Storage partition in the reserved tail → exFAT (3rd primary in free space)
-parted -s "$LOOP" -- mkpart primary 3 -1s
-partprobe "$LOOP" || true
-sleep 2
-mkfs.exfat -n DEVXDATA "${LOOP}p3"
+# Start = end of Ventoy's last partition (so the exFAT storage exactly fills the
+# reserved tail). DEVXDATA is general-purpose storage, intentionally left empty.
+udevadm settle 2>/dev/null || true
+start=$(parted -ms "$LOOP" unit MiB print | tail -n1 | awk -F: '{gsub(/MiB/,"",$3); print $3}')
+parted -s "$LOOP" -- unit MiB mkpart primary "${start}" 100%
+partx -u "$LOOP" 2>/dev/null || partprobe "$LOOP" 2>/dev/null || true
+udevadm settle 2>/dev/null || true
+for i in $(seq 1 30); do [ -b "${LOOP}p3" ] && break; sleep 0.5; done
+mkfs.exfat -L DEVXDATA "${LOOP}p3"
 
-# Copy ISOs + payloads onto the Ventoy data partition
 mkdir -p /mnt/vtoy
 mount "${LOOP}p1" /mnt/vtoy
 cp /tmp/fcos-devx.iso /mnt/vtoy/fcos.iso
 cp "$CACHE/ubuntu.iso" /mnt/vtoy/ubuntu.iso
 mkdir -p /mnt/vtoy/ventoy
 cp "/tmp/devx/payload"/ventoy/ventoy.json /mnt/vtoy/ventoy/ventoy.json
-cp -r "/tmp/devx/payload"/ubuntu /mnt/vtoy/ubuntu 2>/dev/null || true
+if [ -d "/tmp/devx/payload"/ubuntu ]; then cp -r "/tmp/devx/payload"/ubuntu /mnt/vtoy/ubuntu; fi
 sync
 umount /mnt/vtoy
-losetup -d "$LOOP"
 echo "devx: image ready at /tmp/devx/devx-usb.img"

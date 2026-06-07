@@ -46,10 +46,13 @@ func TestRenderBuilderProvision_Golden(t *testing.T) {
 
 func TestRenderBuilderProvision_Tools(t *testing.T) {
 	s := RenderBuilderProvision()
-	for _, tool := range []string{"ventoy", "coreos-installer", "exfatprogs", "parted", "wget", "butane"} {
+	for _, tool := range []string{"ventoy", "podman", "exfatprogs", "parted", "wget", "butane", "jq"} {
 		if !strings.Contains(s, tool) {
 			t.Errorf("provision script must install %q", tool)
 		}
+	}
+	if strings.Contains(s, "coreos-installer") {
+		t.Error("coreos-installer ships no Linux binary; run it via the container, not apt")
 	}
 }
 
@@ -62,8 +65,8 @@ func TestBuildImageCommands(t *testing.T) {
 	b := &Builder{VMName: "devx-usb-builder", run: fake}
 	_, err := b.BuildImage(context.Background(), AssemblyParams{
 		BootSizeMB: 16384, TotalSizeMB: 117000,
-		ISOs:       []ISOSpec{{Name: "fcos", URL: "u", Filename: "f.iso", EmbedIgnition: true}},
-		IgnitionVM: "/tmp/devx/payload/f.ign", PayloadVM: "/tmp/devx/payload", ImageVM: "/tmp/devx/devx-usb.img",
+		ISOs:     []ISOSpec{{Name: "fcos", URL: "u", Filename: "f.iso", EmbedIgnition: true}},
+		ButaneVM: "/tmp/devx/payload/f.ign", PayloadVM: "/tmp/devx/payload", ImageVM: "/tmp/devx/devx-usb.img",
 	}, "/local/staging")
 	if err != nil {
 		t.Fatal(err)

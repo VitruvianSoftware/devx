@@ -25,20 +25,26 @@ import (
 	"strings"
 )
 
-// Default ephemeral ISO sources (x86_64; the feature targets x86 laptops). The
-// FCOS live ISO URL is resolved at runtime from the stable-stream metadata so it
-// does not go stale; Ubuntu's is pinned to an LTS point release.
+// Runtime ISO resolution sources (x86_64; the feature targets x86 laptops). URLs
+// are resolved at build time inside the VM so they never go stale: FCOS from its
+// stream metadata, Ubuntu from the releases directory listing (point releases are
+// pruned, so a pinned URL would 404).
 const (
-	UbuntuISOURL  = "https://releases.ubuntu.com/24.04/ubuntu-24.04.1-live-server-amd64.iso"
-	FCOSStreamURL = "https://builds.coreos.fedoraproject.org/streams/stable.json"
+	FCOSStreamURL     = "https://builds.coreos.fedoraproject.org/streams/stable.json"
+	UbuntuReleasesDir = "https://releases.ubuntu.com/24.04/"
+	// CoreosInstallerImage embeds the Ignition; coreos-installer ships no Linux
+	// binary on GitHub, so we run its official container in the builder VM.
+	CoreosInstallerImage = "quay.io/coreos/coreos-installer:release"
 )
 
-// ISOSpec describes one OS image placed on the stick. An empty URL combined with
-// EmbedIgnition=true means "resolve the FCOS live ISO from the stream metadata."
+// ISOSpec describes one OS image placed on the stick. Resolver selects how the
+// download URL is obtained: "fcos" (stream metadata), "ubuntu" (releases dir),
+// or "" (use URL verbatim).
 type ISOSpec struct {
 	Name          string // "fcos" | "ubuntu"
 	URL           string
 	Filename      string
+	Resolver      string
 	EmbedIgnition bool
 }
 
@@ -53,15 +59,16 @@ type AssemblyParams struct {
 }
 
 // DefaultISOSpecs returns the built-in ephemeral ISO specs for the requested
-// names (subset of "fcos", "ubuntu").
+// names (subset of "fcos", "ubuntu"). Filenames match the renderer BaseImage
+// constants so the on-stick names line up with ventoy.json.
 func DefaultISOSpecs(names []string) []ISOSpec {
 	var out []ISOSpec
 	for _, n := range names {
 		switch strings.TrimSpace(n) {
 		case "fcos":
-			out = append(out, ISOSpec{Name: "fcos", Filename: "fedora-coreos-live.x86_64.iso", EmbedIgnition: true})
+			out = append(out, ISOSpec{Name: "fcos", Filename: FCOSImage, Resolver: "fcos", EmbedIgnition: true})
 		case "ubuntu":
-			out = append(out, ISOSpec{Name: "ubuntu", URL: UbuntuISOURL, Filename: "ubuntu-24.04-live-server-amd64.iso"})
+			out = append(out, ISOSpec{Name: "ubuntu", Filename: UbuntuImage, Resolver: "ubuntu"})
 		}
 	}
 	return out
@@ -89,26 +96,49 @@ func RenderAssemblyScript(p AssemblyParams) (string, error) {
 	w := func(f string, a ...any) { fmt.Fprintf(&b, f, a...) }
 	w("#!/usr/bin/env bash\n# devx usb assembly — GENERATED.\nset -euxo pipefail\n\n")
 	w("CACHE=/var/cache/devx-usb\nmkdir -p \"$CACHE\"\n\n")
+
+	// --- Download ISOs (cached; URLs resolved at runtime where needed) ---
 	for _, iso := range p.ISOs {
-		if iso.URL == "" && iso.EmbedIgnition {
-			// FCOS: resolve the current live ISO URL from the stream metadata.
+		switch iso.Resolver {
+		case "fcos":
 			w("if [ ! -f \"$CACHE/%s\" ]; then\n", iso.Filename)
 			w("  url=$(wget -qO- %q | jq -r '.architectures.x86_64.artifacts.metal.formats.iso.disk.location')\n", FCOSStreamURL)
 			w("  wget -q -O \"$CACHE/%s.part\" \"$url\" && mv \"$CACHE/%s.part\" \"$CACHE/%s\"\nfi\n", iso.Filename, iso.Filename, iso.Filename)
-		} else {
+		case "ubuntu":
+			w("if [ ! -f \"$CACHE/%s\" ]; then\n", iso.Filename)
+			w("  name=$(wget -qO- %q | grep -oE 'ubuntu-24[.]04[0-9.]*-live-server-amd64[.]iso' | sort -u | tail -n1)\n", UbuntuReleasesDir)
+			w("  wget -q -O \"$CACHE/%s.part\" %q\"$name\" && mv \"$CACHE/%s.part\" \"$CACHE/%s\"\nfi\n", iso.Filename, UbuntuReleasesDir, iso.Filename, iso.Filename)
+		default:
 			w("if [ ! -f \"$CACHE/%s\" ]; then wget -q -O \"$CACHE/%s.part\" %q && mv \"$CACHE/%s.part\" \"$CACHE/%s\"; fi\n",
 				iso.Filename, iso.Filename, iso.URL, iso.Filename, iso.Filename)
 		}
 	}
-	w("\n# Compile Butane → Ignition, then embed into a copy of the FCOS ISO\n")
-	w("butane --strict -o /tmp/devx-node.ign %q\n", p.ButaneVM)
+
+	// --- Compile Butane → Ignition and embed into a copy of the FCOS ISO ---
+	w("\nbutane --strict -o /tmp/devx-node.ign %q\n", p.ButaneVM)
 	w("cp \"$CACHE/%s\" /tmp/fcos-devx.iso\n", fcos.Filename)
-	b.WriteString("coreos-installer iso ignition embed -f -i /tmp/devx-node.ign /tmp/fcos-devx.iso\n\n")
-	w("# Sparse image + loop\nrm -f %q\ntruncate -s %dM %q\nLOOP=$(losetup --show -f -P %q)\n\n", p.ImageVM, p.TotalSizeMB, p.ImageVM, p.ImageVM)
-	w("# Install Ventoy (force, reserve the storage tail)\nyes | bash /opt/ventoy/Ventoy2Disk.sh -I -r %d \"$LOOP\"\npartprobe \"$LOOP\" || true\nsleep 2\n\n", reserve)
-	w("# Storage partition in the reserved tail → exFAT (3rd primary in free space)\n")
-	w("parted -s \"$LOOP\" -- mkpart primary 3 -1s\npartprobe \"$LOOP\" || true\nsleep 2\nmkfs.exfat -n DEVXDATA \"${LOOP}p3\"\n\n")
-	w("# Copy ISOs + payloads onto the Ventoy data partition\nmkdir -p /mnt/vtoy\nmount \"${LOOP}p1\" /mnt/vtoy\n")
+	w("podman run --rm --privileged -v /tmp:/data %s iso ignition embed -f -i /data/devx-node.ign /data/fcos-devx.iso\n\n", CoreosInstallerImage)
+
+	// --- Sparse image + loop + Ventoy install (reserve the storage tail) ---
+	w("rm -f %q\ntruncate -s %dM %q\nLOOP=$(losetup --show -f -P %q)\n", p.ImageVM, p.TotalSizeMB, p.ImageVM, p.ImageVM)
+	b.WriteString("trap 'umount /mnt/vtoy 2>/dev/null || true; [ -n \"${LOOP:-}\" ] && losetup -d \"$LOOP\" 2>/dev/null || true' EXIT\n")
+	w("yes | bash /opt/ventoy/Ventoy2Disk.sh -I -r %d \"$LOOP\"\n\n", reserve)
+
+	// --- Storage partition: fill Ventoy's reserved tail, derived at runtime ---
+	b.WriteString(`# Start = end of Ventoy's last partition (so the exFAT storage exactly fills the
+# reserved tail). DEVXDATA is general-purpose storage, intentionally left empty.
+udevadm settle 2>/dev/null || true
+start=$(parted -ms "$LOOP" unit MiB print | tail -n1 | awk -F: '{gsub(/MiB/,"",$3); print $3}')
+parted -s "$LOOP" -- unit MiB mkpart primary "${start}" 100%
+partx -u "$LOOP" 2>/dev/null || partprobe "$LOOP" 2>/dev/null || true
+udevadm settle 2>/dev/null || true
+for i in $(seq 1 30); do [ -b "${LOOP}p3" ] && break; sleep 0.5; done
+mkfs.exfat -L DEVXDATA "${LOOP}p3"
+
+`)
+
+	// --- Copy ISOs + payloads onto the Ventoy data partition (p1) ---
+	w("mkdir -p /mnt/vtoy\nmount \"${LOOP}p1\" /mnt/vtoy\n")
 	w("cp /tmp/fcos-devx.iso /mnt/vtoy/%s\n", fcos.Filename)
 	for _, iso := range p.ISOs {
 		if iso.EmbedIgnition {
@@ -118,7 +148,7 @@ func RenderAssemblyScript(p AssemblyParams) (string, error) {
 	}
 	w("mkdir -p /mnt/vtoy/ventoy\ncp %q/ventoy/ventoy.json /mnt/vtoy/ventoy/ventoy.json\n", p.PayloadVM)
 	// Ubuntu cloud-init seed (referenced by ventoy.json auto_install as /ubuntu/.../user-data).
-	w("cp -r %q/ubuntu /mnt/vtoy/ubuntu 2>/dev/null || true\n", p.PayloadVM)
-	w("sync\numount /mnt/vtoy\nlosetup -d \"$LOOP\"\necho \"devx: image ready at %s\"\n", p.ImageVM)
+	w("if [ -d %q/ubuntu ]; then cp -r %q/ubuntu /mnt/vtoy/ubuntu; fi\n", p.PayloadVM, p.PayloadVM)
+	w("sync\numount /mnt/vtoy\necho \"devx: image ready at %s\"\n", p.ImageVM)
 	return b.String(), nil
 }

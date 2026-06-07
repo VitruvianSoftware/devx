@@ -65,10 +65,12 @@ func TestRenderAssemblyScript_Invariants(t *testing.T) {
 	for _, want := range []string{
 		"wget -q -O",
 		"butane --strict -o /tmp/devx-node.ign",
-		"coreos-installer iso ignition embed",
-		"Ventoy2Disk.sh -I -r 100616", // reserve = total-boot = 117000-16384
-		"mkfs.exfat",
-		"truncate -s 117000M",
+		"iso ignition embed",            // via the coreos-installer container
+		"Ventoy2Disk.sh -I -r 100616",   // reserve = total-boot = 117000-16384
+		"mkfs.exfat -L DEVXDATA",        // exFAT storage with the right label flag
+		"truncate -s 117000M",           // image size
+		"trap ",                         // loop/mount cleanup on failure
+		"[ -b \"${LOOP}p3\" ] && break", // wait for the partition node
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("assembly script must contain %q", want)
@@ -76,6 +78,9 @@ func TestRenderAssemblyScript_Invariants(t *testing.T) {
 	}
 	if strings.Contains(got, "coreos-installer install") || strings.Contains(got, "/dev/sda") {
 		t.Error("assembly must not write to any physical/host disk")
+	}
+	if strings.Contains(got, "mkfs.exfat -n") {
+		t.Error("must use exfatprogs -L label flag, not the legacy -n")
 	}
 }
 
@@ -92,13 +97,13 @@ func TestDefaultISOSpecs(t *testing.T) {
 	if len(specs) != 2 {
 		t.Fatalf("want 2 specs, got %d", len(specs))
 	}
-	if !specs[0].EmbedIgnition || specs[0].URL != "" {
-		t.Errorf("fcos spec should embed ignition with a runtime-resolved URL: %+v", specs[0])
+	if !specs[0].EmbedIgnition || specs[0].Resolver != "fcos" {
+		t.Errorf("fcos spec should embed ignition + resolve via stream: %+v", specs[0])
 	}
-	if specs[1].URL != UbuntuISOURL {
-		t.Errorf("ubuntu spec should use the pinned URL: %+v", specs[1])
+	if specs[1].Resolver != "ubuntu" || specs[1].URL != "" {
+		t.Errorf("ubuntu spec should resolve at runtime (no pinned URL): %+v", specs[1])
 	}
-	// The FCOS empty-URL path must emit the stream-resolution + jq.
+	// The resolvers must emit their runtime resolution (FCOS stream + jq, Ubuntu dir scrape).
 	got, err := RenderAssemblyScript(AssemblyParams{
 		BootSizeMB: 1024, TotalSizeMB: 4096, ISOs: specs,
 		ButaneVM: "/i.ign", PayloadVM: "/p", ImageVM: "/o.img",
@@ -107,6 +112,9 @@ func TestDefaultISOSpecs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(got, FCOSStreamURL) || !strings.Contains(got, "jq -r") {
-		t.Error("FCOS empty-URL spec must resolve the ISO via stream metadata + jq")
+		t.Error("FCOS spec must resolve the ISO via stream metadata + jq")
+	}
+	if !strings.Contains(got, UbuntuReleasesDir) || !strings.Contains(got, "live-server-amd64") {
+		t.Error("Ubuntu spec must resolve the latest ISO from the releases dir")
 	}
 }

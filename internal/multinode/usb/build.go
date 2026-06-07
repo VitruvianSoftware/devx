@@ -253,7 +253,9 @@ func manifest(r *BuildResult) string {
 		fmt.Fprintf(&b, "- %s\n", img)
 	}
 	b.WriteString("\nThe provisioning payloads (Ignition/cloud-init/config) and ventoy/ventoy.json\n")
-	b.WriteString("are staged alongside this manifest. See the design spec for the field\n")
+	b.WriteString("are staged alongside this manifest. To skip the manual assembly, re-run with\n")
+	b.WriteString("--assemble (build a flashable .img in a Lima VM) or --device /dev/diskN (build\n")
+	b.WriteString("and flash a removable stick directly). See the design spec for the field\n")
 	b.WriteString("checklist (Secure Boot off, Ethernet recommended for FCOS, x86_64 only).\n")
 	return b.String()
 }

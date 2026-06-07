@@ -50,6 +50,16 @@ func TestParseDiskutilInfo(t *testing.T) {
 	}
 }
 
+// externalSSDInfo models an external Thunderbolt/USB SSD or a Time Machine USB
+// HDD: Internal:No + Ejectable:Yes but Removable Media: Fixed. It MUST be refused.
+const externalSSDInfo = `   Device Identifier:         disk6
+   Device / Media Name:       Samsung T7 SSD
+   Protocol:                  USB
+   Internal:                  No
+   Ejectable:                 Yes
+   Removable Media:           Fixed
+   Disk Size:                 2.0 TB (2000398934016 Bytes)`
+
 func TestValidateFlashTarget(t *testing.T) {
 	if err := ValidateFlashTarget(ParseDiskutilInfo(sandiskInfo)); err != nil {
 		t.Errorf("removable USB should be allowed: %v", err)
@@ -59,6 +69,17 @@ func TestValidateFlashTarget(t *testing.T) {
 	}
 	if err := ValidateFlashTarget(DiskInfo{Identifier: "disk0", Removable: true}); err == nil {
 		t.Error("disk0 must be refused even if it claims removable")
+	}
+	if err := ValidateFlashTarget(ParseDiskutilInfo(externalSSDInfo)); err == nil {
+		t.Error("external Fixed+Ejectable SSD/HDD must be refused (data-loss guard)")
+	}
+	// A partition path (disk4s2) is not a whole disk → refuse.
+	if err := ValidateFlashTarget(DiskInfo{Identifier: "disk4s2", Removable: true, Protocol: "USB", SizeBytes: 1 << 30}); err == nil {
+		t.Error("a partition identifier must be refused")
+	}
+	// Unparseable info (no size) → refuse (fail closed).
+	if err := ValidateFlashTarget(DiskInfo{Identifier: "disk4", Removable: true, Protocol: "USB"}); err == nil {
+		t.Error("zero-size (unparseable) target must be refused")
 	}
 }
 
