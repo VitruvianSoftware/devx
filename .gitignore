@@ -37,3 +37,7 @@ cmd/var/
 # Python
 __pycache__/
 *.pyc
+
+# devx cluster usb generated artifacts
+devx-usb/
+devx-usb.img
