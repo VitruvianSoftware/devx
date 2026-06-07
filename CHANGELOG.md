@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.61.0](https://github.com/VitruvianSoftware/devx/compare/v0.60.1...v0.61.0) (2026-06-07)
+
+
+### Features
+
+* **cluster:** one-command bootable USB assembly + flash (cluster usb build --device) ([#243](https://github.com/VitruvianSoftware/devx/issues/243)) ([f024f7a](https://github.com/VitruvianSoftware/devx/commit/f024f7a2d971a39430c82cb626f007006390b86f))
+
 ## [0.60.1](https://github.com/VitruvianSoftware/devx/compare/v0.60.0...v0.60.1) (2026-06-07)
 
 
