@@ -23,6 +23,7 @@ package usb
 import (
 	"flag"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -201,6 +202,58 @@ func TestRenderJoinScript_Invariants(t *testing.T) {
 			t.Error("embedded single quotes must be escaped")
 		}
 	})
+}
+
+// TestRenderJoinScript_Shellcheck runs the real shellcheck linter over the
+// generated script for representative specs. It is gated on shellcheck being
+// installed (like the butane integration test) so it skips in environments
+// without it. -S warning fails on warnings+errors (e.g. the SC2034 unused-var
+// class) while tolerating intentional info-level word splitting in flag vars.
+func TestRenderJoinScript_Shellcheck(t *testing.T) {
+	if _, err := exec.LookPath("shellcheck"); err != nil {
+		t.Skip("shellcheck not in PATH — skipping")
+	}
+	specs := map[string]JoinSpec{
+		"agent_tailscale": agentSpec(),
+		"server_install": {
+			Role: RoleServer, Mode: ModeInstall, Pool: "lab",
+			NodeNamePrefix: "node", Token: "tok", LANServerURL: "https://10.0.0.5:6443",
+		},
+		"scratch_existing": func() JoinSpec {
+			s := agentSpec()
+			s.Scratch = ScratchConfig{Strategy: ScratchExisting, Source: "LABEL=devx", ForceFormat: true}
+			return s
+		}(),
+		"scratch_freespace": func() JoinSpec {
+			s := agentSpec()
+			s.TailscaleAuthKey = ""
+			s.TailnetServerURL = ""
+			s.Scratch = ScratchConfig{Strategy: ScratchFreeSpace}
+			return s
+		}(),
+		"wifi": func() JoinSpec {
+			s := agentSpec()
+			s.WiFiSSID = "homelab"
+			s.WiFiPSK = "hunter2"
+			return s
+		}(),
+	}
+	for name, spec := range specs {
+		t.Run(name, func(t *testing.T) {
+			script, err := RenderJoinScript(spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			f := filepath.Join(t.TempDir(), "devx-join.sh")
+			if err := os.WriteFile(f, []byte(script), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			out, err := exec.Command("shellcheck", "-S", "warning", f).CombinedOutput()
+			if err != nil {
+				t.Errorf("shellcheck reported warnings/errors:\n%s", out)
+			}
+		})
+	}
 }
 
 func TestJoinSpec_Validate(t *testing.T) {
