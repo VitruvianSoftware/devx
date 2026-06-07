@@ -193,16 +193,22 @@ func RenderJoinScript(s JoinSpec) (string, error) {
 	w("set -euo pipefail\n\n")
 
 	// --- Baked parameters --------------------------------------------------
-	w("ROLE=%s\n", shellQuote(string(s.Role)))
+	// role, mode and scratch strategy are specialized by the generator (the Go
+	// code emits role/strategy-specific blocks), so they are NOT read at runtime
+	// — they go in a comment header for audit/debug value rather than as dead
+	// shell variables that would trip shellcheck (SC2034). Scratch source/format
+	// are emitted only inside the existing-scratch block, where they are used.
+	scratchStrategy := s.Scratch.Strategy
+	if scratchStrategy == "" {
+		scratchStrategy = ScratchNone
+	}
+	w("# devx-generated node join (role=%s mode=%s scratch=%s)\n", s.Role, s.Mode, scratchStrategy)
 	w("K3S_VERSION=%s\n", shellQuote(s.K3sVersion))
 	w("TOKEN=%s\n", shellQuote(s.Token))
 	w("LAN_SERVER_URL=%s\n", shellQuote(s.LANServerURL))
 	w("TAILNET_SERVER_URL=%s\n", shellQuote(s.TailnetServerURL))
 	w("TAILSCALE_AUTHKEY=%s\n", shellQuote(s.TailscaleAuthKey))
 	w("NODE_NAME_PREFIX=%s\n", shellQuote(s.NodeNamePrefix))
-	w("SCRATCH_STRATEGY=%s\n", shellQuote(string(s.Scratch.Strategy)))
-	w("SCRATCH_SOURCE=%s\n", shellQuote(s.Scratch.Source))
-	w("SCRATCH_FORCE_FORMAT=%s\n", shellQuote(boolStr(s.Scratch.ForceFormat)))
 	w("NODE_LABELS=%s\n", shellQuote(strings.Join(s.nodeLabels(), ",")))
 	w("WIFI_SSID=%s\n", shellQuote(s.WiFiSSID))
 	w("WIFI_PSK=%s\n", shellQuote(s.WiFiPSK))
@@ -303,6 +309,10 @@ mkdir -p "$SCRATCH_MNT"
 `)
 	switch c.Strategy {
 	case ScratchExisting:
+		// Defined here (not in the top parameter block) so they are only present
+		// where they are used — keeps the none/free-space scripts shellcheck-clean.
+		fmt.Fprintf(&b, "SCRATCH_SOURCE=%s\nSCRATCH_FORCE_FORMAT=%s\n",
+			shellQuote(c.Source), shellQuote(boolStr(c.ForceFormat)))
 		b.WriteString(`echo "devx: using existing scratch ${SCRATCH_SOURCE}"
 dev="$(blkid -t "${SCRATCH_SOURCE}" -o device 2>/dev/null || echo "$SCRATCH_SOURCE")"
 if [ ! -b "$dev" ]; then echo "devx: scratch device $dev not found" >&2; exit 1; fi

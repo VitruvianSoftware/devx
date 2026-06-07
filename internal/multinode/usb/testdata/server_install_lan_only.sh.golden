@@ -3,16 +3,13 @@
 # Wraps the canonical join recipe shared by all USB renderers.
 set -euo pipefail
 
-ROLE='server'
+# devx-generated node join (role=server mode=install scratch=none)
 K3S_VERSION=''
 TOKEN='K10servertoken::node:secret'
 LAN_SERVER_URL='https://10.0.0.5:6443'
 TAILNET_SERVER_URL=''
 TAILSCALE_AUTHKEY=''
 NODE_NAME_PREFIX='node'
-SCRATCH_STRATEGY=''
-SCRATCH_SOURCE=''
-SCRATCH_FORCE_FORMAT='false'
 NODE_LABELS='pool=lab'
 WIFI_SSID=''
 WIFI_PSK=''

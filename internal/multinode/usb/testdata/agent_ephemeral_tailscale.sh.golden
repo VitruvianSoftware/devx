@@ -3,16 +3,13 @@
 # Wraps the canonical join recipe shared by all USB renderers.
 set -euo pipefail
 
-ROLE='agent'
+# devx-generated node join (role=agent mode=ephemeral scratch=none)
 K3S_VERSION='v1.30.4+k3s1'
 TOKEN='K10agenttoken::node:secret'
 LAN_SERVER_URL='https://10.0.0.5:6443'
 TAILNET_SERVER_URL='https://100.64.0.5:6443'
 TAILSCALE_AUTHKEY='tskey-auth-abc123'
 NODE_NAME_PREFIX='usb'
-SCRATCH_STRATEGY='none'
-SCRATCH_SOURCE=''
-SCRATCH_FORCE_FORMAT='false'
 NODE_LABELS='devx.io/ephemeral=true,pool=usb'
 WIFI_SSID=''
 WIFI_PSK=''
