@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# devx usb assembly — GENERATED.
+set -euxo pipefail
+
+CACHE=/var/cache/devx-usb
+mkdir -p "$CACHE"
+
+if [ ! -f "$CACHE/fcos.iso" ]; then wget -q -O "$CACHE/fcos.iso.part" "https://example/fcos.iso" && mv "$CACHE/fcos.iso.part" "$CACHE/fcos.iso"; fi
+if [ ! -f "$CACHE/ubuntu.iso" ]; then wget -q -O "$CACHE/ubuntu.iso.part" "https://example/ubuntu.iso" && mv "$CACHE/ubuntu.iso.part" "$CACHE/ubuntu.iso"; fi
+
+IMG="/tmp/devx/devx-usb.img"
+WORK=$(dirname "$IMG")
+mkdir -p "$WORK"
+
+butane --strict -o "$WORK/devx-node.ign" "/tmp/devx/payload/fcos.ign"
+cp "$CACHE/fcos.iso" "$WORK/fcos-devx.iso"
+podman run --rm --privileged -v "$WORK":/data quay.io/coreos/coreos-installer:release iso ignition embed -f -i /data/devx-node.ign /data/fcos-devx.iso
+
+rm -f "$IMG"
+truncate -s 117000M "$IMG"
+LOOP=$(losetup --show -f -P "$IMG")
+trap 'umount /mnt/vtoy 2>/dev/null || true; [ -n "${LOOP:-}" ] && losetup -d "$LOOP" 2>/dev/null || true' EXIT
+bash /opt/ventoy/Ventoy2Disk.sh -I -r 100616 "$LOOP" <<'VTEOF'
+y
+y
+VTEOF
+
+# Start = end of Ventoy's last partition (so the exFAT storage exactly fills the
+# reserved tail). DEVXDATA is general-purpose storage, intentionally left empty.
+udevadm settle 2>/dev/null || true
+start=$(parted -ms "$LOOP" unit MiB print | tail -n1 | awk -F: '{gsub(/MiB/,"",$3); print $3}')
+parted -s "$LOOP" -- unit MiB mkpart primary "${start}" 100%
+partx -u "$LOOP" 2>/dev/null || partprobe "$LOOP" 2>/dev/null || true
+udevadm settle 2>/dev/null || true
+for i in $(seq 1 30); do [ -b "${LOOP}p3" ] && break; sleep 0.5; done
+mkfs.exfat -L DEVXDATA "${LOOP}p3"
+
+mkdir -p /mnt/vtoy
+mount "${LOOP}p1" /mnt/vtoy
+cp "$WORK/fcos-devx.iso" /mnt/vtoy/fcos.iso
+cp "$CACHE/ubuntu.iso" /mnt/vtoy/ubuntu.iso
+mkdir -p /mnt/vtoy/ventoy
+cp "/tmp/devx/payload"/ventoy/ventoy.json /mnt/vtoy/ventoy/ventoy.json
+if [ -d "/tmp/devx/payload"/ubuntu ]; then cp -r "/tmp/devx/payload"/ubuntu /mnt/vtoy/ubuntu; fi
+rm -f "$WORK/fcos-devx.iso" "$WORK/devx-node.ign"
+sync
+umount /mnt/vtoy
+echo "devx: image ready at $IMG"
