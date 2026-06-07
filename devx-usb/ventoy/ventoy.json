@@ -1,0 +1,28 @@
+{
+  "control": [
+    {
+      "VTOY_MENU_TIMEOUT": "10"
+    },
+    {
+      "VTOY_DEFAULT_MENU_MODE": "0"
+    }
+  ],
+  "menu_alias": [
+    {
+      "image": "/fedora-coreos-live.x86_64.iso",
+      "alias": "devx node — Fedora CoreOS"
+    },
+    {
+      "image": "/ubuntu-24.04-live-server-amd64.iso",
+      "alias": "devx node — Ubuntu"
+    }
+  ],
+  "auto_install": [
+    {
+      "image": "/ubuntu-24.04-live-server-amd64.iso",
+      "template": [
+        "/ubuntu/ephemeral/user-data"
+      ]
+    }
+  ]
+}

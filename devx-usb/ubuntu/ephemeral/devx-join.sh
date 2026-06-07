@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# devx cluster node join — GENERATED, do not edit by hand.
+# Wraps the canonical join recipe shared by all USB renderers.
+set -euo pipefail
+
+# devx-generated node join (role=agent mode=ephemeral scratch=none)
+K3S_VERSION='v1.35.3+k3s1'
+TOKEN='K102cee03bcde4ba7a7ea5183df0461c1582cd11b9e6e497e334080e350019351c9::server:cbb8851f93b39ac4c2bbad1e6c478eca'
+LAN_SERVER_URL='https://192.168.86.32:6443'
+TAILNET_SERVER_URL='https://100.98.214.120:6443'
+TAILSCALE_AUTHKEY='tskey-auth-kF7NzaRTD221CNTRL-zSRtdbEYHRYdxTJH1ChmQYE2ryNquZFG'
+NODE_NAME_PREFIX='usb'
+NODE_LABELS='devx.io/ephemeral=true,pool=usb'
+WIFI_SSID=''
+WIFI_PSK=''
+
+# Node name: prefix + first MAC (colons stripped) + short hostname.
+mac="$(cat /sys/class/net/*/address 2>/dev/null | grep -v '^00:00:00:00:00:00$' | head -n1 | tr -d ':' || true)"
+short_host="$(hostname -s 2>/dev/null || hostname)"
+NODE_NAME="${NODE_NAME_PREFIX}-${mac:-nomac}-${short_host}"
+echo "devx: node name ${NODE_NAME}"
+
+if [ -n "$WIFI_SSID" ]; then
+  echo "devx: connecting Wi-Fi ${WIFI_SSID}"
+  if command -v nmcli >/dev/null 2>&1; then
+    nmcli dev wifi connect "$WIFI_SSID" password "$WIFI_PSK" || true
+  else
+    echo "devx: nmcli not present; cannot bring up Wi-Fi" >&2
+  fi
+fi
+
+if [ -n "$TAILSCALE_AUTHKEY" ]; then
+  echo "devx: bringing up Tailscale"
+  if ! command -v tailscale >/dev/null 2>&1; then
+    curl -fsSL https://tailscale.com/install.sh | sh
+  fi
+  tailscale up --authkey="$TAILSCALE_AUTHKEY" --accept-routes --hostname="$NODE_NAME"
+fi
+
+# devx_reachable HOST:PORT — true if a TCP connection succeeds within 3s.
+devx_reachable() {
+  local hostport="${1#*://}"; hostport="${hostport%%/*}"
+  local host="${hostport%%:*}" port="${hostport##*:}"
+  [ "$port" = "$host" ] && port=6443
+  timeout 3 bash -c "exec 3<>/dev/tcp/${host}/${port}" 2>/dev/null
+}
+
+SERVER_URL=""
+FLANNEL_IFACE=""
+if [ -n "$LAN_SERVER_URL" ] && devx_reachable "$LAN_SERVER_URL"; then
+  echo "devx: joining via LAN ${LAN_SERVER_URL}"
+  SERVER_URL="$LAN_SERVER_URL"
+elif [ -n "$TAILNET_SERVER_URL" ]; then
+  echo "devx: joining via tailnet ${TAILNET_SERVER_URL}"
+  SERVER_URL="$TAILNET_SERVER_URL"
+  FLANNEL_IFACE="tailscale0"
+elif [ -n "$LAN_SERVER_URL" ]; then
+  echo "devx: LAN not reachable; trying ${LAN_SERVER_URL} anyway"
+  SERVER_URL="$LAN_SERVER_URL"
+else
+  echo "devx: no server URL available" >&2
+  exit 1
+fi
+
+echo "devx: scratch=none (RAM only)"
+
+flannel_flag=""
+if [ -n "$FLANNEL_IFACE" ]; then flannel_flag="--flannel-iface=${FLANNEL_IFACE}"; fi
+labels_flags=""
+if [ -n "$NODE_LABELS" ]; then
+  IFS=',' read -ra _labels <<< "$NODE_LABELS"
+  for l in "${_labels[@]}"; do labels_flags="$labels_flags --node-label=$l"; done
+fi
+version_env=""
+if [ -n "$K3S_VERSION" ]; then version_env="INSTALL_K3S_VERSION=$K3S_VERSION"; fi
+echo "devx: installing k3s agent (joining as worker)"
+curl -sfL https://get.k3s.io | env $version_env K3S_TOKEN="$TOKEN" K3S_URL="$SERVER_URL" \
+  sh -s - agent --node-name="$NODE_NAME" $flannel_flag $labels_flags
+echo "devx: k3s install invoked; node ${NODE_NAME} joining ${SERVER_URL}"

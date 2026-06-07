@@ -137,7 +137,9 @@ func flashWith(ctx context.Context, run runFunc, imagePath, device string, confi
 		return fmt.Errorf("unmount %s: %w", info.Identifier, err)
 	}
 	raw := "/dev/r" + info.Identifier // raw device (/dev/rdiskN) — derived from the validated whole-disk id
-	if _, err := run(ctx, "dd", "if="+imagePath, "of="+raw, "bs=4m"); err != nil {
+	// Writing the raw disk device requires root; dd via sudo (the operator is
+	// prompted for their password unless sudo is already cached).
+	if _, err := run(ctx, "sudo", "dd", "if="+imagePath, "of="+raw, "bs=4m"); err != nil {
 		return fmt.Errorf("dd to %s: %w", raw, err)
 	}
 	_, _ = run(ctx, "diskutil", "eject", "/dev/"+info.Identifier)
