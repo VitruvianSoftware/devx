@@ -102,13 +102,23 @@ type MountConfig struct {
 // NodeConfig describes a single node in the cluster.
 type NodeConfig struct {
 	Host       string   `yaml:"host"`
-	Role       string   `yaml:"role"` // "server" or "agent"
-	Pool       string   `yaml:"pool"`
-	VM         VMConfig `yaml:"vm"`
-	VMName     string   `yaml:"vmName,omitempty"`     // Override default VM name (default: "k8s-node")
-	SSHUser    string   `yaml:"sshUser,omitempty"`    // SSH username (default: current user)
-	SSHPort    string   `yaml:"sshPort,omitempty"`    // SSH port (default: 22)
-	SSHKeyPath string   `yaml:"sshKeyPath,omitempty"` // Path to SSH private key (optional)
+	Role       string   `yaml:"role"`             // "server" or "agent"
+	Pool       string   `yaml:"pool"`             //
+	Kind       string   `yaml:"kind,omitempty"`   // "lima" (default, macOS+VM) | "native" (Linux host, no VM)
+	NodeIP     string   `yaml:"nodeIP,omitempty"` // native: override the auto-detected tailscale IP
+	VM         VMConfig `yaml:"vm"`               // required for kind=lima; ignored for kind=native
+	VMName     string   `yaml:"vmName,omitempty"`
+	SSHUser    string   `yaml:"sshUser,omitempty"`
+	SSHPort    string   `yaml:"sshPort,omitempty"`
+	SSHKeyPath string   `yaml:"sshKeyPath,omitempty"`
+}
+
+// GetKind returns the node kind, defaulting to "lima".
+func (n *NodeConfig) GetKind() string {
+	if n.Kind == "" {
+		return "lima"
+	}
+	return n.Kind
 }
 
 // VMConfig describes the resource allocation for a Lima VM.
