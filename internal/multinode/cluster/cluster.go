@@ -39,6 +39,7 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/multinode/k3s"
 	"github.com/VitruvianSoftware/devx/internal/multinode/lima"
 	"github.com/VitruvianSoftware/devx/internal/multinode/prereqs"
+	"github.com/VitruvianSoftware/devx/internal/multinode/provider"
 	"github.com/VitruvianSoftware/devx/internal/multinode/util"
 )
 
@@ -225,100 +226,96 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	return nil
 }
 
-// Join adds nodes that are in the config but not yet in the cluster.
+// Join adds nodes that are in the config but not yet in the cluster. Each node is
+// provisioned through its NodeProvider (Lima VM or native Linux host).
 func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	slog.Info("joining new nodes to cluster", "name", cfg.Cluster.Name, "dry_run", dryRun)
 
-	var (
-		initIP string
-		token  string
-		found  bool
-	)
-
-	// Find the first healthy server node to query current cluster state and retrieve the token.
+	// Find a healthy server to read the join token + the API endpoint to join against.
+	var serverURL, token string
 	for _, n := range cfg.ServerNodes() {
-		runner := util.NewRunner(n)
-		k3sMgr := k3s.NewManagerWithVM(runner, n.GetVMName())
-
-		installed, _ := k3sMgr.IsInstalled(ctx)
-		if !installed {
+		prov := provider.For(n, cfg)
+		if installed, _ := prov.IsInstalled(ctx); !installed {
 			continue
 		}
-
-		limaMgr := lima.NewManager(runner, n)
-		ip, err := limaMgr.GetBridgedIP(ctx)
-		if err != nil {
-			slog.Debug("failed to get IP for healthy server", "host", n.Host, "error", err)
-			continue
-		}
-
-		t, err := k3sMgr.GetToken(ctx)
+		t, err := prov.GetToken(ctx)
 		if err != nil {
 			slog.Debug("failed to get token from healthy server", "host", n.Host, "error", err)
 			continue
 		}
-
-		initIP = ip
+		ip, err := serverAPIIP(ctx, n, cfg)
+		if err != nil || ip == "" {
+			slog.Debug("failed to get API IP for healthy server", "host", n.Host, "error", err)
+			continue
+		}
+		serverURL = fmt.Sprintf("https://%s:6443", ip)
 		token = t
-		found = true
 		break
 	}
-
-	if !found {
+	if serverURL == "" {
 		return fmt.Errorf("no existing healthy server node found to join against")
 	}
 
-	serverURL := fmt.Sprintf("https://%s:6443", initIP)
-
 	for _, node := range cfg.Nodes {
-		runner := util.NewRunner(node)
-		k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
-		limaMgr := lima.NewManager(runner, node)
-
-		installed, _ := k3sMgr.IsInstalled(ctx)
-		if installed {
+		prov := provider.For(node, cfg)
+		if installed, _ := prov.IsInstalled(ctx); installed {
 			slog.Debug("node already part of cluster, skipping", "host", node.Host)
 			continue
 		}
-
 		if dryRun {
-			fmt.Printf("  [%s] Would join as %s (pool=%s)\n", node.Host, node.Role, node.Pool)
+			fmt.Printf("  [%s] Would join as %s (kind=%s, pool=%s)\n", node.Host, node.Role, node.GetKind(), node.Pool)
 			continue
 		}
 
-		// Ensure VM is provisioned.
-		if err := limaMgr.Provision(ctx, cfg.Cluster.Docker.Enabled, cfg.Cluster.Mounts); err != nil {
-			return fmt.Errorf("[%s] provisioning: %w", node.Host, err)
-		}
-
-		nodeIP, err := limaMgr.GetBridgedIP(ctx)
+		nodeIP, err := prov.EnsureRuntime(ctx)
 		if err != nil {
-			return fmt.Errorf("[%s] getting IP: %w", node.Host, err)
+			return fmt.Errorf("[%s] ensuring runtime: %w", node.Host, err)
 		}
 
-		if cfg.Cluster.Tailscale.Enabled && cfg.Cluster.Tailscale.AuthKey != "" {
-			tsIP, err := k3sMgr.InstallTailscale(ctx, cfg.Cluster.Tailscale.AuthKey)
-			if err != nil {
-				return fmt.Errorf("[%s] installing tailscale: %w", node.Host, err)
-			}
-			nodeIP = tsIP
+		o := provider.JoinOpts{
+			NodeIP:           nodeIP,
+			ServerURL:        serverURL,
+			Token:            token,
+			Pool:             node.Pool,
+			K3sVersion:       cfg.Cluster.K3sVersion,
+			TLSSANs:          []string{nodeIP},
+			DisableServiceLB: cfg.Cluster.MetalLB.Enabled,
+			UseTailscale:     cfg.Cluster.Tailscale.Enabled,
+			UseDocker:        cfg.Cluster.Docker.Enabled,
 		}
-
 		switch node.Role {
 		case "server":
-			if err := k3sMgr.JoinServer(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{nodeIP}, cfg.Cluster.MetalLB.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled); err != nil {
-				return fmt.Errorf("[%s] joining as server: %w", node.Host, err)
-			}
+			err = prov.InstallServer(ctx, o)
 		case "agent":
-			if err := k3sMgr.JoinAgent(ctx, nodeIP, serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled); err != nil {
-				return fmt.Errorf("[%s] joining as agent: %w", node.Host, err)
-			}
+			err = prov.InstallAgent(ctx, o)
 		}
-
-		slog.Info("node joined", "host", node.Host, "role", node.Role)
+		if err != nil {
+			return fmt.Errorf("[%s] joining as %s: %w", node.Host, node.Role, err)
+		}
+		slog.Info("node joined", "host", node.Host, "role", node.Role, "kind", node.GetKind())
 	}
 
 	return nil
+}
+
+// serverAPIIP returns the IP a joining node should reach a server's K3s API on:
+// the server's tailnet IP when Tailscale is enabled (so native/cross-network nodes
+// can reach it), else its bridged LAN IP.
+func serverAPIIP(ctx context.Context, n config.NodeConfig, cfg *config.Config) (string, error) {
+	runner := util.NewRunner(n)
+	if n.GetKind() == "native" {
+		if n.NodeIP != "" {
+			return n.NodeIP, nil
+		}
+		out, err := runner.RunSudo(ctx, "tailscale ip -4")
+		return strings.TrimSpace(out), err
+	}
+	if cfg.Cluster.Tailscale.Enabled {
+		if out, err := runner.LimaShellSudo(ctx, n.GetVMName(), "tailscale ip -4"); err == nil && strings.TrimSpace(out) != "" {
+			return strings.TrimSpace(out), nil
+		}
+	}
+	return lima.NewManager(runner, n).GetBridgedIP(ctx)
 }
 
 // Reconcile converges already-provisioned nodes to the current desired
