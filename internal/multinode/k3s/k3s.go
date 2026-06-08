@@ -35,28 +35,53 @@ import (
 
 const defaultVMName = "k8s-node"
 
-// Manager handles K3s operations on a remote Lima VM.
+// execFunc runs a privileged command on the node and returns combined output.
+// Lima VMs use limactl-shell-sudo; native Linux hosts use ssh-sudo.
+type execFunc func(ctx context.Context, command string) (string, error)
+
+// Manager handles K3s operations on a node, running privileged commands via exec.
+// The K3s install/join recipe is identical for a Lima VM or a bare host; only how
+// the command is delivered differs.
 type Manager struct {
 	runner *remote.Runner
 	vmName string
+	exec   execFunc
 }
 
-// NewManager creates a new K3s manager for the given remote host.
+// NewManager creates a new K3s manager for the given remote host (Lima VM).
 func NewManager(runner *remote.Runner) *Manager {
-	return &Manager{runner: runner, vmName: defaultVMName}
+	return NewManagerWithVM(runner, defaultVMName)
 }
 
-// NewManagerWithVM creates a new K3s manager with a custom VM name.
+// NewManagerWithVM creates a new K3s manager that runs commands inside a Lima VM.
 func NewManagerWithVM(runner *remote.Runner, vmName string) *Manager {
 	if vmName == "" {
 		vmName = defaultVMName
 	}
-	return &Manager{runner: runner, vmName: vmName}
+	return &Manager{
+		runner: runner,
+		vmName: vmName,
+		exec: func(ctx context.Context, cmd string) (string, error) {
+			return runner.LimaShellSudo(ctx, vmName, cmd)
+		},
+	}
+}
+
+// NewManagerWithExec creates a Manager that runs commands via the injected exec
+// (e.g. ssh-sudo directly on a native Linux host). runner is used only for its
+// Host label in log lines.
+func NewManagerWithExec(runner *remote.Runner, exec execFunc) *Manager {
+	return &Manager{runner: runner, vmName: runner.Host, exec: exec}
+}
+
+// sudo runs a privileged command on the node via the configured exec.
+func (m *Manager) sudo(ctx context.Context, cmd string) (string, error) {
+	return m.exec(ctx, cmd)
 }
 
 // IsInstalled checks whether K3s is installed inside the VM.
 func (m *Manager) IsInstalled(ctx context.Context) (bool, error) {
-	out, err := m.runner.LimaShellSudo(ctx, m.vmName, "test -f /usr/local/bin/k3s && echo yes || echo no")
+	out, err := m.sudo(ctx, "test -f /usr/local/bin/k3s && echo yes || echo no")
 	if err != nil {
 		return false, err
 	}
@@ -70,18 +95,18 @@ func (m *Manager) InstallTailscale(ctx context.Context, authKey string) (string,
 
 	// Install Tailscale
 	script := "curl -fsSL https://tailscale.com/install.sh | sh"
-	if _, err := m.runner.LimaShellSudo(ctx, m.vmName, script); err != nil {
+	if _, err := m.sudo(ctx, script); err != nil {
 		return "", fmt.Errorf("[%s] installing tailscale: %w", m.runner.Host, err)
 	}
 
 	// Bring up Tailscale
 	upCmd := fmt.Sprintf("tailscale up --authkey=%s --accept-routes", authKey)
-	if _, err := m.runner.LimaShellSudo(ctx, m.vmName, upCmd); err != nil {
+	if _, err := m.sudo(ctx, upCmd); err != nil {
 		return "", fmt.Errorf("[%s] starting tailscale: %w", m.runner.Host, err)
 	}
 
 	// Get the Tailscale IPv4 address
-	ip, err := m.runner.LimaShellSudo(ctx, m.vmName, "tailscale ip -4")
+	ip, err := m.sudo(ctx, "tailscale ip -4")
 	if err != nil {
 		return "", fmt.Errorf("[%s] getting tailscale ip: %w", m.runner.Host, err)
 	}
@@ -133,7 +158,7 @@ func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion stri
 	)
 
 	slog.Debug("K3s install script", "host", m.runner.Host, "script", script)
-	_, err = m.runner.LimaShellSudo(ctx, m.vmName, script)
+	_, err = m.sudo(ctx, script)
 	return err
 }
 
@@ -143,7 +168,7 @@ func (m *Manager) DeployMetalLB(ctx context.Context, ipRange string) error {
 	fmt.Printf("  [%s] Applying MetalLB manifests...\n", m.runner.Host)
 
 	// Install MetalLB
-	_, err := m.runner.LimaShellSudo(ctx, m.vmName, "k3s kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml")
+	_, err := m.sudo(ctx, "k3s kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml")
 	if err != nil {
 		return fmt.Errorf("applying metallb manifests: %w", err)
 	}
@@ -151,7 +176,7 @@ func (m *Manager) DeployMetalLB(ctx context.Context, ipRange string) error {
 	fmt.Printf("  [%s] Waiting for MetalLB controller to be ready...\n", m.runner.Host)
 	// Give it a moment to create the pods
 	time.Sleep(5 * time.Second)
-	_, err = m.runner.LimaShellSudo(ctx, m.vmName, "k3s kubectl wait --namespace metallb-system --for=condition=ready pod --selector=component=controller --timeout=90s")
+	_, err = m.sudo(ctx, "k3s kubectl wait --namespace metallb-system --for=condition=ready pod --selector=component=controller --timeout=90s")
 	if err != nil {
 		slog.Warn("timeout waiting for metallb pods, continuing anyway", "error", err)
 	}
@@ -176,7 +201,7 @@ metadata:
 	// Write the manifest to a temp file in the VM and apply it
 	encoded := base64.StdEncoding.EncodeToString([]byte(configManifest))
 	cmd := fmt.Sprintf("echo '%s' | base64 -d | k3s kubectl apply -f -", encoded)
-	_, err = m.runner.LimaShellSudo(ctx, m.vmName, cmd)
+	_, err = m.sudo(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("applying metallb config: %w", err)
 	}
@@ -230,14 +255,14 @@ func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool
 	)
 
 	slog.Debug("K3s join script", "host", m.runner.Host)
-	_, err = m.runner.LimaShellSudo(ctx, m.vmName, script)
+	_, err = m.sudo(ctx, script)
 	if err != nil {
 		return err
 	}
 
 	// Now start K3s and let it retry joining on its own.
 	fmt.Printf("  [%s] Starting K3s server (joining cluster)...\n", m.runner.Host)
-	_, err = m.runner.LimaShellSudo(ctx, m.vmName, "systemctl start k3s --no-block")
+	_, err = m.sudo(ctx, "systemctl start k3s --no-block")
 	if err != nil {
 		return fmt.Errorf("[%s] starting k3s service: %w", m.runner.Host, err)
 	}
@@ -256,7 +281,7 @@ func (m *Manager) waitForJoin(ctx context.Context, timeout time.Duration) error 
 		}
 
 		// Check if K3s process is running (active).
-		out, err := m.runner.LimaShellSudo(ctx, m.vmName, "systemctl is-active k3s 2>/dev/null")
+		out, err := m.sudo(ctx, "systemctl is-active k3s 2>/dev/null")
 		if err == nil && strings.TrimSpace(out) == "active" {
 			slog.Info("K3s joined successfully", "host", m.runner.Host)
 			return nil
@@ -310,13 +335,13 @@ func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool,
 	)
 
 	slog.Debug("K3s agent join script", "host", m.runner.Host)
-	_, err = m.runner.LimaShellSudo(ctx, m.vmName, script)
+	_, err = m.sudo(ctx, script)
 	return err
 }
 
 // GetToken retrieves the K3s node token from the server.
 func (m *Manager) GetToken(ctx context.Context) (string, error) {
-	out, err := m.runner.LimaShellSudo(ctx, m.vmName, "cat /var/lib/rancher/k3s/server/node-token")
+	out, err := m.sudo(ctx, "cat /var/lib/rancher/k3s/server/node-token")
 	if err != nil {
 		return "", fmt.Errorf("[%s] reading node token: %w", m.runner.Host, err)
 	}
@@ -335,7 +360,7 @@ func (m *Manager) WaitForReady(ctx context.Context, timeout time.Duration) error
 		}
 
 		// Check that the node-token file exists.
-		out, err := m.runner.LimaShellSudo(ctx, m.vmName, "test -f /var/lib/rancher/k3s/server/node-token && echo ready || echo waiting")
+		out, err := m.sudo(ctx, "test -f /var/lib/rancher/k3s/server/node-token && echo ready || echo waiting")
 		if err != nil || strings.TrimSpace(out) != "ready" {
 			slog.Debug("waiting for K3s node-token", "host", m.runner.Host)
 			fmt.Printf("  [%s] Waiting for K3s to initialize...\n", m.runner.Host)
@@ -348,7 +373,7 @@ func (m *Manager) WaitForReady(ctx context.Context, timeout time.Duration) error
 		}
 
 		// Also verify the API server is accepting connections.
-		_, err = m.runner.LimaShellSudo(ctx, m.vmName, "k3s kubectl get nodes --request-timeout=5s 2>/dev/null")
+		_, err = m.sudo(ctx, "k3s kubectl get nodes --request-timeout=5s 2>/dev/null")
 		if err == nil {
 			slog.Info("K3s is ready", "host", m.runner.Host)
 			return nil
@@ -368,7 +393,7 @@ func (m *Manager) WaitForReady(ctx context.Context, timeout time.Duration) error
 
 // GetNodeStatus returns the output of kubectl get nodes.
 func (m *Manager) GetNodeStatus(ctx context.Context) (string, error) {
-	return m.runner.LimaShellSudo(ctx, m.vmName, "k3s kubectl get nodes -o wide -L pool -L kubernetes.io/arch")
+	return m.sudo(ctx, "k3s kubectl get nodes -o wide -L pool -L kubernetes.io/arch")
 }
 
 // Uninstall removes K3s from the VM.
@@ -390,7 +415,7 @@ func (m *Manager) Uninstall(ctx context.Context, role string) error {
 		script = "/usr/local/bin/k3s-agent-uninstall.sh"
 	}
 
-	_, err = m.runner.LimaShellSudo(ctx, m.vmName, script)
+	_, err = m.sudo(ctx, script)
 	return err
 }
 
@@ -398,7 +423,7 @@ func (m *Manager) Uninstall(ctx context.Context, role string) error {
 func (m *Manager) DrainNode(ctx context.Context, nodeName string) error {
 	slog.Info("draining node", "host", m.runner.Host, "node", nodeName)
 	fmt.Printf("  [%s] Draining node %s...\n", m.runner.Host, nodeName)
-	_, err := m.runner.LimaShellSudo(ctx, m.vmName,
+	_, err := m.sudo(ctx,
 		fmt.Sprintf("k3s kubectl drain %s --ignore-daemonsets --delete-emptydir-data --timeout=60s", nodeName))
 	return err
 }
@@ -407,14 +432,14 @@ func (m *Manager) DrainNode(ctx context.Context, nodeName string) error {
 func (m *Manager) DeleteNode(ctx context.Context, nodeName string) error {
 	slog.Info("deleting node from cluster", "host", m.runner.Host, "node", nodeName)
 	fmt.Printf("  [%s] Deleting node %s from cluster...\n", m.runner.Host, nodeName)
-	_, err := m.runner.LimaShellSudo(ctx, m.vmName,
+	_, err := m.sudo(ctx,
 		fmt.Sprintf("k3s kubectl delete node %s", nodeName))
 	return err
 }
 
 // GetKubeconfig retrieves and patches the kubeconfig for external access.
 func (m *Manager) GetKubeconfig(ctx context.Context, serverIP string) (string, error) {
-	out, err := m.runner.LimaShellSudo(ctx, m.vmName, "cat /etc/rancher/k3s/k3s.yaml")
+	out, err := m.sudo(ctx, "cat /etc/rancher/k3s/k3s.yaml")
 	if err != nil {
 		return "", err
 	}

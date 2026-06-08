@@ -175,6 +175,12 @@ func (r *Runner) LimaShellSudo(ctx context.Context, vmName, command string) (str
 	return r.Run(ctx, fmt.Sprintf("limactl shell %s -- sudo sh -c %q", vmName, command))
 }
 
+// RunSudo runs a command as root directly on the host via `sudo sh -c` (used for
+// native Linux nodes, which have no Lima VM).
+func (r *Runner) RunSudo(ctx context.Context, command string) (string, error) {
+	return r.Run(ctx, fmt.Sprintf("sudo sh -c %q", command))
+}
+
 // isTransient returns true if the error message suggests a transient SSH failure.
 func isTransient(errMsg string) bool {
 	transientPatterns := []string{

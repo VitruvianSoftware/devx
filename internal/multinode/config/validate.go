@@ -61,14 +61,22 @@ func (c *Config) Validate() error {
 		if n.Pool == "" {
 			errs = append(errs, fmt.Sprintf("nodes[%d].pool is required", i))
 		}
-		if n.VM.CPUs < 1 {
-			errs = append(errs, fmt.Sprintf("nodes[%d].vm.cpus must be >= 1", i))
-		}
-		if n.VM.Memory == "" {
-			errs = append(errs, fmt.Sprintf("nodes[%d].vm.memory is required", i))
-		}
-		if n.VM.Disk == "" {
-			errs = append(errs, fmt.Sprintf("nodes[%d].vm.disk is required", i))
+		switch n.GetKind() {
+		case "lima":
+			// Lima nodes provision a VM, so the VM sizing is required.
+			if n.VM.CPUs < 1 {
+				errs = append(errs, fmt.Sprintf("nodes[%d].vm.cpus must be >= 1", i))
+			}
+			if n.VM.Memory == "" {
+				errs = append(errs, fmt.Sprintf("nodes[%d].vm.memory is required", i))
+			}
+			if n.VM.Disk == "" {
+				errs = append(errs, fmt.Sprintf("nodes[%d].vm.disk is required", i))
+			}
+		case "native":
+			// Native Linux hosts run K3s directly; no VM to size.
+		default:
+			errs = append(errs, fmt.Sprintf("nodes[%d].kind %q must be 'lima' or 'native'", i, n.Kind))
 		}
 
 		if hosts[n.Host] {
