@@ -394,25 +394,17 @@ func Remove(ctx context.Context, cfg *config.Config, hostName string, dryRun boo
 		return nil
 	}
 
-	// Use the init node to drain and delete from the cluster.
-	initNode := cfg.InitNode()
-	initRunner := util.NewRunner(initNode)
-	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
-
-	// Drain the node.
-	if err := initK3s.DrainNode(ctx, hostName); err != nil {
+	// Drain + delete the node from the cluster via the init (server) node.
+	initProv := provider.For(cfg.InitNode(), cfg)
+	if err := initProv.Drain(ctx, hostName); err != nil {
 		slog.Warn("drain failed (may already be removed)", "host", hostName, "error", err)
 	}
-
-	// Delete the node from K8s.
-	if err := initK3s.DeleteNode(ctx, hostName); err != nil {
+	if err := initProv.DeleteNode(ctx, hostName); err != nil {
 		slog.Warn("delete failed (may already be removed)", "host", hostName, "error", err)
 	}
 
-	// Uninstall K3s on the target.
-	targetRunner := util.NewRunner(*target)
-	targetK3s := k3s.NewManagerWithVM(targetRunner, target.GetVMName())
-	if err := targetK3s.Uninstall(ctx, target.Role); err != nil {
+	// Uninstall K3s on the target node itself (Lima VM or native host).
+	if err := provider.For(*target, cfg).Uninstall(ctx, target.Role); err != nil {
 		return fmt.Errorf("[%s] uninstalling K3s: %w", target.Host, err)
 	}
 
