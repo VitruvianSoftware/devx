@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.63.0](https://github.com/VitruvianSoftware/devx/compare/v0.62.0...v0.63.0) (2026-06-09)
+
+
+### Features
+
+* **cluster:** native nodes mask suspend/sleep targets ([#249](https://github.com/VitruvianSoftware/devx/issues/249)) ([4b91168](https://github.com/VitruvianSoftware/devx/commit/4b91168246a798c414133310d675a8aa587285ac))
+
 ## [0.62.0](https://github.com/VitruvianSoftware/devx/compare/v0.61.0...v0.62.0) (2026-06-09)
 
 
