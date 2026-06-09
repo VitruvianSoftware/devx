@@ -46,9 +46,15 @@ func TestRenderBuilderProvision_Golden(t *testing.T) {
 
 func TestRenderBuilderProvision_Tools(t *testing.T) {
 	s := RenderBuilderProvision()
-	for _, tool := range []string{"ventoy", "podman", "exfatprogs", "parted", "wget", "butane", "jq"} {
+	for _, tool := range []string{"podman", "wget", "butane"} {
 		if !strings.Contains(s, tool) {
 			t.Errorf("provision script must install %q", tool)
+		}
+	}
+	// Ventoy/exFAT/partition tooling is no longer used.
+	for _, gone := range []string{"ventoy", "exfatprogs", "parted", "jq"} {
+		if strings.Contains(s, gone) {
+			t.Errorf("provision script must not install Ventoy-era tool %q", gone)
 		}
 	}
 	if strings.Contains(s, "coreos-installer") {
@@ -64,9 +70,9 @@ func TestBuildImageCommands(t *testing.T) {
 	}
 	b := &Builder{VMName: "devx-usb-builder", run: fake}
 	_, err := b.BuildImage(context.Background(), AssemblyParams{
-		BootSizeMB: 16384, TotalSizeMB: 117000,
-		ISOs:     []ISOSpec{{Name: "fcos", URL: "u", Filename: "f.iso", EmbedIgnition: true}},
-		ButaneVM: "/tmp/devx/payload/f.ign", PayloadVM: "/tmp/devx/payload", ImageVM: "/tmp/devx/devx-usb.img",
+		ImageSizeMB: 4096,
+		ButaneVM:    "/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
+		ImageVM:     "/tmp/devx/devx-usb.img",
 	}, "/local/staging")
 	if err != nil {
 		t.Fatal(err)

@@ -19,13 +19,13 @@
 // SOFTWARE.
 
 // Package usb generates the artifacts needed to boot a bare-metal laptop off a
-// Ventoy USB stick and have it self-provision a K3s node that joins an existing
+// USB stick and have it self-provision a K3s node that joins an existing
 // devx-managed cluster.
 //
 // The package is organized around a single source of truth — the canonical join
 // script produced by RenderJoinScript from a JoinSpec. Every OS renderer
-// (FCOS/Ignition, Ubuntu/cloud-init, prebaked image) only re-packages that same
-// script for its boot medium, so the join *logic* lives in exactly one place.
+// (FCOS/Ignition, prebaked image) only re-packages that same script for its boot
+// medium, so the join *logic* lives in exactly one place.
 package usb
 
 import (
@@ -100,6 +100,7 @@ type JoinSpec struct {
 	LANServerURL     string // e.g. "https://10.0.0.5:6443"; tried first if reachable
 	TailnetServerURL string // e.g. "https://100.64.0.5:6443"; Tailscale fallback
 	TailscaleAuthKey string // ephemeral, ACL-tagged; empty disables Tailscale
+	TailscaleVersion string // pinned static-binary version for FCOS provisioning (e.g. "1.84.3")
 
 	Ephemeral   bool // add the EphemeralLabel and run as a disposable node
 	Scratch     ScratchConfig
@@ -190,7 +191,10 @@ func RenderJoinScript(s JoinSpec) (string, error) {
 	w("#!/usr/bin/env bash\n")
 	w("# devx cluster node join — GENERATED, do not edit by hand.\n")
 	w("# Wraps the canonical join recipe shared by all USB renderers.\n")
-	w("set -euo pipefail\n\n")
+	// No blanket `set -e`: best-effort steps (Wi-Fi, Tailscale readiness) must not
+	// abort the join, and the genuinely-critical k3s install checks its own exit
+	// status so systemd's Restart=on-failure can retry. -u and pipefail stay.
+	w("set -uo pipefail\n\n")
 
 	// --- Baked parameters --------------------------------------------------
 	// role, mode and scratch strategy are specialized by the generator (the Go
@@ -207,7 +211,6 @@ func RenderJoinScript(s JoinSpec) (string, error) {
 	w("TOKEN=%s\n", shellQuote(s.Token))
 	w("LAN_SERVER_URL=%s\n", shellQuote(s.LANServerURL))
 	w("TAILNET_SERVER_URL=%s\n", shellQuote(s.TailnetServerURL))
-	w("TAILSCALE_AUTHKEY=%s\n", shellQuote(s.TailscaleAuthKey))
 	w("NODE_NAME_PREFIX=%s\n", shellQuote(s.NodeNamePrefix))
 	w("NODE_LABELS=%s\n", shellQuote(strings.Join(s.nodeLabels(), ",")))
 	w("WIFI_SSID=%s\n", shellQuote(s.WiFiSSID))
@@ -223,6 +226,8 @@ mac="$(cat /sys/class/net/*/address 2>/dev/null | grep -v '^00:00:00:00:00:00$' 
 short_host="$(hostname -s 2>/dev/null || hostname)"
 NODE_NAME="${NODE_NAME_PREFIX}-${mac:-nomac}-${short_host}"
 echo "devx: node name ${NODE_NAME}"
+mkdir -p /run/devx
+echo "$NODE_NAME" >/run/devx/node-name
 `)
 	w("\n")
 
@@ -238,16 +243,13 @@ fi
 `)
 	w("\n")
 
-	// --- Tailscale (optional) ----------------------------------------------
-	b.WriteString(`if [ -n "$TAILSCALE_AUTHKEY" ]; then
-  echo "devx: bringing up Tailscale"
-  if ! command -v tailscale >/dev/null 2>&1; then
-    curl -fsSL https://tailscale.com/install.sh | sh
-  fi
-  tailscale up --authkey="$TAILSCALE_AUTHKEY" --accept-routes --hostname="$NODE_NAME"
-fi
-`)
-	w("\n")
+	// --- Tailscale -----------------------------------------------------------
+	// Tailscale is NOT installed here. Immutable hosts (Fedora CoreOS) cannot run
+	// install.sh at runtime, so the OS layer provisions tailscaled and brings the
+	// tailnet up out-of-band (FCOS: dedicated Ignition units in fcos.go; baked
+	// image: baked in). A failure there must never abort a LAN-reachable join.
+	// This script only *consumes* the result: it reads /run/devx/tailnet-ip
+	// (written by that bring-up) when choosing the tailnet endpoint below.
 
 	// --- Endpoint selection: prefer LAN if reachable, else tailnet ---------
 	b.WriteString(`# devx_reachable HOST:PORT — true if a TCP connection succeeds within 3s.
@@ -260,15 +262,27 @@ devx_reachable() {
 
 SERVER_URL=""
 FLANNEL_IFACE=""
-if [ -n "$LAN_SERVER_URL" ] && devx_reachable "$LAN_SERVER_URL"; then
-  echo "devx: joining via LAN ${LAN_SERVER_URL}"
-  SERVER_URL="$LAN_SERVER_URL"
-elif [ -n "$TAILNET_SERVER_URL" ]; then
+NODE_IP=""
+# Prefer the tailnet when Tailscale is up: the cluster runs flannel on tailscale0,
+# so a joining node MUST use tailscale0 + its tailnet IP to share the pod network.
+# Fall back to LAN only when Tailscale is unavailable.
+if [ -n "$TAILNET_SERVER_URL" ] && [ -s /run/devx/tailnet-ip ]; then
   echo "devx: joining via tailnet ${TAILNET_SERVER_URL}"
   SERVER_URL="$TAILNET_SERVER_URL"
   FLANNEL_IFACE="tailscale0"
+  # tailscaled reports ready before tailscale0 is bindable; wait for its IPv4 so
+  # flannel and --node-ip see a real address.
+  for _ in $(seq 1 30); do ip -4 addr show tailscale0 2>/dev/null | grep -q 'inet ' && break; sleep 2; done
+  NODE_IP="$(cat /run/devx/tailnet-ip)"
+elif [ -n "$LAN_SERVER_URL" ] && devx_reachable "$LAN_SERVER_URL"; then
+  echo "devx: joining via LAN ${LAN_SERVER_URL}"
+  SERVER_URL="$LAN_SERVER_URL"
+elif [ -n "$TAILNET_SERVER_URL" ]; then
+  echo "devx: tailnet not confirmed; trying ${TAILNET_SERVER_URL} anyway"
+  SERVER_URL="$TAILNET_SERVER_URL"
+  FLANNEL_IFACE="tailscale0"
 elif [ -n "$LAN_SERVER_URL" ]; then
-  echo "devx: LAN not reachable; trying ${LAN_SERVER_URL} anyway"
+  echo "devx: trying ${LAN_SERVER_URL}"
   SERVER_URL="$LAN_SERVER_URL"
 else
   echo "devx: no server URL available" >&2
@@ -339,7 +353,7 @@ mount "$newpart" "$SCRATCH_MNT"
 	}
 	// Point k3s/containerd data at the scratch mount.
 	b.WriteString(`mkdir -p "$SCRATCH_MNT/rancher" /var/lib/rancher
-mount --bind "$SCRATCH_MNT/rancher" /var/lib/rancher || true
+mount --bind "$SCRATCH_MNT/rancher" /var/lib/rancher || { echo "devx: ERROR scratch bind-mount failed; refusing to silently fall back to RAM" >&2; exit 1; }
 `)
 	return b.String()
 }
@@ -351,6 +365,8 @@ func renderK3sInstallBlock(s JoinSpec) string {
 	var b strings.Builder
 	b.WriteString(`flannel_flag=""
 if [ -n "$FLANNEL_IFACE" ]; then flannel_flag="--flannel-iface=${FLANNEL_IFACE}"; fi
+node_ip_flag=""
+if [ -n "${NODE_IP:-}" ]; then node_ip_flag="--node-ip=${NODE_IP}"; fi
 labels_flags=""
 if [ -n "$NODE_LABELS" ]; then
   IFS=',' read -ra _labels <<< "$NODE_LABELS"
@@ -358,6 +374,12 @@ if [ -n "$NODE_LABELS" ]; then
 fi
 version_env=""
 if [ -n "$K3S_VERSION" ]; then version_env="INSTALL_K3S_VERSION=$K3S_VERSION"; fi
+# Immutable / SELinux-Enforcing hosts (FCOS): get.k3s.io would layer k3s-selinux
+# via rpm-ostree, which only takes effect after a reboot — so the agent never
+# starts and the join silently no-ops. Skip that RPM and run Permissive instead
+# (the node is disposable and cluster-trusted), mirroring the native provider.
+selinux_env="INSTALL_K3S_SKIP_SELINUX_RPM=true"
+setenforce 0 2>/dev/null || true
 `)
 	extra := ""
 	if len(s.ExtraArgs) > 0 {
@@ -365,18 +387,26 @@ if [ -n "$K3S_VERSION" ]; then version_env="INSTALL_K3S_VERSION=$K3S_VERSION"; f
 	}
 	if s.Role == RoleServer {
 		// Server join: --server + token, mirrors k3s.Manager.JoinServer.
-		fmt.Fprintf(&b, `echo "devx: installing k3s server (joining HA control plane)"
-curl -sfL https://get.k3s.io | env $version_env K3S_TOKEN="$TOKEN" INSTALL_K3S_EXEC="server" \
-  sh -s - --server="$SERVER_URL" --node-name="$NODE_NAME" $flannel_flag $labels_flags%s
+		fmt.Fprintf(&b, `advertise_flag=""
+if [ -n "${NODE_IP:-}" ]; then advertise_flag="--advertise-address=${NODE_IP}"; fi
+echo "devx: installing k3s server (joining HA control plane)"
+if curl -sfL https://get.k3s.io | env $version_env $selinux_env K3S_TOKEN="$TOKEN" INSTALL_K3S_EXEC="server" \
+  sh -s - --server="$SERVER_URL" --node-name="$NODE_NAME" $flannel_flag $node_ip_flag $advertise_flag $labels_flags%s; then
+  echo "devx: k3s server install invoked; node ${NODE_NAME} joining ${SERVER_URL}"
+else
+  echo "devx: k3s server install FAILED" >&2; exit 1
+fi
 `, extra)
 	} else {
 		// Agent join: K3S_URL + token, mirrors k3s.Manager.JoinAgent.
 		fmt.Fprintf(&b, `echo "devx: installing k3s agent (joining as worker)"
-curl -sfL https://get.k3s.io | env $version_env K3S_TOKEN="$TOKEN" K3S_URL="$SERVER_URL" \
-  sh -s - agent --node-name="$NODE_NAME" $flannel_flag $labels_flags%s
+if curl -sfL https://get.k3s.io | env $version_env $selinux_env K3S_TOKEN="$TOKEN" K3S_URL="$SERVER_URL" \
+  sh -s - agent --node-name="$NODE_NAME" $flannel_flag $node_ip_flag $labels_flags%s; then
+  echo "devx: k3s agent install invoked; node ${NODE_NAME} joining ${SERVER_URL}"
+else
+  echo "devx: k3s agent install FAILED" >&2; exit 1
+fi
 `, extra)
 	}
-	b.WriteString(`echo "devx: k3s install invoked; node ${NODE_NAME} joining ${SERVER_URL}"
-`)
 	return b.String()
 }

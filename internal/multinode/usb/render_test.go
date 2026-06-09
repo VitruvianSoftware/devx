@@ -22,7 +22,6 @@ package usb
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,7 +50,7 @@ func TestFCOSRenderer(t *testing.T) {
 		t.Fatalf("want 1 entry, got %d", len(entries))
 	}
 	e := entries[0]
-	if e.Renderer != "fcos" || e.BaseImage != FCOSImage || e.Injection.Kind != InjectIgnition {
+	if e.Renderer != "fcos" || e.BaseImage != FCOSStickName || e.Injection.Kind != InjectIgnition {
 		t.Errorf("unexpected entry: %+v", e)
 	}
 	if e.InstallToDisk {
@@ -81,39 +80,8 @@ func TestFCOSRenderer(t *testing.T) {
 	if !es[0].InstallToDisk {
 		t.Error("install entry must set InstallToDisk")
 	}
-	if !strings.Contains(string(sink2.files["fcos/install/devx-join.bu"]), "devx-install.service") {
-		t.Error("install butane must contain the install unit")
-	}
-}
-
-func TestUbuntuRenderer(t *testing.T) {
-	s := agentSpec()
-
-	// Ephemeral → NoCloud user-data with write_files + runcmd.
-	sink := &memSink{}
-	entries, err := UbuntuRenderer{}.Render(s, ModeEphemeral, sink)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entries[0].Injection.Kind != InjectCloudInit || entries[0].BaseImage != UbuntuImage {
-		t.Errorf("unexpected entry: %+v", entries[0])
-	}
-	ud := string(sink.files["ubuntu/ephemeral/user-data"])
-	if !strings.HasPrefix(ud, "#cloud-config") || !strings.Contains(ud, "runcmd:") {
-		t.Error("ephemeral user-data must be a #cloud-config with runcmd")
-	}
-	if strings.Contains(ud, "autoinstall:") {
-		t.Error("ephemeral must not use autoinstall")
-	}
-
-	// Install → autoinstall.
-	sink2 := &memSink{}
-	if _, err := (UbuntuRenderer{}).Render(s, ModeInstall, sink2); err != nil {
-		t.Fatal(err)
-	}
-	ud2 := string(sink2.files["ubuntu/install/user-data"])
-	if !strings.Contains(ud2, "autoinstall:") || !strings.Contains(ud2, "late-commands:") {
-		t.Error("install user-data must use subiquity autoinstall with late-commands")
+	if !strings.Contains(string(sink2.files["fcos/install/devx-join.bu"]), "tailscaled.service") {
+		t.Error("butane must provision tailscaled (static binary) for the tailnet")
 	}
 }
 
@@ -132,44 +100,6 @@ func TestBakedRenderer(t *testing.T) {
 	}
 	if got := string(sink.files["baked/ephemeral/devx-config/mode"]); got != "ephemeral\n" {
 		t.Errorf("mode file = %q, want ephemeral", got)
-	}
-}
-
-func TestVentoyJSON(t *testing.T) {
-	var entries []BootEntry
-	for _, r := range AllRenderers() {
-		for _, m := range r.Modes() {
-			es, err := r.Render(agentSpec(), m, &memSink{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			entries = append(entries, es...)
-		}
-	}
-	raw, err := VentoyJSON(entries)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Must be valid JSON.
-	var cfg ventoyConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		t.Fatalf("ventoy.json is not valid JSON: %v", err)
-	}
-	// One alias per base image (3 images).
-	if len(cfg.MenuAlias) != 3 {
-		t.Errorf("want 3 menu aliases, got %d", len(cfg.MenuAlias))
-	}
-	// Ubuntu cloud-init entries register autoinstall templates.
-	if len(cfg.AutoInstall) != 1 {
-		t.Fatalf("want 1 auto_install image (ubuntu), got %d", len(cfg.AutoInstall))
-	}
-	if len(cfg.AutoInstall[0].Template) != 2 {
-		t.Errorf("want ubuntu image to map both ephemeral+install templates, got %v", cfg.AutoInstall[0].Template)
-	}
-	// Determinism: re-render must byte-match.
-	raw2, _ := VentoyJSON(entries)
-	if string(raw) != string(raw2) {
-		t.Error("VentoyJSON must be deterministic")
 	}
 }
 

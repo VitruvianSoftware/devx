@@ -51,14 +51,14 @@ type Artifact struct {
 type Injection struct {
 	Kind        InjectionKind
 	PayloadPath string // relative path of the payload artifact in the sink
-	Notes       string // operator-facing notes (also surfaced in ventoy.json)
+	Notes       string // operator-facing notes
 }
 
-// BootEntry is one line in the Ventoy menu plus the metadata the assembler needs
-// to wire its provisioning payload.
+// BootEntry is one boot option plus the metadata the assembler needs to wire its
+// provisioning payload.
 type BootEntry struct {
-	MenuTitle     string    // shown in the Ventoy boot menu
-	BaseImage     string    // ISO/IMG filename this entry boots (operator supplies)
+	MenuTitle     string    // human label for the boot entry
+	BaseImage     string    // boot medium this entry produces/boots
 	Renderer      string    // provenance: renderer Name()
 	Mode          Mode      // provenance: lifecycle mode
 	InstallToDisk bool      // true if this entry persists the OS to the internal disk
@@ -82,7 +82,7 @@ type Renderer interface {
 
 // AllRenderers returns the built-in renderers keyed by Name(), in a stable order.
 func AllRenderers() []Renderer {
-	return []Renderer{FCOSRenderer{}, UbuntuRenderer{}, BakedRenderer{}}
+	return []Renderer{FCOSRenderer{}, BakedRenderer{}}
 }
 
 // RendererByName looks up a built-in renderer.
@@ -115,7 +115,7 @@ func modeSupported(r Renderer, m Mode) bool {
 	return false
 }
 
-// menuTitle builds a consistent Ventoy menu label.
+// menuTitle builds a consistent boot-entry label.
 func menuTitle(os string, m Mode) string {
 	switch m {
 	case ModeInstall:
