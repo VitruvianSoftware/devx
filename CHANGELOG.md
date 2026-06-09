@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.62.0](https://github.com/VitruvianSoftware/devx/compare/v0.61.0...v0.62.0) (2026-06-09)
+
+
+### Features
+
+* **cluster:** native Linux host nodes (kind: native) via NodeProvider ([#245](https://github.com/VitruvianSoftware/devx/issues/245)) ([d2f405d](https://github.com/VitruvianSoftware/devx/commit/d2f405df8b313a8766d3a35f7629b86e8fdc22de))
+* **cluster:** native nodes self-heal the k3s/tailscale boot race ([#248](https://github.com/VitruvianSoftware/devx/issues/248)) ([28e2971](https://github.com/VitruvianSoftware/devx/commit/28e2971f30acc3b523478a8fdb8baee25f3ac1b0))
+* **cluster:** USB nodes via GPT Fedora CoreOS (coreos-installer) ([#247](https://github.com/VitruvianSoftware/devx/issues/247)) ([5125337](https://github.com/VitruvianSoftware/devx/commit/5125337fb230d5f47e172add385117bc3b63f45b))
+
 ## [0.61.0](https://github.com/VitruvianSoftware/devx/compare/v0.60.1...v0.61.0) (2026-06-07)
 
 
