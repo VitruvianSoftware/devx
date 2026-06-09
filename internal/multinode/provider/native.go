@@ -95,6 +95,10 @@ func (p *NativeProvider) EnsureRuntime(ctx context.Context) (string, error) {
 	if _, err := p.run(ctx, depInstallCmd(pm, k3sDeps)); err != nil {
 		return "", fmt.Errorf("[%s] installing deps: %w", p.node.Host, err)
 	}
+	// Keep the node awake: mask suspend/sleep so an idle GNOME/GDM login screen
+	// (Workstation/Silverblue auto-suspends at the greeter) can't suspend the host
+	// and silently drop it out of the cluster. Best-effort.
+	_, _ = p.run(ctx, "systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target")
 	// 2. Trust the tailnet interface in firewalld (if running) so flannel flows.
 	if out, _ := p.run(ctx, "firewall-cmd --state 2>/dev/null || true"); strings.Contains(out, "running") {
 		_, _ = p.run(ctx, "firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 && firewall-cmd --reload")
