@@ -32,7 +32,7 @@ import (
 // BuildOptions configures a `devx cluster usb build`.
 type BuildOptions struct {
 	OutputDir string   // staging directory for artifacts (required unless DryRun)
-	Renderers []string // subset of fcos|ubuntu|baked; empty uses config/all
+	Renderers []string // subset of fcos|baked; empty uses config/all
 	Modes     []Mode   // subset of ephemeral|install; empty uses both
 	Role      Role     // role for install entries (ephemeral always joins as agent)
 	DryRun    bool     // plan only; do not resolve coordinates or write files
@@ -56,8 +56,8 @@ type BuildResult struct {
 }
 
 // Build resolves the join coordinates, runs the selected renderers across the
-// selected modes into OutputDir, and writes ventoy.json plus an operator
-// manifest. With DryRun it produces only the plan (no cluster access, no files).
+// selected modes into OutputDir, and writes an operator manifest. With DryRun it
+// produces only the plan (no cluster access, no files).
 func Build(ctx context.Context, cfg *config.Config, opts BuildOptions) (*BuildResult, error) {
 	renderers, err := selectRenderers(opts.Renderers, cfg.Cluster.USB.Renderers)
 	if err != nil {
@@ -74,13 +74,14 @@ func Build(ctx context.Context, cfg *config.Config, opts BuildOptions) (*BuildRe
 	}
 
 	base := JoinSpec{
-		K3sVersion:     cfg.Cluster.K3sVersion,
-		Pool:           orDefault(cfg.Cluster.USB.Pool, "usb"),
-		NodeNamePrefix: orDefault(cfg.Cluster.USB.NodeNamePrefix, "usb"),
-		WiFiSSID:       cfg.Cluster.USB.WiFi.SSID,
-		WiFiPSK:        cfg.Cluster.USB.WiFi.PSK,
-		Ephemeral:      true, // overridden per-mode below
-		Scratch:        scratch,
+		K3sVersion:       cfg.Cluster.K3sVersion,
+		Pool:             orDefault(cfg.Cluster.USB.Pool, "usb"),
+		NodeNamePrefix:   orDefault(cfg.Cluster.USB.NodeNamePrefix, "usb"),
+		WiFiSSID:         cfg.Cluster.USB.WiFi.SSID,
+		WiFiPSK:          cfg.Cluster.USB.WiFi.PSK,
+		TailscaleVersion: DefaultTailscaleVersion,
+		Ephemeral:        true, // overridden per-mode below
+		Scratch:          scratch,
 	}
 
 	if opts.DryRun {
@@ -146,13 +147,6 @@ func Build(ctx context.Context, cfg *config.Config, opts BuildOptions) (*BuildRe
 	result := newBuildResult(entries, opts)
 
 	if !opts.DryRun {
-		vj, err := VentoyJSON(entries)
-		if err != nil {
-			return nil, fmt.Errorf("generating ventoy.json: %w", err)
-		}
-		if err := sink.Add(Artifact{Path: "ventoy/ventoy.json", Contents: vj, Mode: 0o644}); err != nil {
-			return nil, err
-		}
 		if err := sink.Add(Artifact{Path: "MANIFEST.md", Contents: []byte(manifest(result)), Mode: 0o644}); err != nil {
 			return nil, err
 		}
@@ -240,22 +234,24 @@ type discardSink struct{}
 
 func (discardSink) Add(Artifact) error { return nil }
 
-// manifest renders an operator-facing summary of what to put on the stick.
+// manifest renders an operator-facing summary of the build.
 func manifest(r *BuildResult) string {
 	var b strings.Builder
 	b.WriteString("# devx cluster USB — build manifest\n\n")
-	b.WriteString("Boot menu entries:\n\n")
+	b.WriteString("Boot entries:\n\n")
 	for _, e := range r.Entries {
 		fmt.Fprintf(&b, "- %s  (%s/%s, %s)\n", e.MenuTitle, e.Renderer, e.Mode, e.Injection)
 	}
-	b.WriteString("\nRequired base images (copy these onto the Ventoy stick root):\n\n")
+	b.WriteString("\nBoot media:\n\n")
 	for _, img := range r.RequiredImages {
 		fmt.Fprintf(&b, "- %s\n", img)
 	}
-	b.WriteString("\nThe provisioning payloads (Ignition/cloud-init/config) and ventoy/ventoy.json\n")
-	b.WriteString("are staged alongside this manifest. To skip the manual assembly, re-run with\n")
-	b.WriteString("--assemble (build a flashable .img in a Lima VM) or --device /dev/diskN (build\n")
-	b.WriteString("and flash a removable stick directly). See the design spec for the field\n")
+	b.WriteString("\nThe provisioning payloads (Ignition/cloud-init/config) are staged alongside\n")
+	b.WriteString("this manifest. The FCOS entry is delivered as a native GPT Fedora CoreOS disk\n")
+	b.WriteString("built by coreos-installer (the metal image is fetched from the FCOS stream and\n")
+	b.WriteString("the Ignition is embedded), not a multi-boot stick. To build a flashable image,\n")
+	b.WriteString("re-run with --assemble (writes a .img in a Lima VM) or --device /dev/diskN\n")
+	b.WriteString("(build and flash a removable stick directly). See the design spec for the field\n")
 	b.WriteString("checklist (Secure Boot off, Ethernet recommended for FCOS, x86_64 only).\n")
 	return b.String()
 }

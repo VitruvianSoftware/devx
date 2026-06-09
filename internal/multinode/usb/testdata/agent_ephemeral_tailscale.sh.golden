@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # devx cluster node join — GENERATED, do not edit by hand.
 # Wraps the canonical join recipe shared by all USB renderers.
-set -euo pipefail
+set -uo pipefail
 
 # devx-generated node join (role=agent mode=ephemeral scratch=none)
 K3S_VERSION='v1.30.4+k3s1'
 TOKEN='K10agenttoken::node:secret'
 LAN_SERVER_URL='https://10.0.0.5:6443'
 TAILNET_SERVER_URL='https://100.64.0.5:6443'
-TAILSCALE_AUTHKEY='tskey-auth-abc123'
 NODE_NAME_PREFIX='usb'
 NODE_LABELS='devx.io/ephemeral=true,pool=usb'
 WIFI_SSID=''
@@ -19,6 +18,8 @@ mac="$(cat /sys/class/net/*/address 2>/dev/null | grep -v '^00:00:00:00:00:00$' 
 short_host="$(hostname -s 2>/dev/null || hostname)"
 NODE_NAME="${NODE_NAME_PREFIX}-${mac:-nomac}-${short_host}"
 echo "devx: node name ${NODE_NAME}"
+mkdir -p /run/devx
+echo "$NODE_NAME" >/run/devx/node-name
 
 if [ -n "$WIFI_SSID" ]; then
   echo "devx: connecting Wi-Fi ${WIFI_SSID}"
@@ -27,14 +28,6 @@ if [ -n "$WIFI_SSID" ]; then
   else
     echo "devx: nmcli not present; cannot bring up Wi-Fi" >&2
   fi
-fi
-
-if [ -n "$TAILSCALE_AUTHKEY" ]; then
-  echo "devx: bringing up Tailscale"
-  if ! command -v tailscale >/dev/null 2>&1; then
-    curl -fsSL https://tailscale.com/install.sh | sh
-  fi
-  tailscale up --authkey="$TAILSCALE_AUTHKEY" --accept-routes --hostname="$NODE_NAME"
 fi
 
 # devx_reachable HOST:PORT — true if a TCP connection succeeds within 3s.
@@ -47,15 +40,27 @@ devx_reachable() {
 
 SERVER_URL=""
 FLANNEL_IFACE=""
-if [ -n "$LAN_SERVER_URL" ] && devx_reachable "$LAN_SERVER_URL"; then
-  echo "devx: joining via LAN ${LAN_SERVER_URL}"
-  SERVER_URL="$LAN_SERVER_URL"
-elif [ -n "$TAILNET_SERVER_URL" ]; then
+NODE_IP=""
+# Prefer the tailnet when Tailscale is up: the cluster runs flannel on tailscale0,
+# so a joining node MUST use tailscale0 + its tailnet IP to share the pod network.
+# Fall back to LAN only when Tailscale is unavailable.
+if [ -n "$TAILNET_SERVER_URL" ] && [ -s /run/devx/tailnet-ip ]; then
   echo "devx: joining via tailnet ${TAILNET_SERVER_URL}"
   SERVER_URL="$TAILNET_SERVER_URL"
   FLANNEL_IFACE="tailscale0"
+  # tailscaled reports ready before tailscale0 is bindable; wait for its IPv4 so
+  # flannel and --node-ip see a real address.
+  for _ in $(seq 1 30); do ip -4 addr show tailscale0 2>/dev/null | grep -q 'inet ' && break; sleep 2; done
+  NODE_IP="$(cat /run/devx/tailnet-ip)"
+elif [ -n "$LAN_SERVER_URL" ] && devx_reachable "$LAN_SERVER_URL"; then
+  echo "devx: joining via LAN ${LAN_SERVER_URL}"
+  SERVER_URL="$LAN_SERVER_URL"
+elif [ -n "$TAILNET_SERVER_URL" ]; then
+  echo "devx: tailnet not confirmed; trying ${TAILNET_SERVER_URL} anyway"
+  SERVER_URL="$TAILNET_SERVER_URL"
+  FLANNEL_IFACE="tailscale0"
 elif [ -n "$LAN_SERVER_URL" ]; then
-  echo "devx: LAN not reachable; trying ${LAN_SERVER_URL} anyway"
+  echo "devx: trying ${LAN_SERVER_URL}"
   SERVER_URL="$LAN_SERVER_URL"
 else
   echo "devx: no server URL available" >&2
@@ -66,6 +71,8 @@ echo "devx: scratch=none (RAM only)"
 
 flannel_flag=""
 if [ -n "$FLANNEL_IFACE" ]; then flannel_flag="--flannel-iface=${FLANNEL_IFACE}"; fi
+node_ip_flag=""
+if [ -n "${NODE_IP:-}" ]; then node_ip_flag="--node-ip=${NODE_IP}"; fi
 labels_flags=""
 if [ -n "$NODE_LABELS" ]; then
   IFS=',' read -ra _labels <<< "$NODE_LABELS"
@@ -73,7 +80,16 @@ if [ -n "$NODE_LABELS" ]; then
 fi
 version_env=""
 if [ -n "$K3S_VERSION" ]; then version_env="INSTALL_K3S_VERSION=$K3S_VERSION"; fi
+# Immutable / SELinux-Enforcing hosts (FCOS): get.k3s.io would layer k3s-selinux
+# via rpm-ostree, which only takes effect after a reboot — so the agent never
+# starts and the join silently no-ops. Skip that RPM and run Permissive instead
+# (the node is disposable and cluster-trusted), mirroring the native provider.
+selinux_env="INSTALL_K3S_SKIP_SELINUX_RPM=true"
+setenforce 0 2>/dev/null || true
 echo "devx: installing k3s agent (joining as worker)"
-curl -sfL https://get.k3s.io | env $version_env K3S_TOKEN="$TOKEN" K3S_URL="$SERVER_URL" \
-  sh -s - agent --node-name="$NODE_NAME" $flannel_flag $labels_flags
-echo "devx: k3s install invoked; node ${NODE_NAME} joining ${SERVER_URL}"
+if curl -sfL https://get.k3s.io | env $version_env $selinux_env K3S_TOKEN="$TOKEN" K3S_URL="$SERVER_URL" \
+  sh -s - agent --node-name="$NODE_NAME" $flannel_flag $node_ip_flag $labels_flags; then
+  echo "devx: k3s agent install invoked; node ${NODE_NAME} joining ${SERVER_URL}"
+else
+  echo "devx: k3s agent install FAILED" >&2; exit 1
+fi

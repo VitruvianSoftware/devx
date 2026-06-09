@@ -40,11 +40,11 @@ func TestBuild_DryRunPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 3 renderers × 2 modes.
-	if len(res.Entries) != 6 {
-		t.Errorf("want 6 boot entries, got %d", len(res.Entries))
+	// 2 renderers × 2 modes.
+	if len(res.Entries) != 4 {
+		t.Errorf("want 4 boot entries, got %d", len(res.Entries))
 	}
-	wantImages := []string{BakedImage, FCOSImage, UbuntuImage}
+	wantImages := []string{BakedImage, FCOSStickName}
 	if len(res.RequiredImages) != len(wantImages) {
 		t.Fatalf("want %v, got %v", wantImages, res.RequiredImages)
 	}
@@ -68,18 +68,8 @@ func TestBuild_WritesArtifacts(t *testing.T) {
 	if _, err := (FCOSRenderer{}).Render(spec, ModeEphemeral, sink); err != nil {
 		t.Fatal(err)
 	}
-	vj, err := VentoyJSON([]BootEntry{{BaseImage: FCOSImage, Renderer: "fcos", Injection: Injection{Kind: InjectIgnition}}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := sink.Add(Artifact{Path: "ventoy/ventoy.json", Contents: vj}); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := os.Stat(filepath.Join(out, "fcos", "ephemeral", "devx-join.bu")); err != nil {
 		t.Errorf("expected butane artifact on disk: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(out, "ventoy", "ventoy.json")); err != nil {
-		t.Errorf("expected ventoy.json on disk: %v", err)
 	}
 	_ = cfg
 }
@@ -118,14 +108,14 @@ func TestParseScratch(t *testing.T) {
 
 func TestSelectRenderers(t *testing.T) {
 	all, err := selectRenderers(nil, nil)
-	if err != nil || len(all) != 3 {
-		t.Fatalf("default should be all 3 renderers, got %d (%v)", len(all), err)
+	if err != nil || len(all) != 2 {
+		t.Fatalf("default should be all 2 renderers, got %d (%v)", len(all), err)
 	}
 	one, err := selectRenderers([]string{"fcos"}, nil)
 	if err != nil || len(one) != 1 || one[0].Name() != "fcos" {
 		t.Fatalf("explicit flag should win: %v %v", one, err)
 	}
-	fromCfg, err := selectRenderers(nil, []string{"ubuntu", "baked"})
+	fromCfg, err := selectRenderers(nil, []string{"fcos", "baked"})
 	if err != nil || len(fromCfg) != 2 {
 		t.Fatalf("config fallback should yield 2, got %d (%v)", len(fromCfg), err)
 	}

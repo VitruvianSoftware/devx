@@ -22,18 +22,18 @@
 
 // Run with: go test -tags integration ./internal/multinode/usb/ -run Integration -timeout 30m
 //
-// This builds a real Ventoy image in a Lima VM (downloads the FCOS live ISO,
-// embeds an Ignition, installs Ventoy, formats an exFAT storage partition) and
-// inspects the result inside the VM. It is heavy (GBs of download, minutes of
-// work) and gated behind the `integration` build tag + limactl presence, so it
-// never runs in the normal unit suite.
+// This builds a real GPT Fedora CoreOS image in a Lima VM (coreos-installer
+// fetches the FCOS metal image from the stream, embeds the compiled Ignition,
+// and installs it to a loop-mounted sparse image) and inspects the result inside
+// the VM. It is heavy (GBs of download, minutes of work) and gated behind the
+// `integration` build tag + limactl presence, so it never runs in the normal
+// unit suite.
 package usb
 
 import (
 	"context"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -45,7 +45,7 @@ func TestAssembleIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	// Stage a minimal FCOS-only payload (no cluster needed): render the FCOS
-	// Butane + a ventoy.json into a temp dir.
+	// Butane into a temp dir. coreos-installer compiles + embeds it.
 	staging := t.TempDir()
 	sink := DirSink{Root: staging}
 	spec := JoinSpec{
@@ -53,15 +53,7 @@ func TestAssembleIntegration(t *testing.T) {
 		Token: "itesttoken", LANServerURL: "https://10.0.0.5:6443", Ephemeral: true,
 		Scratch: ScratchConfig{Strategy: ScratchNone},
 	}
-	entries, err := FCOSRenderer{}.Render(spec, ModeEphemeral, sink)
-	if err != nil {
-		t.Fatal(err)
-	}
-	vj, err := VentoyJSON(entries)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := sink.Add(Artifact{Path: "ventoy/ventoy.json", Contents: vj}); err != nil {
+	if _, err := (FCOSRenderer{}).Render(spec, ModeEphemeral, sink); err != nil {
 		t.Fatal(err)
 	}
 
@@ -70,13 +62,11 @@ func TestAssembleIntegration(t *testing.T) {
 		t.Fatalf("ensure builder VM: %v", err)
 	}
 
-	// FCOS-only, small image: 3 GB boot (FCOS live ISO ~1 GB) + 2 GB exFAT.
+	// Size only for the FCOS metal layout; FCOS grows root on first boot.
 	params := AssemblyParams{
-		BootSizeMB: 3072, TotalSizeMB: 5120,
-		ISOs:      DefaultISOSpecs([]string{"fcos"}),
-		ButaneVM:  "/var/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
-		PayloadVM: "/var/tmp/devx/payload",
-		ImageVM:   "/var/tmp/devx/devx-usb.img",
+		ImageSizeMB: 4096,
+		ButaneVM:    "/var/tmp/devx/payload/fcos/ephemeral/devx-join.bu",
+		ImageVM:     "/var/tmp/devx/devx-usb.img",
 	}
 	img, err := b.BuildImage(ctx, params, staging)
 	if err != nil {
@@ -94,23 +84,20 @@ func TestAssembleIntegration(t *testing.T) {
 	}
 
 	out, err := exec.CommandContext(ctx, "limactl", "shell", "devx-usb-itest", "sudo", "bash", "-c",
-		"L=$(losetup --show -f -P "+inspectImg+"); parted -s $L print; blkid; losetup -d $L").CombinedOutput()
+		"L=$(losetup --show -f -P "+inspectImg+"); sgdisk -p $L 2>/dev/null || parted -s $L print; blkid; losetup -d $L").CombinedOutput()
 	if err != nil {
 		t.Fatalf("inspect image: %v\n%s", err, out)
 	}
 	got := string(out)
-	if !strings.Contains(got, "DEVXDATA") {
-		t.Errorf("expected an exFAT DEVXDATA storage partition; got:\n%s", got)
+	// The coreos-installer GPT layout: BIOS-BOOT, EFI-SYSTEM (vfat), boot (ext4),
+	// root (xfs).
+	for _, want := range []string{"EFI-SYSTEM", "boot", "root"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected GPT partition %q in:\n%s", want, got)
+		}
 	}
-
-	// Confirm the embedded Ignition is readable from the FCOS ISO on the boot
-	// partition. coreos-installer ships no binary, so read it via the container.
-	isoName := filepath.Base(DefaultISOSpecs([]string{"fcos"})[0].Filename)
-	ign, err := exec.CommandContext(ctx, "limactl", "shell", "devx-usb-itest", "sudo", "bash", "-c",
-		"set -e; L=$(losetup --show -f -P "+inspectImg+"); mkdir -p /mnt/i; mount ${L}p1 /mnt/i; "+
-			"podman run --rm -v /mnt/i:/data "+CoreosInstallerImage+" iso ignition show /data/"+isoName+"; "+
-			"umount /mnt/i; losetup -d $L").CombinedOutput()
-	if err != nil || !strings.Contains(string(ign), "devx-join") {
-		t.Errorf("embedded Ignition not found on FCOS ISO: %v\n%s", err, ign)
+	// The Ventoy-era exFAT storage partition must be gone.
+	if strings.Contains(got, "DEVXDATA") {
+		t.Errorf("unexpected exFAT DEVXDATA storage partition (Ventoy remnant):\n%s", got)
 	}
 }

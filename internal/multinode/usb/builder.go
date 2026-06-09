@@ -27,20 +27,19 @@ import (
 	"strings"
 )
 
-// Tool versions fetched into the builder VM as binaries (not apt packages).
-const (
-	VentoyVersion = "1.0.99"
-	ButaneVersion = "0.23.0"
-)
+// ButaneVersion is fetched into the builder VM as a static binary (not an apt
+// package). butane compiles the join Butane into the Ignition that
+// coreos-installer embeds.
+const ButaneVersion = "0.23.0"
 
 // runFunc is an injectable command runner so orchestration command-construction
 // can be unit-tested without executing anything. The production runner is execRun.
 type runFunc func(ctx context.Context, name string, args ...string) (string, error)
 
 // RenderBuilderProvision returns the Lima provision script that installs the
-// Linux tooling needed to assemble the Ventoy image. Deterministic (golden).
-// coreos-installer is NOT installed here — it ships no Linux binary on GitHub, so
-// the assembly script runs its official container via podman.
+// Linux tooling needed to assemble the GPT Fedora CoreOS image. Deterministic
+// (golden). coreos-installer is NOT installed here — it ships no Linux binary on
+// GitHub, so the assembly script runs its official container via podman.
 func RenderBuilderProvision() string {
 	return `#!/bin/bash
 # devx usb builder provisioning — GENERATED. Idempotent; run via limactl shell.
@@ -48,18 +47,7 @@ set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 # apt-get update can race first-boot networking; retry briefly.
 for i in 1 2 3 4 5; do apt-get update -qq && break; sleep 5; done
-apt-get install -y -qq wget jq parted exfatprogs dosfstools util-linux ca-certificates podman
-
-# Ventoy (Linux installer). The tarball nests everything under a versioned dir
-# (with a ./ prefix), so extract then flatten so Ventoy2Disk.sh lands at
-# /opt/ventoy/. Guard on the binary (not the dir) so a partial extract retries.
-if [ ! -x /opt/ventoy/Ventoy2Disk.sh ]; then
-  rm -rf /opt/ventoy && mkdir -p /opt/ventoy
-  wget -qO /tmp/ventoy.tar.gz https://github.com/ventoy/Ventoy/releases/download/v` + VentoyVersion + `/ventoy-` + VentoyVersion + `-linux.tar.gz
-  tar -xzf /tmp/ventoy.tar.gz -C /opt/ventoy
-  d=$(find /opt/ventoy -mindepth 1 -maxdepth 1 -type d -name 'ventoy-*' | head -1)
-  if [ -n "$d" ]; then mv "$d"/* /opt/ventoy/ && rmdir "$d"; fi
-fi
+apt-get install -y -qq wget util-linux ca-certificates podman
 
 # Butane (Ignition compiler) — not in apt, but ships a static Linux binary.
 if ! command -v butane >/dev/null 2>&1; then
@@ -70,7 +58,7 @@ echo "devx: builder provisioned"
 `
 }
 
-// Builder orchestrates the Ventoy image assembly inside a Lima VM.
+// Builder orchestrates the GPT Fedora CoreOS image assembly inside a Lima VM.
 type Builder struct {
 	VMName string
 	run    runFunc
@@ -200,7 +188,7 @@ func (b *Builder) BuildImage(ctx context.Context, p AssemblyParams, stagingDir s
 		_ = os.Remove(hostImg)
 		return "", fmt.Errorf("copy image out: %w", err)
 	}
-	// Reclaim the in-VM working dir (image + payload, multi-GB); keep the ISO cache.
+	// Reclaim the in-VM working dir (image + payload, multi-GB).
 	_, _ = b.run(ctx, "limactl", "shell", b.VMName, "sudo", "rm", "-rf", "/var/tmp/devx")
 	return hostImg, nil
 }
