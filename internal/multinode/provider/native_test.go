@@ -136,3 +136,55 @@ func TestNative_DepInstall_PackageManagers(t *testing.T) {
 		}
 	}
 }
+
+func TestNative_TailscaleOrderingConf(t *testing.T) {
+	dir, conf := tailscaleOrderingConf("agent")
+	if dir != "/etc/systemd/system/k3s-agent.service.d" {
+		t.Errorf("agent drop-in dir = %q", dir)
+	}
+	if d, _ := tailscaleOrderingConf("server"); d != "/etc/systemd/system/k3s.service.d" {
+		t.Errorf("server drop-in dir = %q", d)
+	}
+	for _, want := range []string{
+		"After=tailscaled.service",
+		"Wants=tailscaled.service",
+		"ExecStartPre=",
+		"ip -4 addr show tailscale0",
+	} {
+		if !strings.Contains(conf, want) {
+			t.Errorf("ordering drop-in missing %q in:\n%s", want, conf)
+		}
+	}
+}
+
+func TestNative_InstallAgent_WritesOrderingDropin(t *testing.T) {
+	p, calls := nativeWithRunner(nil)
+	if err := p.InstallAgent(context.Background(), JoinOpts{
+		NodeIP: "100.97.82.15", ServerURL: "https://100.64.0.5:6443", Token: "K10tok",
+		Pool: "linux", UseTailscale: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(*calls, "\n")
+	for _, want := range []string{
+		"mkdir -p /etc/systemd/system/k3s-agent.service.d",
+		"base64 -d > /etc/systemd/system/k3s-agent.service.d/10-devx-tailscale.conf",
+		"systemctl daemon-reload",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("a Tailscale agent install must write the ordering drop-in; missing %q in:\n%s", want, got)
+		}
+	}
+}
+
+func TestNative_InstallAgent_NoTailscaleNoDropin(t *testing.T) {
+	p, calls := nativeWithRunner(nil)
+	if err := p.InstallAgent(context.Background(), JoinOpts{
+		NodeIP: "10.0.0.9", ServerURL: "https://10.0.0.5:6443", Token: "K10tok", Pool: "linux",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(strings.Join(*calls, "\n"), "10-devx-tailscale.conf") {
+		t.Error("no Tailscale → must not write the ordering drop-in")
+	}
+}
