@@ -63,6 +63,7 @@ func TestNative_EnsureRuntime_Silverblue(t *testing.T) {
 		"rpm-ostree install",
 		"--apply-live",
 		"conntrack-tools socat",
+		"systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target",
 		"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0",
 	} {
 		if !strings.Contains(joined, want) {
