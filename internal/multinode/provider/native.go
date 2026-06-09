@@ -22,6 +22,7 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -146,18 +147,54 @@ func (p *NativeProvider) installScript(role string, o JoinOpts) string {
 }
 
 func (p *NativeProvider) InstallAgent(ctx context.Context, o JoinOpts) error {
-	if inst, _ := p.IsInstalled(ctx); inst {
-		return nil
+	if inst, _ := p.IsInstalled(ctx); !inst {
+		if _, err := p.run(ctx, p.installScript("agent", o)); err != nil {
+			return err
+		}
 	}
-	_, err := p.run(ctx, p.installScript("agent", o))
-	return err
+	return p.ensureTailscaleOrdering(ctx, "agent", o)
 }
 
 func (p *NativeProvider) InstallServer(ctx context.Context, o JoinOpts) error {
-	if inst, _ := p.IsInstalled(ctx); inst {
+	if inst, _ := p.IsInstalled(ctx); !inst {
+		if _, err := p.run(ctx, p.installScript("server", o)); err != nil {
+			return err
+		}
+	}
+	return p.ensureTailscaleOrdering(ctx, "server", o)
+}
+
+// tailscaleOrderingConf returns the systemd drop-in directory and contents that
+// order the K3s unit after tailscaled and wait (bounded to 60s) for tailscale0 to
+// carry an IPv4 before K3s launches.
+func tailscaleOrderingConf(role string) (dir, contents string) {
+	unit := "k3s-agent.service"
+	if role == "server" {
+		unit = "k3s.service"
+	}
+	dir = "/etc/systemd/system/" + unit + ".d"
+	contents = "[Unit]\n" +
+		"After=tailscaled.service\n" +
+		"Wants=tailscaled.service\n\n" +
+		"[Service]\n" +
+		"ExecStartPre=/usr/bin/bash -c 'for i in $(seq 1 60); do ip -4 addr show tailscale0 2>/dev/null | grep -q \"inet \" && break; sleep 1; done'\n"
+	return dir, contents
+}
+
+// ensureTailscaleOrdering installs a systemd drop-in so the K3s unit starts after
+// tailscaled and waits for tailscale0's IPv4. The install pins
+// --flannel-iface=tailscale0 and --node-ip to the tailnet address, so on a reboot
+// that brings K3s up before the tailnet is ready the node would fail and thrash
+// until Restart recovers it; ordering + a short wait make the rejoin prompt and
+// clean. Idempotent, and a no-op when Tailscale is not in use.
+func (p *NativeProvider) ensureTailscaleOrdering(ctx context.Context, role string, o JoinOpts) error {
+	if !o.UseTailscale {
 		return nil
 	}
-	_, err := p.run(ctx, p.installScript("server", o))
+	dir, conf := tailscaleOrderingConf(role)
+	b64 := base64.StdEncoding.EncodeToString([]byte(conf))
+	cmd := fmt.Sprintf("mkdir -p %s && echo %s | base64 -d > %s/10-devx-tailscale.conf && systemctl daemon-reload", dir, b64, dir)
+	_, err := p.run(ctx, cmd)
 	return err
 }
 
