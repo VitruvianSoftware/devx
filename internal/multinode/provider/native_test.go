@@ -189,3 +189,103 @@ func TestNative_InstallAgent_NoTailscaleNoDropin(t *testing.T) {
 		t.Error("no Tailscale → must not write the ordering drop-in")
 	}
 }
+
+func TestNative_EnsureRuntime_InstallsISCSIForLonghorn(t *testing.T) {
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
+		"tailscale ip -4":       "100.97.82.15",
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	for _, want := range []string{
+		"iscsi-initiator-utils",
+		"systemctl enable --now iscsid",
+		"modprobe iscsi_tcp",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("EnsureRuntime missing %q in:\n%s", want, joined)
+		}
+	}
+}
+
+func TestNative_EnsureRuntime_InstallsOpenISCSIOnApt(t *testing.T) {
+	// Neither rpm-ostree nor dnf present -> apt path; Debian's package is open-iscsi.
+	p, calls := nativeWithRunner(map[string]string{
+		"tailscale ip -4": "100.64.0.7",
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	if !strings.Contains(joined, "open-iscsi") {
+		t.Errorf("apt path should install open-iscsi, got:\n%s", joined)
+	}
+	if strings.Contains(joined, "iscsi-initiator-utils") {
+		t.Errorf("apt path must not use the Fedora package name, got:\n%s", joined)
+	}
+}
+
+func TestNative_EnsureRuntime_FirewalldTrustsPodNetwork(t *testing.T) {
+	// Regression: trusting only tailscale0 leaves pod-bridge traffic REJECTed
+	// ("no route to host" pod-to-pod), which strands CSI volume attach.
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
+		"firewall-cmd --state":  "running",
+		"tailscale ip -4":       "100.97.82.15",
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	for _, want := range []string{
+		"--add-interface=cni0",
+		"--add-interface=flannel.1",
+		"--add-source=10.42.0.0/16",
+		"--add-source=10.43.0.0/16",
+		"firewall-cmd --reload",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("firewalld trust missing %q in:\n%s", want, joined)
+		}
+	}
+}
+
+func TestNative_EnsureRuntime_SkipsFirewalldWhenNotRunning(t *testing.T) {
+	p, calls := nativeWithRunner(map[string]string{
+		"tailscale ip -4": "100.64.0.7",
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range *calls {
+		if strings.Contains(c, "--zone=trusted") {
+			t.Errorf("firewalld not running but trust command issued: %s", c)
+		}
+	}
+}
+
+func TestNative_Reconcile_HealsHostPrereqs(t *testing.T) {
+	// Reconcile must converge existing nodes onto the full prereq set
+	// (deps incl. iscsi, firewalld pod-network trust), not just re-install deps —
+	// that is how already-joined nodes pick up these fixes on `cluster apply`.
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
+		"firewall-cmd --state":  "running",
+	})
+	if err := p.Reconcile(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	for _, want := range []string{
+		"iscsi-initiator-utils",
+		"systemctl enable --now iscsid",
+		"--add-source=10.42.0.0/16",
+		"--add-interface=cni0",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("Reconcile missing %q in:\n%s", want, joined)
+		}
+	}
+}
