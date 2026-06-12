@@ -249,27 +249,7 @@ func ensureSocketVmnetRunning(ctx context.Context, runner *remote.Runner, host, 
 	_, _ = runner.RunShell(ctx, "sleep 1")
 
 	// Create a custom plist for bridged mode.
-	plist := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>homebrew.mxcl.socket_vmnet</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>%s</string>
-    <string>--vmnet-mode=bridged</string>
-    <string>--vmnet-interface=%s</string>
-    <string>%s</string>
-  </array>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>StandardErrorPath</key>
-  <string>%s/stderr</string>
-  <key>StandardOutPath</key>
-  <string>%s/stdout</string>
-</dict>
-</plist>`, socketBin, activeIface, socketPath, logDir, logDir)
+	plist := socketVMNetBridgedPlist(socketBin, activeIface, socketPath, logDir)
 
 	encoded := util.Base64Encode(plist)
 	_, err = runner.RunShell(ctx, fmt.Sprintf("sudo mkdir -p %s && echo %s | base64 -d | sudo tee /Library/LaunchDaemons/homebrew.mxcl.socket_vmnet.plist > /dev/null", logDir, encoded))
@@ -301,4 +281,40 @@ func ensureSocketVmnetRunning(ctx context.Context, runner *remote.Runner, host, 
 func ensureLimaBridgedNetwork(_ context.Context, _ *remote.Runner, _ string, _ string) error {
 	// No longer needed — bridged mode is configured at the socket_vmnet service level.
 	return nil
+}
+
+// socketVMNetBridgedPlist renders the launchd daemon plist that runs socket_vmnet
+// in bridged mode. KeepAlive (restart on non-zero exit) lets launchd retry past a
+// transient boot-time `vmnet_start_interface: VMNET_FAILURE` (the bridged
+// interface not being ready yet) instead of leaving the VM's networking helper
+// dead — which previously stranded the node until a manual restart.
+func socketVMNetBridgedPlist(socketBin, iface, socketPath, logDir string) string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>homebrew.mxcl.socket_vmnet</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>%s</string>
+    <string>--vmnet-mode=bridged</string>
+    <string>--vmnet-interface=%s</string>
+    <string>%s</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+  <key>StandardErrorPath</key>
+  <string>%s/stderr</string>
+  <key>StandardOutPath</key>
+  <string>%s/stdout</string>
+</dict>
+</plist>`, socketBin, iface, socketPath, logDir, logDir)
 }

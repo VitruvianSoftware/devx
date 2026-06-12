@@ -154,12 +154,12 @@ func (m *Manager) Provision(ctx context.Context, dockerEnabled bool, mounts []co
 	case VMStatusRunning:
 		slog.Debug("VM already running, skipping provision", "host", m.runner.Host, "vm", m.vmName)
 		fmt.Printf("  [%s] VM already running, skipping provision\n", m.runner.Host)
-		return nil
 	case VMStatusStopped:
 		slog.Info("VM stopped, starting", "host", m.runner.Host, "vm", m.vmName)
 		fmt.Printf("  [%s] VM exists but stopped, starting...\n", m.runner.Host)
-		_, err := m.runner.Run(ctx, fmt.Sprintf("limactl start %s", m.vmName))
-		return err
+		if _, err := m.runner.Run(ctx, fmt.Sprintf("limactl start %s", m.vmName)); err != nil {
+			return err
+		}
 	case VMStatusNotCreated:
 		slog.Info("creating and starting VM", "host", m.runner.Host, "vm", m.vmName,
 			"cpus", m.node.VM.CPUs, "memory", m.node.VM.Memory, "disk", m.node.VM.Disk)
@@ -194,10 +194,16 @@ func (m *Manager) Provision(ctx context.Context, dockerEnabled bool, mounts []co
 			}
 		}
 
-		return nil
 	default:
 		return fmt.Errorf("unexpected VM status: %s", status)
 	}
+
+	// Self-recovery: install the keeper LaunchAgent so the node comes back on its
+	// own after a host reboot or sleep. Best-effort — never fails provisioning.
+	if err := m.InstallNodeKeeper(ctx); err != nil {
+		slog.Warn("failed to install node-vm-keeper (non-fatal)", "host", m.runner.Host, "error", err)
+	}
+	return nil
 }
 
 // GetBridgedIP returns the bridged LAN IP address of the VM.
