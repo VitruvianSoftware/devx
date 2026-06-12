@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.64.0](https://github.com/VitruvianSoftware/devx/compare/v0.63.0...v0.64.0) (2026-06-12)
+
+
+### Features
+
+* **cluster:** self-recovering Mac-hosted Lima nodes (node-vm-keeper) ([#251](https://github.com/VitruvianSoftware/devx/issues/251)) ([f44e88a](https://github.com/VitruvianSoftware/devx/commit/f44e88a03e41104ed06ba7047873dff3e8b70c0d))
+
 ## [0.63.0](https://github.com/VitruvianSoftware/devx/compare/v0.62.0...v0.63.0) (2026-06-09)
 
 
