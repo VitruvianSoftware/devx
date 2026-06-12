@@ -110,6 +110,9 @@ func TestResolve_ExplicitColima(t *testing.T) {
 func TestResolve_ExplicitDocker(t *testing.T) {
 	vm, rt, err := Resolve("docker")
 	if err != nil {
+		if searchSubstring(err.Error(), "not found on $PATH") {
+			t.Skipf("Skipping test: %v", err)
+		}
 		t.Fatalf("Resolve(docker) error: %v", err)
 	}
 	if vm.Name() != "docker" {
