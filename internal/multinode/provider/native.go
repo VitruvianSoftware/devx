@@ -89,19 +89,56 @@ func depInstallCmd(pm string, pkgs []string) string {
 // k3sDeps are required by K3s (conntrack) and devx bridge/port-forward (socat).
 var k3sDeps = []string{"conntrack-tools", "socat"}
 
-func (p *NativeProvider) EnsureRuntime(ctx context.Context) (string, error) {
+// k3s default cluster (pod) and service CIDRs. Flannel pod-bridge traffic uses
+// these; on firewalld hosts they must be trusted or same-node pod dials are
+// REJECTed ("no route to host"), which strands CSI volume attach (Longhorn).
+const (
+	k3sClusterCIDR = "10.42.0.0/16"
+	k3sServiceCIDR = "10.43.0.0/16"
+)
+
+// iscsiPkg returns the open-iscsi package name for the package manager.
+// Longhorn requires iscsiadm on every node; the Lima path already installs it
+// (lima.NodePackages), the native path must too.
+func iscsiPkg(pm string) string {
+	if pm == "apt" {
+		return "open-iscsi"
+	}
+	return "iscsi-initiator-utils"
+}
+
+// ensureHostPrereqs converges a native host onto the full K3s/storage prereq
+// set: packages (incl. iscsi for Longhorn), no-sleep, firewalld trust for the
+// tailnet AND the k3s pod/service networks, and a running iscsid. Idempotent —
+// called from both EnsureRuntime (first join) and Reconcile (heal existing
+// nodes on `cluster apply`).
+func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 	// 1. Install K3s deps via the detected package manager.
 	pm := p.detectPkgManager(ctx)
-	if _, err := p.run(ctx, depInstallCmd(pm, k3sDeps)); err != nil {
-		return "", fmt.Errorf("[%s] installing deps: %w", p.node.Host, err)
+	if _, err := p.run(ctx, depInstallCmd(pm, append(append([]string{}, k3sDeps...), iscsiPkg(pm)))); err != nil {
+		return fmt.Errorf("[%s] installing deps: %w", p.node.Host, err)
 	}
+	// Longhorn needs the iscsid daemon and the iscsi_tcp module. Best-effort:
+	// nodes without Longhorn workloads lose nothing if this fails.
+	_, _ = p.run(ctx, "systemctl enable --now iscsid 2>/dev/null || true; modprobe iscsi_tcp 2>/dev/null || true")
 	// Keep the node awake: mask suspend/sleep so an idle GNOME/GDM login screen
 	// (Workstation/Silverblue auto-suspends at the greeter) can't suspend the host
 	// and silently drop it out of the cluster. Best-effort.
 	_, _ = p.run(ctx, "systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target")
-	// 2. Trust the tailnet interface in firewalld (if running) so flannel flows.
+	// 2. Trust the tailnet interface AND the k3s pod/service networks in
+	// firewalld (if running). tailscale0 alone is not enough: pod-bridge (cni0)
+	// traffic is otherwise REJECTed, breaking same-node pod dials.
 	if out, _ := p.run(ctx, "firewall-cmd --state 2>/dev/null || true"); strings.Contains(out, "running") {
-		_, _ = p.run(ctx, "firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 && firewall-cmd --reload")
+		_, _ = p.run(ctx, fmt.Sprintf(
+			"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 --add-interface=cni0 --add-interface=flannel.1 --add-source=%s --add-source=%s && firewall-cmd --reload",
+			k3sClusterCIDR, k3sServiceCIDR))
+	}
+	return nil
+}
+
+func (p *NativeProvider) EnsureRuntime(ctx context.Context) (string, error) {
+	if err := p.ensureHostPrereqs(ctx); err != nil {
+		return "", err
 	}
 	// 3. Bring Tailscale up if a cluster auth key is configured (else assume it is up).
 	if p.cfg.Cluster.Tailscale.Enabled && p.cfg.Cluster.Tailscale.AuthKey != "" {
@@ -231,7 +268,5 @@ func (p *NativeProvider) Destroy(ctx context.Context) error {
 }
 
 func (p *NativeProvider) Reconcile(ctx context.Context) error {
-	pm := p.detectPkgManager(ctx)
-	_, err := p.run(ctx, depInstallCmd(pm, k3sDeps))
-	return err
+	return p.ensureHostPrereqs(ctx)
 }
