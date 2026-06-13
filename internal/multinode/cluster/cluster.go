@@ -206,6 +206,13 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 		return err
 	}
 
+	// Phase 6.5: Bake in cluster resilience defaults (CoreDNS HA + single default
+	// StorageClass) so they are part of provisioning, not one-off live edits.
+	fmt.Println("\n⚙️  Phase 6.5: Ensuring cluster defaults (CoreDNS HA, single default StorageClass)...")
+	if err := initK3s.EnsureClusterDefaults(ctx); err != nil {
+		return fmt.Errorf("ensuring cluster defaults: %w", err)
+	}
+
 	// Phase 7: Deploy MetalLB if enabled.
 	if cfg.Cluster.MetalLB.Enabled && cfg.Cluster.MetalLB.IPRange != "" {
 		fmt.Println("\n🛜 Phase 7: Deploying MetalLB...")
@@ -318,17 +325,23 @@ func serverAPIIP(ctx context.Context, n config.NodeConfig, cfg *config.Config) (
 	return lima.NewManager(runner, n).GetBridgedIP(ctx)
 }
 
-// Reconcile converges already-provisioned nodes to the current desired
-// baseline without rebuilding them. Today that means ensuring the standard
-// node package set (lima.NodePackages — notably socat, which kubectl
-// port-forward and devx bridge need to carry traffic on Docker-runtime k3s
-// nodes) is installed inside every node's Lima VM.
+// Reconcile converges an already-provisioned cluster to the current desired
+// baseline without rebuilding it. It does two things, both idempotent and safe
+// to run repeatedly:
 //
-// Unlike Init/Join it does not touch K3s or VM lifecycle — it only installs
-// packages on nodes that already exist, so a cluster that predates a new
-// node-level requirement can adopt it without a destroy/recreate. It is safe
-// to run repeatedly: apt-get install is idempotent and already-satisfied
-// nodes are fast no-ops. Nodes are reconciled in parallel.
+//  1. Per node: ensure the standard node package set (lima.NodePackages —
+//     notably socat, which kubectl port-forward and devx bridge need to carry
+//     traffic on Docker-runtime k3s nodes) is installed inside every node's
+//     Lima VM. Nodes are reconciled in parallel.
+//  2. Cluster-wide: ensure the resilience defaults (CoreDNS HA + single default
+//     StorageClass) via the init server node — mirroring Init's Phase 6.5 — so a
+//     cluster that predates these defaults, or one where a k3s upgrade reset a
+//     bundled addon, re-adopts them on `cluster apply`.
+//
+// Unlike Init/Join it does not touch VM lifecycle or the K3s install itself; it
+// only installs packages and re-asserts cluster-level Kubernetes defaults on
+// nodes that already exist, so existing clusters can adopt new baselines without
+// a destroy/recreate.
 func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	slog.Info("reconciling cluster nodes", "name", cfg.Cluster.Name, "nodes", len(cfg.Nodes), "dry_run", dryRun)
 
@@ -337,6 +350,7 @@ func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
 		for _, node := range cfg.Nodes {
 			fmt.Printf("  [%s] %s\n", node.Host, ensureDepsCommand())
 		}
+		fmt.Printf("\n  Then ensure cluster defaults (CoreDNS HA, single default StorageClass) via %s.\n", cfg.InitNode().Host)
 		fmt.Println("\n  No changes were made (dry-run mode).")
 		return nil
 	}
@@ -358,6 +372,15 @@ func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	}
 	if err := g.Wait(); err != nil {
 		return fmt.Errorf("node reconciliation failed: %w", err)
+	}
+
+	// Cluster-level defaults: re-assert CoreDNS HA + single default StorageClass
+	// against the init server node (same construction as Init's cluster-level ops).
+	initNode := cfg.InitNode()
+	initK3s := k3s.NewManagerWithVM(util.NewRunner(initNode), initNode.GetVMName())
+	fmt.Println("⚙️  Ensuring cluster defaults (CoreDNS HA, single default StorageClass)...")
+	if err := initK3s.EnsureClusterDefaults(ctx); err != nil {
+		return fmt.Errorf("ensuring cluster defaults: %w", err)
 	}
 
 	fmt.Printf("\n✅ Cluster %q reconciled.\n", cfg.Cluster.Name)

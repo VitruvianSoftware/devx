@@ -209,6 +209,56 @@ metadata:
 	return nil
 }
 
+// corednsHAPatch is a JSON merge patch that makes k3s's bundled CoreDNS
+// survive a single node loss: two replicas, kept on distinct hosts by a
+// *required* pod-anti-affinity on the kube-dns pods. k3s ships a single
+// replica, so a DNS-hosting node going down is a cluster-wide outage.
+const corednsHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":[{"key":"k8s-app","operator":"In","values":["kube-dns"]}]},"topologyKey":"kubernetes.io/hostname"}]}}}}}}`
+
+// EnsureClusterDefaults bakes the homelab resilience defaults into a running
+// cluster so they are reproducible and re-asserted on every `cluster init` /
+// `cluster apply`, instead of living as one-off live edits:
+//
+//   - CoreDNS → 2 replicas + required hostname anti-affinity (see corednsHAPatch).
+//   - Exactly one default StorageClass: k3s marks its bundled local-path as
+//     default, but Longhorn (installed by the Pulumi dev-local stack) is the real
+//     default. Two defaults is invalid, so local-path is un-defaulted here.
+//
+// It is idempotent and safe to re-run: the CoreDNS patch is a no-op once applied,
+// and the StorageClass step is guarded so it does nothing if local-path is absent
+// (it never deletes local-path — workloads may still request it explicitly).
+//
+// Note on durability: a plain k3s restart preserves these (k3s only re-applies a
+// bundled addon when its on-disk manifest changes), but a k3s *version upgrade*
+// re-extracts the bundled manifests and can reset them — re-running this (which a
+// `cluster apply` does) re-converges.
+func (m *Manager) EnsureClusterDefaults(ctx context.Context) error {
+	slog.Info("ensuring cluster resilience defaults", "host", m.runner.Host)
+
+	// CoreDNS HA. Deliver the patch via base64 + --patch-file to avoid the
+	// nested-quoting hazards of inlining JSON through `sudo sh -c %q`.
+	fmt.Printf("  [%s] Ensuring CoreDNS HA (2 replicas + anti-affinity)...\n", m.runner.Host)
+	enc := base64.StdEncoding.EncodeToString([]byte(corednsHAPatch))
+	corednsCmd := fmt.Sprintf(
+		"echo '%s' | base64 -d | k3s kubectl -n kube-system patch deployment coredns --type=merge --patch-file=/dev/stdin",
+		enc,
+	)
+	if _, err := m.sudo(ctx, corednsCmd); err != nil {
+		return fmt.Errorf("patching coredns for HA: %w", err)
+	}
+
+	// Single default StorageClass: un-default local-path if present. Guarded so a
+	// cluster without local-path (e.g. --disable local-storage) is a clean no-op.
+	fmt.Printf("  [%s] Ensuring single default StorageClass (un-defaulting local-path)...\n", m.runner.Host)
+	scCmd := "if k3s kubectl get storageclass local-path >/dev/null 2>&1; then " +
+		"k3s kubectl annotate --overwrite storageclass local-path storageclass.kubernetes.io/is-default-class=false; fi"
+	if _, err := m.sudo(ctx, scCmd); err != nil {
+		return fmt.Errorf("un-defaulting local-path storageclass: %w", err)
+	}
+
+	return nil
+}
+
 // JoinServer joins a server node to an existing HA cluster.
 func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale, useDocker bool) error {
 	installed, err := m.IsInstalled(ctx)
