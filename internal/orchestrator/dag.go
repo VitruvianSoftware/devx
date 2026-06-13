@@ -32,6 +32,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/VitruvianSoftware/devx/internal/image"
@@ -210,6 +211,13 @@ type Node struct {
 	cancel      context.CancelFunc
 	bridgeState *BridgeNodeState // runtime state for bridge cleanup
 	logCloser   func() error     // closes the log sink on cleanup
+
+	// waitDone is closed by the single goroutine that owns process.Wait() once
+	// the host process has exited and been reaped; waitErr then holds that Wait's
+	// result. Both waitForCompletion and teardown synchronize on waitDone instead
+	// of calling Wait() themselves — a second Wait() would race the reaper.
+	waitDone chan struct{}
+	waitErr  error
 }
 
 // DAG is a directed acyclic graph of nodes.
@@ -360,7 +368,16 @@ func (d *DAG) Execute(ctx context.Context) (cleanup func(), err error) {
 				n.cancel()
 			}
 			if n.process != nil && n.process.Process != nil {
-				_ = n.process.Process.Kill()
+				// Kill the whole process group (negative PID), not just the leader,
+				// so a shell's grandchildren (e.g. `sleep`) die with it instead of
+				// being orphaned and holding inherited stdio open.
+				_ = killGroup(n.process.Process)
+			}
+			// Reap before closing the log sink: wait for the process group's I/O to
+			// drain (bounded by the command's WaitDelay) so no descendant outlives
+			// teardown. waitDone is nil for non-host nodes (nothing to reap).
+			if n.waitDone != nil {
+				<-n.waitDone
 			}
 			if n.logCloser != nil {
 				_ = n.logCloser()
@@ -511,6 +528,16 @@ func startHostProcess(ctx context.Context, n *Node) error {
 
 	cmd := exec.CommandContext(childCtx, n.Command[0], n.Command[1:]...)
 
+	// Run each host process in its own process group so teardown can signal the
+	// whole group — the command AND any grandchildren it spawns (e.g. a shell's
+	// `sleep`) — instead of orphaning them. On context cancellation, kill that
+	// group; WaitDelay then bounds how long Wait() blocks draining I/O if a
+	// lingering descendant keeps an inherited stdout/stderr pipe open after the
+	// kill, so it can't hang indefinitely.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return killGroup(cmd.Process) }
+	cmd.WaitDelay = 5 * time.Second
+
 	// Idea 44: Set working directory for services from included (sibling) repositories.
 	// When empty, inherits the parent's CWD (existing single-project behavior).
 	if n.Dir != "" {
@@ -542,7 +569,37 @@ func startHostProcess(ctx context.Context, n *Node) error {
 
 	fmt.Printf("  🚀 Starting %s: %s\n", n.Name, strings.Join(n.Command, " "))
 
-	return cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	// Single owner of process.Wait(): reap the process exactly once and publish
+	// the result via waitDone/waitErr. waitForCompletion and teardown synchronize
+	// on waitDone rather than calling Wait() themselves (a concurrent Wait would
+	// race the reaper and is rejected by os/exec).
+	n.waitDone = make(chan struct{})
+	go func() {
+		n.waitErr = cmd.Wait()
+		close(n.waitDone)
+	}()
+
+	return nil
+}
+
+// killGroup sends SIGKILL to the entire process group led by p. Host processes
+// are started with Setpgid, so p is its own group leader and the negative PID
+// reaches every descendant in the group (e.g. a shell and the `sleep` it
+// spawned) — preventing orphaned grandchildren from outliving teardown and
+// holding inherited stdio open. A nil process or an already-gone group (ESRCH)
+// is a no-op.
+func killGroup(p *os.Process) error {
+	if p == nil {
+		return nil
+	}
+	if err := syscall.Kill(-p.Pid, syscall.SIGKILL); err != nil && err != syscall.ESRCH {
+		return err
+	}
+	return nil
 }
 
 // waitForCompletion blocks until a one-shot task's process exits, returning an
@@ -551,7 +608,7 @@ func startHostProcess(ctx context.Context, n *Node) error {
 // data seeds can legitimately run for a while. Dependents are gated on this via
 // tier ordering: the task's tier is not considered ready until it completes.
 func waitForCompletion(ctx context.Context, n *Node) error {
-	if n.process == nil {
+	if n.process == nil || n.waitDone == nil {
 		return fmt.Errorf("task was not started (no command?)")
 	}
 
@@ -560,17 +617,18 @@ func waitForCompletion(ctx context.Context, n *Node) error {
 		timeout = 10 * time.Minute
 	}
 
-	done := make(chan error, 1)
-	go func() { done <- n.process.Wait() }()
-
+	// The reaper goroutine started in startHostProcess owns process.Wait(); we
+	// observe its result through waitDone/waitErr. On timeout or cancellation we
+	// return without touching Wait — teardown kills the process group, which lets
+	// the reaper finish and reap (no orphaned `sleep`, no leaked Wait goroutine).
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(timeout):
 		return fmt.Errorf("timed out after %s", timeout)
-	case err := <-done:
-		if err != nil {
-			return fmt.Errorf("exited with error: %w", err)
+	case <-n.waitDone:
+		if n.waitErr != nil {
+			return fmt.Errorf("exited with error: %w", n.waitErr)
 		}
 		return nil
 	}

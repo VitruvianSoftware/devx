@@ -26,6 +26,30 @@ import (
 	"time"
 )
 
+// reapNode guarantees a started node's process — and any shell grandchildren it
+// spawned (e.g. `sleep`), which share its process group thanks to Setpgid — are
+// killed and reaped before the test returns. Without this, an orphaned
+// descendant outlives the test holding the inherited stdout/stderr pipe, which
+// trips `go test`'s "Test I/O incomplete / WaitDelay expired" leak detector
+// under machine load even though every test reports PASS.
+func reapNode(t *testing.T, n *Node) {
+	t.Helper()
+	t.Cleanup(func() {
+		if n.cancel != nil {
+			n.cancel() // cancel ctx → cmd.Cancel kills the whole process group
+		}
+		if n.process != nil && n.process.Process != nil {
+			_ = killGroup(n.process.Process)
+		}
+		if n.waitDone != nil {
+			<-n.waitDone // block until the reaper goroutine has Wait()ed the process
+		}
+		if n.logCloser != nil {
+			_ = n.logCloser()
+		}
+	})
+}
+
 // A one-shot task that exits 0 must complete and let its dependents start, so
 // the whole DAG comes up successfully.
 func TestExecute_OneShotCompletesThenDependentRuns(t *testing.T) {
@@ -90,6 +114,7 @@ func TestWaitForCompletion_ExitZero(t *testing.T) {
 	if err := startHostProcess(context.Background(), n); err != nil {
 		t.Fatalf("startHostProcess: %v", err)
 	}
+	reapNode(t, n)
 	if err := waitForCompletion(context.Background(), n); err != nil {
 		t.Errorf("waitForCompletion on a 0-exit task should succeed, got: %v", err)
 	}
@@ -100,6 +125,7 @@ func TestWaitForCompletion_ExitNonZero(t *testing.T) {
 	if err := startHostProcess(context.Background(), n); err != nil {
 		t.Fatalf("startHostProcess: %v", err)
 	}
+	reapNode(t, n)
 	if err := waitForCompletion(context.Background(), n); err == nil {
 		t.Error("waitForCompletion on a non-zero-exit task should return an error, got nil")
 	}
@@ -116,14 +142,10 @@ func TestWaitForCompletion_Timeout(t *testing.T) {
 	if err := startHostProcess(context.Background(), n); err != nil {
 		t.Fatalf("startHostProcess: %v", err)
 	}
-	defer func() {
-		if n.cancel != nil {
-			n.cancel()
-		}
-		if n.process != nil && n.process.Process != nil {
-			_ = n.process.Process.Kill()
-		}
-	}()
+	// Cancel the context and wait for the whole process group (sh AND its `sleep`
+	// child) to actually exit before the test returns — don't leave `sleep 5`
+	// running and orphaned.
+	reapNode(t, n)
 
 	start := time.Now()
 	err := waitForCompletion(context.Background(), n)
