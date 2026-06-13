@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.65.0](https://github.com/VitruvianSoftware/devx/compare/v0.64.0...v0.65.0) (2026-06-13)
+
+
+### Features
+
+* **cluster:** bake CoreDNS HA + single default StorageClass into provisioning ([44278ae](https://github.com/VitruvianSoftware/devx/commit/44278aed1073211a933e9f6965cdce087f68e987))
+
+
+### Bug Fixes
+
+* **image:** back the in-cluster registry with a durable PVC, not emptyDir ([#255](https://github.com/VitruvianSoftware/devx/issues/255)) ([85abe27](https://github.com/VitruvianSoftware/devx/commit/85abe276d10cfaf51c3ade3614c6ef8ab6af4aae))
+* **multinode:** make native host prereqs survive rpm-ostree reboots ([#256](https://github.com/VitruvianSoftware/devx/issues/256)) ([cca16cc](https://github.com/VitruvianSoftware/devx/commit/cca16cce67c046342f593c3f367dd3d1c141cf80))
+* **multinode:** trust k3s pod network in firewalld and install open-iscsi on native nodes ([#253](https://github.com/VitruvianSoftware/devx/issues/253)) ([4a2459d](https://github.com/VitruvianSoftware/devx/commit/4a2459d24bb1247aa68fe3e1449e29a0dd92ef09))
+* **orchestrator:** reap host process groups so no subprocess leaks past teardown ([#257](https://github.com/VitruvianSoftware/devx/issues/257)) ([0ffc38e](https://github.com/VitruvianSoftware/devx/commit/0ffc38e1ccadfcfab1d52094d063d588c5df1d90))
+
 ## [0.64.0](https://github.com/VitruvianSoftware/devx/compare/v0.63.0...v0.64.0) (2026-06-12)
 
 
