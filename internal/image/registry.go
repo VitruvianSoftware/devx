@@ -39,12 +39,34 @@ const (
 // registryManifest deploys the in-cluster registry: a registry:2 Deployment plus
 // a NodePort Service. Nodes pull via localhost:<NodePort> (Docker's 127.0.0.0/8
 // insecure default covers it — validated on the target cluster, no per-node
-// config). Storage is emptyDir: images don't survive a registry pod restart, which
-// is fine for a dev loop (devx rebuilds + repushes on each `up`).
+// config).
+//
+// Storage is a PersistentVolumeClaim (not emptyDir): pushed images survive a
+// registry pod restart, and — on the cluster default StorageClass (Longhorn on
+// dev-local) — survive node loss too, relocating with the volume. The PVC omits
+// storageClassName so it binds to whatever default the cluster has (Longhorn here;
+// k3s local-path elsewhere), never blocking on a class that may not exist yet.
+// Because the single replica holds an RWO volume, the Deployment uses the Recreate
+// strategy — a rolling update would otherwise deadlock (the new pod can't mount a
+// volume the old pod still holds).
 const registryManifest = `apiVersion: v1
 kind: Namespace
 metadata:
   name: devx-registry
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-data
+  namespace: devx-registry
+  labels:
+    app: devx-registry
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -55,6 +77,8 @@ metadata:
     app: devx-registry
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: devx-registry
@@ -73,7 +97,8 @@ spec:
               mountPath: /var/lib/registry
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: registry-data
 ---
 apiVersion: v1
 kind: Service
