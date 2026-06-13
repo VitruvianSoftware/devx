@@ -138,6 +138,43 @@ func TestNative_DepInstall_PackageManagers(t *testing.T) {
 	}
 }
 
+func TestNative_DepInstall_RpmOstreeAllowsReplacement(t *testing.T) {
+	// On Silverblue, a layered prereq (e.g. iscsi-initiator-utils) can replace a
+	// base-image package; without --allow-replacement, `rpm-ostree install
+	// --apply-live` aborts with "packages would be changed: N, allow replacement
+	// to override" and the prereq never lands — so it vanishes after a reboot and
+	// longhorn-manager crashloops (no iscsiadm).
+	got := depInstallCmd("rpm-ostree", []string{"iscsi-initiator-utils"})
+	if !strings.Contains(got, "--allow-replacement") {
+		t.Errorf("rpm-ostree install must pass --allow-replacement, got %q", got)
+	}
+}
+
+func TestNative_EnsureRuntime_PersistsISCSIModuleAndTailscaledEnv(t *testing.T) {
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
+		"tailscale ip -4":       "100.97.82.15",
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+
+	// iscsi_tcp must be persisted (modules-load.d) so it auto-loads after a
+	// reboot — a live `modprobe` alone is lost, leaving Longhorn unable to attach.
+	if !strings.Contains(joined, "modules-load.d") || !strings.Contains(joined, "iscsi_tcp") {
+		t.Errorf("EnsureRuntime must persist iscsi_tcp via modules-load.d, got:\n%s", joined)
+	}
+
+	// tailscaled's unit has a *required* EnvironmentFile=/etc/default/tailscaled;
+	// the rpm-ostree /etc merge can drop it on the deploy that first layers
+	// tailscale, killing tailscaled (and k3s --flannel-iface=tailscale0) after a
+	// reboot. Provisioning must ensure a persistent /etc copy.
+	if !strings.Contains(joined, "/etc/default/tailscaled") {
+		t.Errorf("EnsureRuntime must ensure /etc/default/tailscaled exists, got:\n%s", joined)
+	}
+}
+
 func TestNative_TailscaleOrderingConf(t *testing.T) {
 	dir, conf := tailscaleOrderingConf("agent")
 	if dir != "/etc/systemd/system/k3s-agent.service.d" {

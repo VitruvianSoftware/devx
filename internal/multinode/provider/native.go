@@ -78,7 +78,12 @@ func depInstallCmd(pm string, pkgs []string) string {
 	list := strings.Join(pkgs, " ")
 	switch pm {
 	case "rpm-ostree":
-		return "rpm-ostree install --apply-live --allow-inactive --idempotent " + list
+		// --allow-replacement: a layered prereq may replace a base-image package
+		// (e.g. iscsi-initiator-utils on Silverblue). Without it, --apply-live
+		// aborts ("packages would be changed: N, allow replacement to override")
+		// and the package never lands — so it's gone after a reboot and
+		// longhorn-manager crashloops on a missing iscsiadm.
+		return "rpm-ostree install --apply-live --allow-inactive --allow-replacement --idempotent " + list
 	case "dnf":
 		return "dnf install -y " + list
 	default:
@@ -118,9 +123,19 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 	if _, err := p.run(ctx, depInstallCmd(pm, append(append([]string{}, k3sDeps...), iscsiPkg(pm)))); err != nil {
 		return fmt.Errorf("[%s] installing deps: %w", p.node.Host, err)
 	}
-	// Longhorn needs the iscsid daemon and the iscsi_tcp module. Best-effort:
-	// nodes without Longhorn workloads lose nothing if this fails.
-	_, _ = p.run(ctx, "systemctl enable --now iscsid 2>/dev/null || true; modprobe iscsi_tcp 2>/dev/null || true")
+	// Longhorn needs the iscsid daemon and the iscsi_tcp module. Persist the
+	// module via modules-load.d so it auto-loads after a reboot (a live modprobe
+	// alone is lost — Longhorn then can't attach volumes on the rebooted node).
+	// Best-effort: nodes without Longhorn workloads lose nothing if this fails.
+	_, _ = p.run(ctx, "printf 'iscsi_tcp\\n' > /etc/modules-load.d/iscsi_tcp.conf 2>/dev/null || true; modprobe iscsi_tcp 2>/dev/null || true; systemctl enable --now iscsid 2>/dev/null || true")
+	// tailscaled's unit declares a *required* EnvironmentFile=/etc/default/tailscaled.
+	// On rpm-ostree/Silverblue the package ships it only as the OSTree default
+	// /usr/etc/default/tailscaled, which the /etc merge can fail to materialize on
+	// the deployment that first layers tailscale — leaving tailscaled (and thus a
+	// k3s server pinned to --flannel-iface=tailscale0) dead after a reboot. Ensure
+	// a persistent /etc copy. Self-gating on tailscaled's presence; best-effort.
+	_, _ = p.run(ctx, "if command -v tailscaled >/dev/null 2>&1 && [ ! -f /etc/default/tailscaled ]; then "+
+		"cp /usr/etc/default/tailscaled /etc/default/tailscaled 2>/dev/null || printf 'PORT=\"41641\"\\nFLAGS=\"\"\\n' > /etc/default/tailscaled; fi 2>/dev/null || true")
 	// Keep the node awake: mask suspend/sleep so an idle GNOME/GDM login screen
 	// (Workstation/Silverblue auto-suspends at the greeter) can't suspend the host
 	// and silently drop it out of the cluster. Best-effort.
