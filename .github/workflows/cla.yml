@@ -1,0 +1,82 @@
+# Copyright (c) 2026 VitruvianSoftware
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+name: CLA Assistant
+
+# CLA enforcement for VitruvianSoftware/devx contributors.
+#
+# AUTHORING / EXPORT MODEL: this file is authored in the MONOREPO at
+# devx/.github/workflows/cla.yml so that Copybara's export_devx workflow carries
+# it down to the mirror (VitruvianSoftware/devx) repo root at
+# .github/workflows/cla.yml. It is intentionally NOT listed in copy.bara.sky's
+# `standalone_only` set, so it IS synced. The action below therefore runs IN THE
+# MIRROR after export, in the mirror's own Actions context.
+#
+# GATE ORDERING: a contributor must sign the CLA (this check goes green) BEFORE a
+# maintainer applies the 'import-to-monorepo' label. The monorepo poll workflow
+# (.github/workflows/copybara-import-pr-devx.yaml) only imports labelled PRs, so
+# CLA-signing precedes import. The monorepo PR is opened via
+# authoring.pass_thru (original author preserved), so the standalone CLA is the
+# system of record; the bot-opened monorepo PR needs no second signature.
+#
+# CREDENTIALS: uses ONLY the mirror's built-in secrets.GITHUB_TOKEN, scoped to
+# VitruvianSoftware/devx. No monorepo secret (and specifically NOT
+# DEVX_IMPORT_TOKEN) is referenced or reachable here. pull_request_target runs in
+# the mirror's trusted base context; this action only writes CLA status checks,
+# PR comments, and the signatures file -- it never checks out or executes PR head
+# code.
+
+on:
+    pull_request_target:
+        types: [opened, closed, synchronize]
+    issue_comment:
+        types: [created]
+
+permissions:
+    contents: write
+    pull-requests: write
+    statuses: write
+    actions: write
+
+jobs:
+    cla:
+        runs-on: ubuntu-latest
+        steps:
+            - name: CLA Assistant Lite
+              # Run on PR sync/open/close and on the sign-off comment, but skip the
+              # action's own housekeeping comment to avoid a feedback loop.
+              if: (github.event.issue.pull_request && contains(github.event.comment.body, 'I have read the CLA Document and I hereby sign the CLA')) || github.event_name == 'pull_request_target'
+              uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08 # v2.6.1
+              env:
+                # Mirror's built-in token ONLY -- scoped to VitruvianSoftware/devx.
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                # Comment a contributor posts to sign.
+                custom-pr-sign-comment: "I have read the CLA Document and I hereby sign the CLA"
+                # Where signatures are persisted (a JSON ledger committed to a
+                # branch in the MIRROR repo -- the mirror is the CLA system of record).
+                path-to-signatures: "signatures/version1/cla.json"
+                branch: "cla-signatures"
+                # The CLA text contributors must read. Must be PUBLICLY readable on
+                # devx main; verify the URL resolves at cutover (residual risk #1).
+                path-to-document: "https://github.com/VitruvianSoftware/devx/blob/main/CLA.md"
+                # Do not require a CLA from automation accounts.
+                allowlist: "dependabot[bot],renovate[bot],*[bot]"
+
