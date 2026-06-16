@@ -181,3 +181,26 @@ func TestGenerateConfig_Mounts(t *testing.T) {
 		}
 	})
 }
+
+func TestGenerateConfig_DockerMultiArchEmulation(t *testing.T) {
+	m := &Manager{node: config.NodeConfig{VM: config.VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}}, vmName: "k8s-node"}
+
+	t.Run("docker enabled registers QEMU binfmt emulation for foreign-arch images", func(t *testing.T) {
+		out := m.GenerateConfig("/sock", true, nil)
+		// qemu-user-static + binfmt-support give the node's Docker the ability to
+		// run/build linux/amd64 images on an arm64 host (and vice versa) under
+		// emulation, persisted across reboots via systemd-binfmt.
+		for _, want := range []string{"qemu-user-static", "binfmt-support"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("docker-enabled config should install %q for amd64 emulation, got:\n%s", want, out)
+			}
+		}
+	})
+
+	t.Run("docker disabled installs no emulation packages", func(t *testing.T) {
+		out := m.GenerateConfig("/sock", false, nil)
+		if strings.Contains(out, "qemu-user-static") {
+			t.Errorf("docker-disabled config should not install qemu emulation, got:\n%s", out)
+		}
+	})
+}

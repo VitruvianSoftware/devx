@@ -137,6 +137,12 @@ networks:
       for u in $(awk -F: '$3 >= 1000 || $3 == 501 {print $1}' /etc/passwd); do
         usermod -aG docker "$u" || true
       done
+      # Register QEMU binfmt handlers so this node's Docker can run and build
+      # foreign-arch images (e.g. linux/amd64 on an arm64 host) under emulation.
+      # binfmt-support + systemd-binfmt re-apply the handlers on every boot, so
+      # multi-arch survives VM reboots; they register with the fix-binary (F)
+      # flag, which is required for the emulator to work inside containers.
+      apt-get install -y -qq qemu-user-static binfmt-support
 `
 	}
 

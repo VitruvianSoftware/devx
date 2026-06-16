@@ -238,6 +238,7 @@ When enabled, `devx cluster` will:
 2. Grant the guest login user access to the `docker` group.
 3. Configure K3s to use Docker (`--docker`) as the container runtime.
 4. Forward the guest VM's `/var/run/docker.sock` to the host machine.
+5. Register QEMU binfmt emulators (`qemu-user-static` + `binfmt-support`) so each node's Docker can run and build foreign-architecture images — e.g. `linux/amd64` on an Apple Silicon (arm64) host. The handlers persist across VM reboots via `systemd-binfmt`.
 
 ### Accessing Docker from the Host
 
@@ -260,5 +261,16 @@ Alternatively, you can direct your Docker CLI to the socket via the `DOCKER_HOST
 export DOCKER_HOST="unix://$HOME/.lima/k8s-node/sock/docker.sock"
 docker ps
 ```
+
+### Running foreign-architecture (amd64) images
+
+Because each node registers QEMU binfmt emulators, you can run or build images for other architectures directly — for example `linux/amd64` images on an Apple Silicon (arm64) host:
+
+```bash
+docker run --rm --platform linux/amd64 alpine uname -m   # -> x86_64
+docker buildx build --platform linux/amd64,linux/arm64 .
+```
+
+Emulated execution is correct but slower than native; use it for compatibility testing and multi-arch builds, not performance-sensitive workloads.
 
 
