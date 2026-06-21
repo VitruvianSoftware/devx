@@ -36,6 +36,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -66,6 +67,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     name: Deploy
     steps:
       - name: Deploy to GitHub Pages

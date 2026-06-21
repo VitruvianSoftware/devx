@@ -58,6 +58,7 @@ permissions:
 jobs:
     cla:
         runs-on: ubuntu-latest
+        timeout-minutes: 45
         steps:
             - name: CLA Assistant Lite
               # Run on PR sync/open/close and on the sign-off comment, but skip the
