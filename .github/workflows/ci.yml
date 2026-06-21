@@ -28,6 +28,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded PR runs; never cancel push-to-main.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     name: Lint
