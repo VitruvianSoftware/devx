@@ -46,7 +46,7 @@ jobs:
           addlicense -check -c "VitruvianSoftware" -l mit -ignore "docs/**" -ignore "internal/scaffold/templates/**" .
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         with:
           version: v2.12.1
 
