@@ -25,10 +25,10 @@ import (
 	"testing"
 )
 
-// The in-cluster registry must persist pushed images across pod/node restarts
+// The in-cluster registry must persist pushed images across pod restarts
 // (emptyDir loses them on every restart). The manifest should back the registry
-// with a PersistentVolumeClaim on the cluster's default StorageClass (Longhorn on
-// dev-local — durable + relocatable on node loss).
+// with a PersistentVolumeClaim on local-path (node-local; images are re-pullable,
+// so node-pinning is acceptable — dev-local removed Longhorn).
 func TestRegistryManifest_UsesDurablePVC(t *testing.T) {
 	m := registryManifest
 
@@ -63,11 +63,12 @@ func TestRegistryManifest_UsesDurablePVC(t *testing.T) {
 	}
 }
 
-// The PVC must not pin a specific StorageClass: omitting storageClassName uses the
-// cluster default (Longhorn on dev-local; falls back gracefully elsewhere), so the
-// registry never blocks on a class that may not exist yet.
-func TestRegistryManifest_UsesDefaultStorageClass(t *testing.T) {
-	if strings.Contains(registryManifest, "storageClassName:") {
-		t.Errorf("registry PVC should omit storageClassName (use cluster default), got an explicit class")
+// The PVC pins storageClassName: local-path (the k3s built-in node-local class,
+// present on every devx target) so the registry is deterministic and never
+// re-races a cluster's ambiguous default — dev-local removed Longhorn, whose
+// cross-node replication was unreliable on the homelab.
+func TestRegistryManifest_PinsLocalPathStorageClass(t *testing.T) {
+	if !strings.Contains(registryManifest, "storageClassName: local-path") {
+		t.Errorf("registry PVC must pin storageClassName: local-path (got default/none)")
 	}
 }

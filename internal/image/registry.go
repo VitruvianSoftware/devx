@@ -42,10 +42,12 @@ const (
 // config).
 //
 // Storage is a PersistentVolumeClaim (not emptyDir): pushed images survive a
-// registry pod restart, and — on the cluster default StorageClass (Longhorn on
-// dev-local) — survive node loss too, relocating with the volume. The PVC omits
-// storageClassName so it binds to whatever default the cluster has (Longhorn here;
-// k3s local-path elsewhere), never blocking on a class that may not exist yet.
+// registry pod restart. The PVC pins storageClassName: local-path — the k3s
+// built-in, node-local class present on every devx target. dev-local removed
+// Longhorn (its cross-node replication is unreliable over the homelab tailnet),
+// so there is no relocate-on-node-loss; images are re-pullable, so a node nap
+// just means the registry waits for that node — acceptable. Pinning the class
+// explicitly avoids depending on whichever StorageClass happens to be default.
 // Because the single replica holds an RWO volume, the Deployment uses the Recreate
 // strategy — a rolling update would otherwise deadlock (the new pod can't mount a
 // volume the old pod still holds).
@@ -62,6 +64,7 @@ metadata:
   labels:
     app: devx-registry
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
