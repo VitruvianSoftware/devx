@@ -42,16 +42,16 @@ const (
 // config).
 //
 // Storage is a PersistentVolumeClaim (not emptyDir): pushed images survive a
-// registry pod restart. The PVC pins storageClassName: local-path — the k3s
-// built-in, node-local class present on every devx target. dev-local removed
-// Longhorn (its cross-node replication is unreliable over the homelab tailnet),
-// so there is no relocate-on-node-loss; images are re-pullable, so a node nap
-// just means the registry waits for that node — acceptable. Pinning the class
-// explicitly avoids depending on whichever StorageClass happens to be default.
+// registry pod restart. registryStorage picks the class per target — the off-node
+// `nfs` class (NAS-backed) when it exists, so on dev-local the registry survives a
+// node napping; otherwise the k3s built-in node-local `local-path` (single-node
+// lima, etc.). Images are re-pullable, so even on local-path a node nap just means
+// the registry waits for that node. Picking explicitly avoids depending on
+// whichever StorageClass happens to be default.
 // Because the single replica holds an RWO volume, the Deployment uses the Recreate
 // strategy — a rolling update would otherwise deadlock (the new pod can't mount a
 // volume the old pod still holds).
-const registryManifest = `apiVersion: v1
+const registryManifestTmpl = `apiVersion: v1
 kind: Namespace
 metadata:
   name: devx-registry
@@ -59,12 +59,12 @@ metadata:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: registry-data
+  name: __PVC_NAME__
   namespace: devx-registry
   labels:
     app: devx-registry
 spec:
-  storageClassName: local-path
+  storageClassName: __STORAGE_CLASS__
   accessModes:
     - ReadWriteOnce
   resources:
@@ -101,7 +101,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: registry-data
+            claimName: __PVC_NAME__
 ---
 apiVersion: v1
 kind: Service
@@ -117,6 +117,25 @@ spec:
       targetPort: 5000
       nodePort: 30500
 `
+
+// registryManifest renders the registry manifest for the given StorageClass and
+// PVC name.
+func registryManifest(storageClass, pvcName string) string {
+	m := strings.ReplaceAll(registryManifestTmpl, "__STORAGE_CLASS__", storageClass)
+	return strings.ReplaceAll(m, "__PVC_NAME__", pvcName)
+}
+
+// registryStorage picks the StorageClass + PVC name for the target cluster: the
+// off-node `nfs` class when present (dev-local, NAS-backed — survives a node
+// napping), otherwise the k3s built-in `local-path` (single-node lima, etc.). The
+// PVC name differs by class because a PVC's storageClassName is immutable, so a
+// class switch needs a distinct PVC (and a one-time data copy).
+func registryStorage(ctx context.Context, kubeconfig, kctx string) (storageClass, pvcName string) {
+	if _, err := kubectl(ctx, kubeconfig, kctx, "get", "storageclass", "nfs"); err == nil {
+		return "nfs", "registry-data-nfs"
+	}
+	return "local-path", "registry-data"
+}
 
 // LocalRegistry describes a deployed in-cluster registry and the addresses needed
 // to use it.
@@ -145,8 +164,9 @@ func (r *LocalRegistry) PushRef(name, tag string) string {
 // and reference it. kubeconfig and kctx target the cluster (already resolved by
 // the caller); kctx may be empty to use the current context.
 func EnsureRegistry(ctx context.Context, kubeconfig, kctx string) (*LocalRegistry, error) {
-	if out, err := kubectlApplyStdin(ctx, kubeconfig, kctx, registryManifest); err != nil {
-		return nil, fmt.Errorf("deploying in-cluster registry: %w\n%s", err, strings.TrimSpace(out))
+	storageClass, pvcName := registryStorage(ctx, kubeconfig, kctx)
+	if out, err := kubectlApplyStdin(ctx, kubeconfig, kctx, registryManifest(storageClass, pvcName)); err != nil {
+		return nil, fmt.Errorf("deploying in-cluster registry (%s/%s): %w\n%s", pvcName, storageClass, err, strings.TrimSpace(out))
 	}
 	if out, err := kubectl(ctx, kubeconfig, kctx, "-n", RegistryNamespace, "wait",
 		"--for=condition=Available", "deployment/"+registryName, "--timeout=120s"); err != nil {

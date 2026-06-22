@@ -30,7 +30,7 @@ import (
 // with a PersistentVolumeClaim on local-path (node-local; images are re-pullable,
 // so node-pinning is acceptable — dev-local removed Longhorn).
 func TestRegistryManifest_UsesDurablePVC(t *testing.T) {
-	m := registryManifest
+	m := registryManifest("local-path", "registry-data")
 
 	if strings.Contains(m, "emptyDir") {
 		t.Errorf("registry manifest still uses emptyDir; images are lost on pod restart")
@@ -63,12 +63,30 @@ func TestRegistryManifest_UsesDurablePVC(t *testing.T) {
 	}
 }
 
-// The PVC pins storageClassName: local-path (the k3s built-in node-local class,
-// present on every devx target) so the registry is deterministic and never
-// re-races a cluster's ambiguous default — dev-local removed Longhorn, whose
-// cross-node replication was unreliable on the homelab.
-func TestRegistryManifest_PinsLocalPathStorageClass(t *testing.T) {
-	if !strings.Contains(registryManifest, "storageClassName: local-path") {
-		t.Errorf("registry PVC must pin storageClassName: local-path (got default/none)")
+// registryManifest renders the StorageClass + PVC name it is given, with no
+// leftover placeholders. registryStorage picks `nfs` (off-node, NAS-backed) when
+// that class exists, else the k3s built-in `local-path`; the PVC name differs by
+// class because a PVC's storageClassName is immutable.
+func TestRegistryManifest_RendersStorageClassAndPVC(t *testing.T) {
+	cases := []struct{ sc, pvc string }{
+		{"local-path", "registry-data"},
+		{"nfs", "registry-data-nfs"},
+	}
+	for _, c := range cases {
+		m := registryManifest(c.sc, c.pvc)
+		for _, want := range []string{
+			"storageClassName: " + c.sc,
+			"name: " + c.pvc,
+			"claimName: " + c.pvc,
+		} {
+			if !strings.Contains(m, want) {
+				t.Errorf("registryManifest(%q,%q) missing %q", c.sc, c.pvc, want)
+			}
+		}
+		for _, ph := range []string{"__STORAGE_CLASS__", "__PVC_NAME__"} {
+			if strings.Contains(m, ph) {
+				t.Errorf("registryManifest(%q,%q) left placeholder %q unrendered", c.sc, c.pvc, ph)
+			}
+		}
 	}
 }
