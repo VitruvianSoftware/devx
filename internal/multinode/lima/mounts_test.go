@@ -159,7 +159,7 @@ func TestGenerateConfig_Mounts(t *testing.T) {
 	m := &Manager{node: config.NodeConfig{VM: config.VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}}, vmName: "k8s-node"}
 
 	t.Run("default home mount when nil", func(t *testing.T) {
-		out := m.GenerateConfig("/sock", true, nil)
+		out := m.GenerateConfig("/sock", config.DockerConfig{Enabled: true}, nil)
 		for _, want := range []string{`mountType: "virtiofs"`, "mounts:", `- location: "~"`, "writable: true"} {
 			if !strings.Contains(out, want) {
 				t.Errorf("GenerateConfig missing %q in:\n%s", want, out)
@@ -168,14 +168,14 @@ func TestGenerateConfig_Mounts(t *testing.T) {
 	})
 
 	t.Run("opt-out renders no mounts block", func(t *testing.T) {
-		out := m.GenerateConfig("/sock", true, []config.MountConfig{})
+		out := m.GenerateConfig("/sock", config.DockerConfig{Enabled: true}, []config.MountConfig{})
 		if strings.Contains(out, "mounts:") || strings.Contains(out, "mountType:") {
 			t.Errorf("opt-out should render no mounts/mountType, got:\n%s", out)
 		}
 	})
 
 	t.Run("docker socket still rendered alongside mounts", func(t *testing.T) {
-		out := m.GenerateConfig("/sock", true, nil)
+		out := m.GenerateConfig("/sock", config.DockerConfig{Enabled: true}, nil)
 		if !strings.Contains(out, "/var/run/docker.sock") {
 			t.Errorf("expected docker portForward, got:\n%s", out)
 		}
@@ -186,7 +186,7 @@ func TestGenerateConfig_DockerMultiArchEmulation(t *testing.T) {
 	m := &Manager{node: config.NodeConfig{VM: config.VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}}, vmName: "k8s-node"}
 
 	t.Run("docker enabled registers QEMU binfmt emulation for foreign-arch images", func(t *testing.T) {
-		out := m.GenerateConfig("/sock", true, nil)
+		out := m.GenerateConfig("/sock", config.DockerConfig{Enabled: true}, nil)
 		// qemu-user-static + binfmt-support give the node's Docker the ability to
 		// run/build linux/amd64 images on an arm64 host (and vice versa) under
 		// emulation, persisted across reboots via systemd-binfmt.
@@ -198,9 +198,37 @@ func TestGenerateConfig_DockerMultiArchEmulation(t *testing.T) {
 	})
 
 	t.Run("docker disabled installs no emulation packages", func(t *testing.T) {
-		out := m.GenerateConfig("/sock", false, nil)
+		out := m.GenerateConfig("/sock", config.DockerConfig{Enabled: false}, nil)
 		if strings.Contains(out, "qemu-user-static") {
 			t.Errorf("docker-disabled config should not install qemu emulation, got:\n%s", out)
+		}
+	})
+}
+
+func TestGenerateConfig_PinsContainerRuntime(t *testing.T) {
+	m := &Manager{node: config.NodeConfig{VM: config.VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}}, vmName: "k8s-node"}
+
+	t.Run("defaults are pinned and held, not the unpinned get.docker.com", func(t *testing.T) {
+		out := m.GenerateConfig("/sock", config.DockerConfig{Enabled: true}, nil)
+		if strings.Contains(out, "get.docker.com") {
+			t.Errorf("runtime must be pinned, not the unpinned get.docker.com script:\n%s", out)
+		}
+		for _, want := range []string{DefaultDockerVersion, DefaultContainerdVersion, "apt-mark hold", "docker-ce=", "containerd.io="} {
+			if !strings.Contains(out, want) {
+				t.Errorf("pinned-runtime config missing %q in:\n%s", want, out)
+			}
+		}
+	})
+
+	t.Run("cluster.yaml versions override the defaults", func(t *testing.T) {
+		out := m.GenerateConfig("/sock", config.DockerConfig{Enabled: true, DockerVersion: "30.1.2", ContainerdVersion: "2.9.9"}, nil)
+		for _, want := range []string{"30.1.2", "2.9.9"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("override version %q not honored in:\n%s", want, out)
+			}
+		}
+		if strings.Contains(out, DefaultDockerVersion) {
+			t.Errorf("override should replace the default docker version %q:\n%s", DefaultDockerVersion, out)
 		}
 	})
 }

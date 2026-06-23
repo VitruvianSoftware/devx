@@ -54,7 +54,7 @@ func NewLimaProvider(node config.NodeConfig, cfg *config.Config) *LimaProvider {
 }
 
 func (p *LimaProvider) EnsureRuntime(ctx context.Context) (string, error) {
-	if err := p.lima.Provision(ctx, p.cfg.Cluster.Docker.Enabled, p.cfg.Cluster.Mounts); err != nil {
+	if err := p.lima.Provision(ctx, p.cfg.Cluster.Docker, p.cfg.Cluster.Mounts); err != nil {
 		return "", err
 	}
 	ip, err := p.lima.GetBridgedIP(ctx)

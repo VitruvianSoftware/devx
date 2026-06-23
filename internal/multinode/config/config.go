@@ -84,6 +84,15 @@ type MetalLBConfig struct {
 // DockerConfig holds configuration for Docker runtime integration.
 type DockerConfig struct {
 	Enabled bool `yaml:"enabled"`
+	// DockerVersion and ContainerdVersion pin the node container runtime to an
+	// exact, mutually-compatible apt version pair (held via apt-mark) so a node
+	// restart or unattended upgrade can never pair a mismatched
+	// containerd<->shim — the cause of the "unsupported protocol" pod-sandbox
+	// creation failures. Empty falls back to lima.DefaultDockerVersion /
+	// lima.DefaultContainerdVersion (the pin tracked in git, since cluster.yaml
+	// is local). Bump the two together.
+	DockerVersion     string `yaml:"dockerVersion,omitempty"`
+	ContainerdVersion string `yaml:"containerdVersion,omitempty"`
 }
 
 // MountConfig describes a host directory shared into the cluster VMs so that

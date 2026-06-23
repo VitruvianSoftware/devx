@@ -99,10 +99,22 @@ func (m *Manager) Status(ctx context.Context) (VMStatus, error) {
 	return VMStatusNotCreated, nil
 }
 
+// DefaultDockerVersion and DefaultContainerdVersion pin the node container
+// runtime when cluster.yaml (which is local, not in git) does not override them
+// via docker.dockerVersion / docker.containerdVersion. They MUST be a
+// mutually-compatible apt pair — docker-ce depends on a matching containerd.io —
+// so bump them together. Pinning + holding them is what stops a node restart or
+// unattended upgrade from pairing a v2.3 containerd with a v2.2 shim, which
+// produces the "unsupported protocol" pod-sandbox failures. See GenerateConfig.
+const (
+	DefaultDockerVersion     = "29.5.2"
+	DefaultContainerdVersion = "2.2.4"
+)
+
 // GenerateConfig returns the Lima YAML config for this node. mounts is the raw
 // cluster mount set; it is resolved via ResolveMounts (nil -> default home mount,
 // empty -> none).
-func (m *Manager) GenerateConfig(socketPath string, dockerEnabled bool, mounts []config.MountConfig) string {
+func (m *Manager) GenerateConfig(socketPath string, docker config.DockerConfig, mounts []config.MountConfig) string {
 	cfg := fmt.Sprintf(`vmType: "vz"
 images:
   - location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
@@ -118,7 +130,7 @@ networks:
 
 	cfg += renderMounts(ResolveMounts(mounts))
 
-	if dockerEnabled {
+	if docker.Enabled {
 		cfg += `portForwards:
   - guestSocket: "/var/run/docker.sock"
     hostSocket: "{{.Dir}}/sock/docker.sock"
@@ -131,8 +143,36 @@ networks:
       #!/bin/bash
       apt-get update -qq && apt-get install -y -qq %s
 `, NodePackages)
-	if dockerEnabled {
-		cfg += `      curl -fsSL https://get.docker.com | sh
+	if docker.Enabled {
+		dockerVer := docker.DockerVersion
+		if dockerVer == "" {
+			dockerVer = DefaultDockerVersion
+		}
+		containerdVer := docker.ContainerdVersion
+		if containerdVer == "" {
+			containerdVer = DefaultContainerdVersion
+		}
+		// Pinned, single-source container runtime (replaces the unpinned
+		// `curl get.docker.com | sh`). docker-ce + containerd.io are installed at
+		// an exact, mutually-compatible apt version resolved from the Docker repo
+		// and then held, so a node restart or unattended upgrade can never pair a
+		// mismatched containerd<->shim (the cause of "unsupported protocol"
+		// pod-sandbox failures). madison resolves the full repo version string for
+		// the pin so we stay codename-agnostic; a missing pin fails loudly.
+		cfg += fmt.Sprintf(`      install -m0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+      . /etc/os-release
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" > /etc/apt/sources.list.d/docker.list
+      apt-get update -qq
+      docker_pin=$(apt-cache madison docker-ce | awk -v v='%[1]s' 'index($3, v){print $3; exit}')
+      containerd_pin=$(apt-cache madison containerd.io | awk -v v='%[2]s' 'index($3, v){print $3; exit}')
+      if [ -z "$docker_pin" ] || [ -z "$containerd_pin" ]; then
+        echo "FATAL: pinned docker-ce=%[1]s / containerd.io=%[2]s not found in apt repo" >&2
+        exit 1
+      fi
+      apt-get install -y -qq docker-ce="$docker_pin" docker-ce-cli="$docker_pin" docker-ce-rootless-extras="$docker_pin" containerd.io="$containerd_pin"
+      apt-mark hold docker-ce docker-ce-cli docker-ce-rootless-extras containerd.io
       # Add all interactive users (UID >= 1000 or UID == 501) to the docker group
       for u in $(awk -F: '$3 >= 1000 || $3 == 501 {print $1}' /etc/passwd); do
         usermod -aG docker "$u" || true
@@ -143,14 +183,14 @@ networks:
       # multi-arch survives VM reboots; they register with the fix-binary (F)
       # flag, which is required for the emulator to work inside containers.
       apt-get install -y -qq qemu-user-static binfmt-support
-`
+`, dockerVer, containerdVer)
 	}
 
 	return cfg
 }
 
 // Provision creates and starts the Lima VM on the remote host.
-func (m *Manager) Provision(ctx context.Context, dockerEnabled bool, mounts []config.MountConfig) error {
+func (m *Manager) Provision(ctx context.Context, docker config.DockerConfig, mounts []config.MountConfig) error {
 	status, err := m.Status(ctx)
 	if err != nil && status != VMStatusNotCreated {
 		return err
@@ -179,7 +219,7 @@ func (m *Manager) Provision(ctx context.Context, dockerEnabled bool, mounts []co
 
 		// Write the config file to the remote host via base64 to avoid
 		// shell quoting issues with multiline content.
-		limaConfig := m.GenerateConfig(socketPath, dockerEnabled, mounts)
+		limaConfig := m.GenerateConfig(socketPath, docker, mounts)
 		configPath := fmt.Sprintf("~/%s.yaml", m.vmName)
 		encoded := util.Base64Encode(limaConfig)
 		_, err = m.runner.Run(ctx, fmt.Sprintf("echo %s | base64 -d > %s", encoded, configPath))

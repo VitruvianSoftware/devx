@@ -474,7 +474,7 @@ func (m *Manager) DrainNode(ctx context.Context, nodeName string) error {
 	slog.Info("draining node", "host", m.runner.Host, "node", nodeName)
 	fmt.Printf("  [%s] Draining node %s...\n", m.runner.Host, nodeName)
 	_, err := m.sudo(ctx,
-		fmt.Sprintf("k3s kubectl drain %s --ignore-daemonsets --delete-emptydir-data --timeout=60s", nodeName))
+		fmt.Sprintf("k3s kubectl drain %s --ignore-daemonsets --delete-emptydir-data --force --timeout=120s", nodeName))
 	return err
 }
 
