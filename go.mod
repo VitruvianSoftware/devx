@@ -11,8 +11,8 @@ require (
 	github.com/hashicorp/yamux v0.1.2
 	github.com/joho/godotenv v1.5.1
 	github.com/magefile/mage v1.17.2
-	github.com/mark3labs/mcp-go v0.54.1
-	github.com/pelletier/go-toml/v2 v2.3.1
+	github.com/mark3labs/mcp-go v0.55.0
+	github.com/pelletier/go-toml/v2 v2.4.1
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.53.0
 	golang.org/x/sync v0.21.0
