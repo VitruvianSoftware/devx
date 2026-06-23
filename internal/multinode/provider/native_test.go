@@ -289,7 +289,8 @@ func TestNative_EnsureRuntime_FirewalldTrustsPodNetwork(t *testing.T) {
 	}
 }
 
-func TestNative_EnsureRuntime_SkipsFirewalldWhenNotRunning(t *testing.T) {
+func TestNative_EnsureRuntime_SkipsFirewalldWhenAbsent(t *testing.T) {
+	// No firewalld at all (not enabled, not running) => nothing to trust, skip.
 	p, calls := nativeWithRunner(map[string]string{
 		"tailscale ip -4": "100.64.0.7",
 	})
@@ -298,7 +299,37 @@ func TestNative_EnsureRuntime_SkipsFirewalldWhenNotRunning(t *testing.T) {
 	}
 	for _, c := range *calls {
 		if strings.Contains(c, "--zone=trusted") {
-			t.Errorf("firewalld not running but trust command issued: %s", c)
+			t.Errorf("firewalld absent but trust command issued: %s", c)
+		}
+	}
+}
+
+func TestNative_EnsureRuntime_AppliesFirewalldTrustWhenEnabledButStopped(t *testing.T) {
+	// Regression: on a fresh join firewalld can be momentarily stopped while the
+	// host converges. Gating the pod-network trust on the live "running" state
+	// silently skipped it, leaving pod egress REJECTed ("no route to host") until
+	// a later reconcile -- this stranded external-dns on a freshly-joined node.
+	// When firewalld is ENABLED we must start it and apply the trust regardless of
+	// the momentary state. ("firewall-cmd --state" prints "not running" to stderr
+	// when stopped, so with 2>/dev/null its stdout is empty -- modelled by omitting
+	// the reply here.)
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree":          "/usr/bin/rpm-ostree",
+		"systemctl is-enabled firewalld": "enabled",
+		"tailscale ip -4":                "100.97.82.15",
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	for _, want := range []string{
+		"systemctl start firewalld",
+		"--add-source=10.42.0.0/16",
+		"--add-source=10.43.0.0/16",
+		"firewall-cmd --reload",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("enabled-but-stopped firewalld missing %q in:\n%s", want, joined)
 		}
 	}
 }

@@ -141,9 +141,21 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 	// and silently drop it out of the cluster. Best-effort.
 	_, _ = p.run(ctx, "systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target")
 	// 2. Trust the tailnet interface AND the k3s pod/service networks in
-	// firewalld (if running). tailscale0 alone is not enough: pod-bridge (cni0)
-	// traffic is otherwise REJECTed, breaking same-node pod dials.
-	if out, _ := p.run(ctx, "firewall-cmd --state 2>/dev/null || true"); strings.Contains(out, "running") {
+	// firewalld. tailscale0 alone is not enough: pod-bridge (cni0) traffic is
+	// otherwise REJECTed, breaking same-node pod dials AND pod egress to the
+	// internet ("no route to host").
+	//
+	// Gate on firewalld being ENABLED, not on its momentary "running" state: on a
+	// fresh join firewalld can be briefly stopped while the host converges, and
+	// gating on live state silently skips the trust (it then only lands on a later
+	// `cluster apply`), stranding egress-dependent pods until then. If enabled (or
+	// already running), start it so --permanent + --reload take effect.
+	// ("firewall-cmd --state" prints "not running" to stderr when stopped, hence
+	// 2>/dev/null and the empty-stdout check.)
+	fwEnabled, _ := p.run(ctx, "systemctl is-enabled firewalld 2>/dev/null || true")
+	fwState, _ := p.run(ctx, "firewall-cmd --state 2>/dev/null || true")
+	if strings.Contains(fwEnabled, "enabled") || strings.Contains(fwState, "running") {
+		_, _ = p.run(ctx, "systemctl start firewalld 2>/dev/null || true")
 		_, _ = p.run(ctx, fmt.Sprintf(
 			"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 --add-interface=cni0 --add-interface=flannel.1 --add-source=%s --add-source=%s && firewall-cmd --reload",
 			k3sClusterCIDR, k3sServiceCIDR))
