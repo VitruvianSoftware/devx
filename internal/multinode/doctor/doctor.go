@@ -193,19 +193,39 @@ func checkVM(ctx context.Context, mgr *lima.Manager, runner *remote.Runner, vmNa
 
 func checkBridgedIP(ctx context.Context, mgr *lima.Manager, runner *remote.Runner, vmName, host string, fix bool) CheckResult {
 	ip, err := mgr.GetBridgedIP(ctx)
-	if err != nil {
-		if fix {
-			fmt.Printf("  [%s] 🔧 Auto-fixing Bridged IP (restarting VM to fetch DHCP lease)...\n", host)
-			_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl stop %s", vmName))
-			_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
-			ip, err = mgr.GetBridgedIP(ctx)
-			if err == nil {
-				return CheckResult{Name: "Bridged IP", Host: host, Passed: true, Message: fmt.Sprintf("%s (fixed)", ip)}
-			}
-		}
-		return CheckResult{Name: "Bridged IP", Host: host, Passed: false, Message: fmt.Sprintf("not available: %v", err)}
+	if err == nil && isBridgedIP(ip) {
+		return CheckResult{Name: "Bridged IP", Host: host, Passed: true, Message: ip}
 	}
-	return CheckResult{Name: "Bridged IP", Host: host, Passed: true, Message: ip}
+	// No real bridge: GetBridgedIP errored, or returned the Lima user-mode
+	// address (192.168.5.x) — meaning socket_vmnet never attached a bridged
+	// interface (lima0). The usual cause is a stale/wedged socket_vmnet daemon,
+	// which a plain VM restart does NOT clear — kickstart the daemon first, then
+	// restart the VM so it picks up the bridge.
+	if fix {
+		fmt.Printf("  [%s] 🔧 Auto-fixing Bridged IP (kickstart socket_vmnet + restart VM)...\n", host)
+		_, _ = runner.RunShell(ctx, "sudo launchctl kickstart -k system/homebrew.mxcl.socket_vmnet 2>/dev/null || true")
+		_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl stop %s", vmName))
+		_, _ = runner.RunShell(ctx, fmt.Sprintf("PATH=$PATH:/usr/local/bin:/opt/homebrew/bin LIMA_HOME=~/.lima limactl start %s", vmName))
+		if ip, err = mgr.GetBridgedIP(ctx); err == nil && isBridgedIP(ip) {
+			return CheckResult{Name: "Bridged IP", Host: host, Passed: true, Message: fmt.Sprintf("%s (fixed)", ip)}
+		}
+	}
+	switch {
+	case err != nil:
+		return CheckResult{Name: "Bridged IP", Host: host, Passed: false, Message: fmt.Sprintf("not available: %v", err)}
+	case ip != "":
+		return CheckResult{Name: "Bridged IP", Host: host, Passed: false,
+			Message: fmt.Sprintf("got Lima user-mode IP %s, not a socket_vmnet bridge — kickstart socket_vmnet + restart the VM", ip)}
+	default:
+		return CheckResult{Name: "Bridged IP", Host: host, Passed: false, Message: "no bridged interface (lima0)"}
+	}
+}
+
+// isBridgedIP reports whether ip is a real socket_vmnet bridged LAN address —
+// i.e. non-empty and NOT in Lima's user-mode (slirp) subnet 192.168.5.0/24, which
+// is what GetBridgedIP falls back to when no lima0 bridge exists.
+func isBridgedIP(ip string) bool {
+	return ip != "" && !strings.HasPrefix(ip, "192.168.5.")
 }
 
 func checkK3s(ctx context.Context, mgr *k3s.Manager, runner *remote.Runner, vmName, host string, role string, fix bool) CheckResult {
