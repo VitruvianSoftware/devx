@@ -42,6 +42,7 @@ type ClusterConfig struct {
 	K3sVersion string          `yaml:"k3sVersion"`
 	Kubeconfig string          `yaml:"kubeconfig"`
 	MetalLB    MetalLBConfig   `yaml:"metallb"`
+	Cilium     CiliumConfig    `yaml:"cilium"`
 	Tailscale  TailscaleConfig `yaml:"tailscale"`
 	Docker     DockerConfig    `yaml:"docker"`
 	Mounts     []MountConfig   `yaml:"mounts"`
@@ -93,6 +94,12 @@ type DockerConfig struct {
 	// is local). Bump the two together.
 	DockerVersion     string `yaml:"dockerVersion,omitempty"`
 	ContainerdVersion string `yaml:"containerdVersion,omitempty"`
+}
+
+// CiliumConfig selects the Cilium CNI (Flannel+kube-proxy+servicelb disabled in k3s).
+type CiliumConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Version string `yaml:"version,omitempty"` // informational; helm pin lives in GitOps
 }
 
 // MountConfig describes a host directory shared into the cluster VMs so that

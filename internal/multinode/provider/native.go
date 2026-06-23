@@ -205,9 +205,14 @@ func (p *NativeProvider) installScript(role string, o JoinOpts) string {
 		if o.DisableServiceLB {
 			lb = " --disable servicelb"
 		}
+		cilium := ""
+		if o.UseCilium {
+			// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
+			cilium = " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
+		}
 		return fmt.Sprintf(
-			`curl -sfL https://get.k3s.io | %s INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s%s --node-label=pool=%s`,
-			common, o.ServerURL, p.node.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, o.Pool)
+			`curl -sfL https://get.k3s.io | %s INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s%s%s --node-label=pool=%s`,
+			common, o.ServerURL, p.node.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, cilium, o.Pool)
 	}
 	return fmt.Sprintf(
 		`curl -sfL https://get.k3s.io | %s K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s --node-label=pool=%s`,

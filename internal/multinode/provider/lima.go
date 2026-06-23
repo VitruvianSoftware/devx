@@ -72,11 +72,11 @@ func (p *LimaProvider) EnsureRuntime(ctx context.Context) (string, error) {
 }
 
 func (p *LimaProvider) InstallServer(ctx context.Context, o JoinOpts) error {
-	return p.k3s.JoinServer(ctx, o.NodeIP, o.ServerURL, o.Token, o.Pool, o.K3sVersion, o.TLSSANs, o.DisableServiceLB, o.UseTailscale, o.UseDocker)
+	return p.k3s.JoinServer(ctx, o.NodeIP, o.ServerURL, o.Token, o.Pool, o.K3sVersion, o.TLSSANs, o.DisableServiceLB, o.UseTailscale, o.UseDocker, o.UseCilium)
 }
 
 func (p *LimaProvider) InstallAgent(ctx context.Context, o JoinOpts) error {
-	return p.k3s.JoinAgent(ctx, o.NodeIP, o.ServerURL, o.Token, o.Pool, o.K3sVersion, o.UseTailscale, o.UseDocker)
+	return p.k3s.JoinAgent(ctx, o.NodeIP, o.ServerURL, o.Token, o.Pool, o.K3sVersion, o.UseTailscale, o.UseDocker, o.UseCilium)
 }
 
 func (p *LimaProvider) GetToken(ctx context.Context) (string, error) { return p.k3s.GetToken(ctx) }

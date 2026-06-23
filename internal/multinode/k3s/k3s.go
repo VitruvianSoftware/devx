@@ -115,7 +115,7 @@ func (m *Manager) InstallTailscale(ctx context.Context, authKey string) (string,
 }
 
 // InitCluster bootstraps the first control plane node with --cluster-init.
-func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale, useDocker bool) error {
+func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale, useDocker, useCilium bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -150,6 +150,10 @@ func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion stri
 	}
 	if useDocker {
 		extraArgs += " --docker"
+	}
+	if useCilium {
+		// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
+		extraArgs += " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
 	}
 
 	script := fmt.Sprintf(
@@ -260,7 +264,7 @@ func (m *Manager) EnsureClusterDefaults(ctx context.Context) error {
 }
 
 // JoinServer joins a server node to an existing HA cluster.
-func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale, useDocker bool) error {
+func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, tlsSANs []string, disableServiceLB, useTailscale, useDocker, useCilium bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -295,6 +299,10 @@ func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool
 	}
 	if useDocker {
 		extraArgs += " --docker"
+	}
+	if useCilium {
+		// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
+		extraArgs += " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
 	}
 
 	// Install K3s binary and create systemd service without starting it,
@@ -350,7 +358,7 @@ func (m *Manager) waitForJoin(ctx context.Context, timeout time.Duration) error 
 }
 
 // JoinAgent joins a worker node to the cluster.
-func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, useTailscale, useDocker bool) error {
+func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool, k3sVersion string, useTailscale, useDocker, useCilium bool) error {
 	installed, err := m.IsInstalled(ctx)
 	if err != nil {
 		return err
@@ -377,6 +385,10 @@ func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool,
 	}
 	if useDocker {
 		extraArgs += " --docker"
+	}
+	if useCilium {
+		// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
+		extraArgs += " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
 	}
 
 	script := fmt.Sprintf(

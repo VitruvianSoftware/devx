@@ -42,6 +42,7 @@ type JoinOpts struct {
 	DisableServiceLB bool
 	UseTailscale     bool
 	UseDocker        bool
+	UseCilium        bool
 }
 
 // NodeProvider provisions and manages one node's K3s runtime.
