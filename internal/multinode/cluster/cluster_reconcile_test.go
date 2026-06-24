@@ -59,6 +59,33 @@ func TestNodePackagesIncludesSocat(t *testing.T) {
 	}
 }
 
+func TestCiliumExtraRoutes(t *testing.T) {
+	// Cilium native routing over tailscale: every node advertises its pod CIDR,
+	// and the stable L2Hostnames nodes ALSO advertise the MetalLB LB range (the
+	// /24 covering the ipRange) so the LB IPs are tailnet-reachable.
+	cfg := &config.Config{}
+	cfg.Cluster.MetalLB.IPRange = "10.44.86.210-10.44.86.215"
+	cfg.Cluster.MetalLB.L2Hostnames = []string{"fedora", "nuc9"}
+
+	// A stable node gets the LB range as an extra route.
+	got := ciliumExtraRoutes("fedora", cfg)
+	if len(got) != 1 || got[0] != "10.44.86.0/24" {
+		t.Errorf("ciliumExtraRoutes(fedora) = %v, want [10.44.86.0/24]", got)
+	}
+
+	// A non-L2 node advertises only its pod CIDR (no extra routes).
+	if got := ciliumExtraRoutes("james-mbp", cfg); len(got) != 0 {
+		t.Errorf("ciliumExtraRoutes(james-mbp) = %v, want none", got)
+	}
+
+	// No MetalLB range => no LB route even for an L2 node.
+	cfg2 := &config.Config{}
+	cfg2.Cluster.MetalLB.L2Hostnames = []string{"fedora"}
+	if got := ciliumExtraRoutes("fedora", cfg2); len(got) != 0 {
+		t.Errorf("ciliumExtraRoutes with no ipRange = %v, want none", got)
+	}
+}
+
 func TestNodeChanges(t *testing.T) {
 	vm := config.VMConfig{CPUs: 2, Memory: "4GiB", Disk: "30GiB"}
 	matchingSpec := lima.Spec{CPUs: 2, Memory: "4GiB", Disk: "30GiB", Mounts: []config.MountConfig{{Location: "~", Writable: true}}}

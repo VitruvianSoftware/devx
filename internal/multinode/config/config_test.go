@@ -81,6 +81,36 @@ nodes:
 	}
 }
 
+func TestLoad_MetalLBL2Hostnames(t *testing.T) {
+	content := `
+cluster:
+  name: l2-test
+  metallb:
+    enabled: true
+    ipRange: 10.44.86.210-10.44.86.215
+    l2Hostnames:
+      - fedora
+      - nuc9
+nodes:
+  - host: host-1
+    role: server
+    pool: cp-1
+    vm:
+      cpus: 1
+      memory: 1GiB
+      disk: 10GiB
+`
+	path := writeTemp(t, content)
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := cfg.Cluster.MetalLB.L2Hostnames
+	if len(got) != 2 || got[0] != "fedora" || got[1] != "nuc9" {
+		t.Errorf("expected l2Hostnames [fedora nuc9], got %v", got)
+	}
+}
+
 func TestLoad_FileNotFound(t *testing.T) {
 	_, err := Load("/nonexistent/path/config.yaml")
 	if err == nil {

@@ -47,3 +47,30 @@ func TestManagerWithExec_RoutesThroughExec(t *testing.T) {
 		t.Errorf("exec should have run the node-token read; got %v", got)
 	}
 }
+
+// InstallTailscale must ALWAYS enforce --accept-routes idempotently. The bug:
+// `tailscale up --accept-routes` is skipped if the node was already up (joined
+// previously WITHOUT accept-routes), leaving RouteAll=false (this broke the
+// Fedora nodes on the Cilium native-routing migration). An explicit
+// `tailscale set --accept-routes=true` after `up` enforces it regardless.
+func TestInstallTailscale_EnforcesAcceptRoutes(t *testing.T) {
+	var got []string
+	m := NewManagerWithExec(remote.NewRunner("fedora"), func(ctx context.Context, cmd string) (string, error) {
+		got = append(got, cmd)
+		if strings.Contains(cmd, "tailscale ip -4") {
+			return "100.97.82.15\n", nil
+		}
+		return "", nil
+	})
+	ip, err := m.InstallTailscale(context.Background(), "tskey-abc")
+	if err != nil {
+		t.Fatalf("InstallTailscale: %v", err)
+	}
+	if ip != "100.97.82.15" {
+		t.Errorf("tailscale ip = %q", ip)
+	}
+	joined := strings.Join(got, "\n")
+	if !strings.Contains(joined, "tailscale set --accept-routes=true") {
+		t.Errorf("InstallTailscale must run `tailscale set --accept-routes=true`; got:\n%s", joined)
+	}
+}

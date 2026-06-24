@@ -80,6 +80,11 @@ type TailscaleConfig struct {
 type MetalLBConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	IPRange string `yaml:"ipRange"`
+	// L2Hostnames pins the L2Advertisement to a stable subset of nodes via a
+	// per-hostname nodeSelector (kubernetes.io/hostname). Empty = advertise from
+	// all nodes (default MetalLB behaviour). Pinning stops the speaker VIP from
+	// flapping onto high-latency Mac nodes.
+	L2Hostnames []string `yaml:"l2Hostnames"`
 }
 
 // DockerConfig holds configuration for Docker runtime integration.

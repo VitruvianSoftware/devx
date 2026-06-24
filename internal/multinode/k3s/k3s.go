@@ -105,6 +105,14 @@ func (m *Manager) InstallTailscale(ctx context.Context, authKey string) (string,
 		return "", fmt.Errorf("[%s] starting tailscale: %w", m.runner.Host, err)
 	}
 
+	// Enforce --accept-routes idempotently. `tailscale up` only applies it on a
+	// fresh bring-up; a node already up (joined earlier without accept-routes)
+	// keeps RouteAll=false, which breaks Cilium native routing over tailscale
+	// (the Fedora/nuc9 nodes). `tailscale set` re-asserts it regardless of state.
+	if _, err := m.sudo(ctx, "tailscale set --accept-routes=true"); err != nil {
+		return "", fmt.Errorf("[%s] enforcing tailscale accept-routes: %w", m.runner.Host, err)
+	}
+
 	// Get the Tailscale IPv4 address
 	ip, err := m.sudo(ctx, "tailscale ip -4")
 	if err != nil {
@@ -166,9 +174,14 @@ func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion stri
 	return err
 }
 
-// DeployMetalLB installs MetalLB and configures the IPAddressPool and L2Advertisement.
-func (m *Manager) DeployMetalLB(ctx context.Context, ipRange string) error {
-	slog.Info("deploying metallb", "host", m.runner.Host, "ip_range", ipRange)
+// DeployMetalLB installs MetalLB and configures the IPAddressPool and
+// L2Advertisement. When l2Hostnames is non-empty, the L2Advertisement is pinned
+// to those nodes via spec.nodeSelectors (one matchLabels per hostname), so the
+// speaker VIP stays on stable nodes instead of flapping onto high-latency Macs.
+// An empty list emits the L2Advertisement with no nodeSelector (default MetalLB
+// behaviour — advertise from all nodes).
+func (m *Manager) DeployMetalLB(ctx context.Context, ipRange string, l2Hostnames []string) error {
+	slog.Info("deploying metallb", "host", m.runner.Host, "ip_range", ipRange, "l2_hostnames", l2Hostnames)
 	fmt.Printf("  [%s] Applying MetalLB manifests...\n", m.runner.Host)
 
 	// Install MetalLB
@@ -200,7 +213,7 @@ kind: L2Advertisement
 metadata:
   name: default-l2
   namespace: metallb-system
-`, ipRange)
+%s`, ipRange, l2AdvertisementNodeSelectors(l2Hostnames))
 
 	// Write the manifest to a temp file in the VM and apply it
 	encoded := base64.StdEncoding.EncodeToString([]byte(configManifest))
@@ -211,6 +224,22 @@ metadata:
 	}
 
 	return nil
+}
+
+// l2AdvertisementNodeSelectors renders the spec.nodeSelectors block (one
+// matchLabels: {kubernetes.io/hostname: <host>} entry per hostname) for the
+// L2Advertisement, or the empty string when no hostnames are given (so the
+// advertisement carries no spec and matches all nodes).
+func l2AdvertisementNodeSelectors(hostnames []string) string {
+	if len(hostnames) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("spec:\n  nodeSelectors:\n")
+	for _, h := range hostnames {
+		fmt.Fprintf(&b, "  - matchLabels:\n      kubernetes.io/hostname: %s\n", h)
+	}
+	return b.String()
 }
 
 // corednsHAPatch is a JSON merge patch that makes k3s's bundled CoreDNS

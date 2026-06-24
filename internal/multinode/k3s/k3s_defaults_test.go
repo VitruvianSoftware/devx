@@ -99,6 +99,62 @@ func TestEnsureClusterDefaults_PatchesCoreDNSAndStorageClass(t *testing.T) {
 	}
 }
 
+// DeployMetalLB with a non-empty l2Hostnames list must pin the L2Advertisement to
+// those stable nodes via spec.nodeSelectors (one matchLabels per hostname). Without
+// a nodeSelector the speaker VIP can flap onto a high-latency Mac node.
+func TestDeployMetalLB_PinsL2AdvertisementToHostnames(t *testing.T) {
+	var got []string
+	m := NewManagerWithExec(remote.NewRunner("cp-1"), func(ctx context.Context, cmd string) (string, error) {
+		got = append(got, cmd)
+		return "", nil
+	})
+
+	if err := m.DeployMetalLB(context.Background(), "10.44.86.210-10.44.86.215", []string{"fedora", "nuc9"}); err != nil {
+		t.Fatalf("DeployMetalLB: %v", err)
+	}
+
+	manifests := strings.Join(b64Payloads(got), "\n")
+	for _, want := range []string{
+		"nodeSelectors",
+		"kubernetes.io/hostname",
+		"fedora",
+		"nuc9",
+	} {
+		if !strings.Contains(manifests, want) {
+			t.Errorf("L2Advertisement manifest missing %q; decoded payloads:\n%s", want, manifests)
+		}
+	}
+	// The IP pool must still carry the address range.
+	if !strings.Contains(manifests, "10.44.86.210-10.44.86.215") {
+		t.Errorf("IPAddressPool missing the IP range; decoded payloads:\n%s", manifests)
+	}
+}
+
+// With an empty l2Hostnames list, DeployMetalLB must emit the L2Advertisement
+// WITHOUT a nodeSelector (current behaviour — backward compatible).
+func TestDeployMetalLB_NoHostnamesNoNodeSelector(t *testing.T) {
+	var got []string
+	m := NewManagerWithExec(remote.NewRunner("cp-1"), func(ctx context.Context, cmd string) (string, error) {
+		got = append(got, cmd)
+		return "", nil
+	})
+
+	if err := m.DeployMetalLB(context.Background(), "10.44.86.210-10.44.86.215", nil); err != nil {
+		t.Fatalf("DeployMetalLB: %v", err)
+	}
+
+	manifests := strings.Join(b64Payloads(got), "\n")
+	if strings.Contains(manifests, "nodeSelectors") {
+		t.Errorf("empty l2Hostnames must not emit nodeSelectors; decoded payloads:\n%s", manifests)
+	}
+	// The L2Advertisement and IP pool must still be present.
+	for _, want := range []string{"L2Advertisement", "IPAddressPool", "10.44.86.210-10.44.86.215"} {
+		if !strings.Contains(manifests, want) {
+			t.Errorf("manifest missing %q; decoded payloads:\n%s", want, manifests)
+		}
+	}
+}
+
 // EnsureClusterDefaults must surface a real failure (e.g. the API server being
 // unreachable) so callers can fail the phase rather than silently skip HA setup.
 func TestEnsureClusterDefaults_PropagatesError(t *testing.T) {

@@ -164,6 +164,9 @@ func tsUpScript() string {
 set -uo pipefail
 for _ in $(seq 1 30); do /usr/local/bin/tailscale status >/dev/null 2>&1 && break; sleep 2; done
 /usr/local/bin/tailscale up --authkey="${TS_AUTHKEY:-}" --accept-routes --hostname="$(cat /run/devx/node-name 2>/dev/null || hostname)" || exit 0
+# Enforce accept-routes idempotently: tailscale-up is a no-op if already up,
+# leaving RouteAll=false and breaking Cilium native routing over tailscale.
+/usr/local/bin/tailscale set --accept-routes=true || true
 mkdir -p /run/devx
 for _ in $(seq 1 30); do ip=$(/usr/local/bin/tailscale ip -4 2>/dev/null) && [ -n "$ip" ] && { echo "$ip" >/run/devx/tailnet-ip; break; }; sleep 2; done
 `

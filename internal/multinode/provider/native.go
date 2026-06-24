@@ -172,6 +172,11 @@ func (p *NativeProvider) EnsureRuntime(ctx context.Context) (string, error) {
 		_, _ = p.run(ctx, fmt.Sprintf(
 			"command -v tailscale >/dev/null 2>&1 && (tailscale status >/dev/null 2>&1 || tailscale up --authkey=%s --accept-routes)",
 			p.cfg.Cluster.Tailscale.AuthKey))
+		// Enforce --accept-routes idempotently. The `|| tailscale up` above is a
+		// no-op when the node is already up (joined earlier without accept-routes),
+		// leaving RouteAll=false — which broke the Fedora/nuc9 nodes under Cilium
+		// native routing over tailscale. `tailscale set` re-asserts it regardless.
+		_, _ = p.run(ctx, "command -v tailscale >/dev/null 2>&1 && tailscale set --accept-routes=true")
 	}
 	// 4. Node IP: explicit override, else the tailscale IP.
 	if p.node.NodeIP != "" {

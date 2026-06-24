@@ -72,6 +72,27 @@ func TestNative_EnsureRuntime_Silverblue(t *testing.T) {
 	}
 }
 
+func TestNative_EnsureRuntime_EnforcesAcceptRoutes(t *testing.T) {
+	// Regression: `tailscale status >/dev/null 2>&1 || tailscale up ... --accept-routes`
+	// never sets accept-routes on a node that is ALREADY up (joined earlier without
+	// it), leaving RouteAll=false and breaking Cilium native routing over tailscale
+	// (the Fedora/nuc9 nodes). EnsureRuntime must ALWAYS enforce it after `up`.
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
+		"tailscale ip -4":       "100.97.82.15",
+	})
+	// A cluster auth key must be configured for the tailscale-up step to run.
+	p.cfg.Cluster.Tailscale.Enabled = true
+	p.cfg.Cluster.Tailscale.AuthKey = "tskey-abc"
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	if !strings.Contains(joined, "tailscale set --accept-routes=true") {
+		t.Errorf("EnsureRuntime must enforce `tailscale set --accept-routes=true`; got:\n%s", joined)
+	}
+}
+
 func TestNative_EnsureRuntime_NodeIPOverride(t *testing.T) {
 	p, _ := nativeWithRunner(nil)
 	p.node.NodeIP = "10.0.0.9"

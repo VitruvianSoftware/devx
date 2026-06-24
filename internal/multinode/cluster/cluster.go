@@ -219,8 +219,19 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 		fmt.Println("\n🛜 Phase 7: Cilium enabled — LB-IPAM via GitOps; skipping MetalLB.")
 	case cfg.Cluster.MetalLB.Enabled && cfg.Cluster.MetalLB.IPRange != "":
 		fmt.Println("\n🛜 Phase 7: Deploying MetalLB...")
-		if err := initK3s.DeployMetalLB(ctx, cfg.Cluster.MetalLB.IPRange); err != nil {
+		if err := initK3s.DeployMetalLB(ctx, cfg.Cluster.MetalLB.IPRange, cfg.Cluster.MetalLB.L2Hostnames); err != nil {
 			return fmt.Errorf("deploying metallb: %w", err)
+		}
+	}
+
+	// Phase 7.5: Cilium native routing over tailscale — advertise each node's pod
+	// CIDR (and the LB range from the stable L2 nodes) as tailnet subnet routes, so
+	// the routes are tailnet-reachable. Gated on cilium.enabled; runs after all
+	// nodes have joined (so their podCIDRs are assigned). No-op otherwise.
+	if cfg.Cluster.Cilium.Enabled && cfg.Cluster.Tailscale.Enabled {
+		fmt.Println("\n🛰️  Phase 7.5: Advertising Cilium pod-CIDR + LB routes over tailscale...")
+		if err := advertiseCiliumRoutes(ctx, cfg, initK3s); err != nil {
+			return fmt.Errorf("advertising cilium routes: %w", err)
 		}
 	}
 
@@ -389,6 +400,60 @@ func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
 
 	fmt.Printf("\n✅ Cluster %q reconciled.\n", cfg.Cluster.Name)
 	return nil
+}
+
+// ciliumExtraRoutes returns the extra tailnet subnet routes a node should
+// advertise (beyond its own pod CIDR) under Cilium native routing. The stable
+// L2 nodes (cfg.Cluster.MetalLB.L2Hostnames) additionally advertise the /24
+// covering the MetalLB IP range, so the LB IPs are tailnet-reachable; all other
+// nodes advertise only their pod CIDR (empty extras here). Returns nil when the
+// node is not an L2 node or no MetalLB range is configured.
+func ciliumExtraRoutes(host string, cfg *config.Config) []string {
+	lbCIDR := k3s.LBRangeCIDR(cfg.Cluster.MetalLB.IPRange)
+	if lbCIDR == "" {
+		return nil
+	}
+	for _, h := range cfg.Cluster.MetalLB.L2Hostnames {
+		if h == host {
+			return []string{lbCIDR}
+		}
+	}
+	return nil
+}
+
+// advertiseCiliumRoutes reads each node's pod CIDR off the init control-plane
+// node (which has kubectl) and runs the tailscale route-advertisement on the node
+// itself: every node advertises its pod CIDR, and the stable L2 nodes also
+// advertise the MetalLB LB range (see ciliumExtraRoutes). It mirrors the existing
+// per-node execution pattern (a k3s.Manager per node via the node's Runner).
+func advertiseCiliumRoutes(ctx context.Context, cfg *config.Config, initK3s *k3s.Manager) error {
+	for _, node := range cfg.Nodes {
+		podCIDR, err := initK3s.ReadNodePodCIDR(ctx, node.Host)
+		if err != nil {
+			return fmt.Errorf("[%s] reading podCIDR: %w", node.Host, err)
+		}
+		if podCIDR == "" {
+			slog.Warn("node has no podCIDR yet, skipping route advertisement", "host", node.Host)
+			fmt.Printf("  [%s] no podCIDR assigned yet, skipping\n", node.Host)
+			continue
+		}
+		nodeK3s := k3s.NewManagerWithVM(util.NewRunner(node), node.GetVMName())
+		extra := ciliumExtraRoutes(node.Host, cfg)
+		if err := nodeK3s.AdvertiseNodeRoutes(ctx, podCIDR, extra); err != nil {
+			return fmt.Errorf("[%s] advertising routes: %w", node.Host, err)
+		}
+		fmt.Printf("  [%s] advertised %s%s\n", node.Host, podCIDR, routesSuffix(extra))
+		slog.Info("advertised cilium tailnet routes", "host", node.Host, "podCIDR", podCIDR, "extra", extra)
+	}
+	return nil
+}
+
+// routesSuffix renders the extra-routes portion of a log line ("" when none).
+func routesSuffix(extra []string) string {
+	if len(extra) == 0 {
+		return ""
+	}
+	return " + " + strings.Join(extra, ",")
 }
 
 // ensureDepsCommand returns the shell command that idempotently installs the
