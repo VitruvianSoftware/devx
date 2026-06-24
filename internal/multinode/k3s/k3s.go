@@ -386,10 +386,11 @@ func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool,
 	if useDocker {
 		extraArgs += " --docker"
 	}
-	if useCilium {
-		// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
-		extraArgs += " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
-	}
+	// NOTE: a k3s AGENT takes no Cilium disable flags. --flannel-backend=none,
+	// --disable-kube-proxy and --disable-network-policy are SERVER-only flags (the
+	// agent CLI rejects them); agents inherit "none" from the servers' cluster config
+	// and keep --flannel-iface (harmless once Flannel is off). useCilium is unused here.
+	_ = useCilium
 
 	script := fmt.Sprintf(
 		`curl -sfL https://get.k3s.io | %sK3S_TOKEN=%q K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s --node-label=pool=%s`,
