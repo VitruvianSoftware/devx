@@ -1,0 +1,94 @@
+# Copyright (c) 2026 VitruvianSoftware
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Publish-on-version-bump. The monorepo (vitruvian-core) now authors devx's
+# version bump via release-please; the bumped .release-please-manifest.json is
+# exported here by copybara. This workflow detects that bump (a manifest version
+# with no matching tag yet), tags the exported commit, and publishes with
+# GoReleaser using the mirror's existing token. It REPLACES the in-mirror
+# release-please job (which authored version/changelog commits here -- the drift
+# the one-way migration removed). It never authors source; it only tags + ships.
+name: release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}
+
+      - id: detect
+        name: Detect a new release from the exported manifest
+        run: |
+          if [ ! -f .release-please-manifest.json ]; then
+            echo "No manifest yet -- monorepo release-please has not cut a release."
+            exit 0
+          fi
+          V="$(jq -r 'to_entries[0].value' .release-please-manifest.json)"
+          if [ -z "$V" ] || [ "$V" = "null" ]; then
+            echo "No version in manifest."
+            exit 0
+          fi
+          if git rev-parse "v$V" >/dev/null 2>&1; then
+            echo "v$V already released -- nothing to do."
+          else
+            echo "version=$V" >> "$GITHUB_OUTPUT"
+            echo "Detected new release v$V."
+          fi
+
+      - name: Tag the exported release commit
+        if: steps.detect.outputs.version
+        run: |
+          V="${{ steps.detect.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$V" -m "Release v$V"
+          git push origin "v$V"
+
+      - uses: actions/setup-go@v6
+        if: steps.detect.outputs.version
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run GoReleaser
+        if: steps.detect.outputs.version
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}
