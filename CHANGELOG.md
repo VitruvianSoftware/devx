@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.0](https://github.com/VitruvianSoftware/devx/compare/v0.65.0...v0.66.0) (2026-06-26)
+
+
+### Features
+
+* **cilium:** finalize migration — fix agent flags, drop gate, enable Hubble ([#258](https://github.com/VitruvianSoftware/devx/issues/258)) ([df76f90](https://github.com/VitruvianSoftware/devx/commit/df76f904e2b8d209c4df98911d09f8b632c43777))
+* **copybara:** App-authenticated PR-import for all mirrors ([#78](https://github.com/VitruvianSoftware/devx/issues/78)/[#79](https://github.com/VitruvianSoftware/devx/issues/79)/[#80](https://github.com/VitruvianSoftware/devx/issues/80)) ([#121](https://github.com/VitruvianSoftware/devx/issues/121)) ([bc6a01f](https://github.com/VitruvianSoftware/devx/commit/bc6a01fa8fc5f416b14a6704c6fe0a6164969864))
+* **copybara:** go-live devx PR-import via scheduled poll + CLA gate ([#76](https://github.com/VitruvianSoftware/devx/issues/76), [#77](https://github.com/VitruvianSoftware/devx/issues/77)) ([#116](https://github.com/VitruvianSoftware/devx/issues/116)) ([7e7850e](https://github.com/VitruvianSoftware/devx/commit/7e7850e71371d471fa6859eb98c85af36822769c))
+* **devx:** bake Cilium-native-routing node settings into provisioning ([#262](https://github.com/VitruvianSoftware/devx/issues/262)) ([5f8f921](https://github.com/VitruvianSoftware/devx/commit/5f8f92112a2a651eb7cf4020d64be321d67af9d6))
+* **devx:** cilium.enabled provisioning flag (Flannel/kube-proxy/servicelb off) ([#256](https://github.com/VitruvianSoftware/devx/issues/256)) ([cbbc775](https://github.com/VitruvianSoftware/devx/commit/cbbc7758e7257a94cb9ad8b82568f4a466c1ecb8))
+* **devx:** register QEMU binfmt so docker nodes run amd64 images ([#163](https://github.com/VitruvianSoftware/devx/issues/163)) ([9c99d55](https://github.com/VitruvianSoftware/devx/commit/9c99d55bf030d06ae389eb2d224e07795591b0e2))
+* **devx:** registry auto-detects nfs StorageClass, off-node on dev-local (R9) ([#236](https://github.com/VitruvianSoftware/devx/issues/236)) ([49b8735](https://github.com/VitruvianSoftware/devx/commit/49b87351ee39d39c96f6425e05229950e9d6c5f1))
+* **toolchain:** enforce one canonical version repo-wide (conformance check + pin registry) ([#292](https://github.com/VitruvianSoftware/devx/issues/292)) ([647b650](https://github.com/VitruvianSoftware/devx/commit/647b65006cabb4fbb233d52222dae06f9826e979))
+
+
+### Bug Fixes
+
+* **devx/scaffold:** repair broken go-cli CI template + harden both Go templates ([#206](https://github.com/VitruvianSoftware/devx/issues/206)) ([#213](https://github.com/VitruvianSoftware/devx/issues/213)) ([6727cf5](https://github.com/VitruvianSoftware/devx/commit/6727cf5bdd8d5a96c0e0ae06d0a94694f6a6001c))
+* **devx:** cluster doctor flags Lima user-mode IP as a failed bridge + kickstarts socket_vmnet ([#237](https://github.com/VitruvianSoftware/devx/issues/237)) ([348b696](https://github.com/VitruvianSoftware/devx/commit/348b6961571640f2069b2059f3483244a21595b5))
+* **devx:** pin + hold the node container runtime (docker-ce/containerd.io) ([#238](https://github.com/VitruvianSoftware/devx/issues/238)) ([74892a1](https://github.com/VitruvianSoftware/devx/commit/74892a19413e474ed9f214535fa139904dfbd9d6))
+* **devx:** pin in-cluster registry PVC to local-path (off Longhorn) ([#227](https://github.com/VitruvianSoftware/devx/issues/227)) ([18e821b](https://github.com/VitruvianSoftware/devx/commit/18e821b77af95f09d04b3287c3cf23f4cd6c1ebb))
+* **multinode:** apply firewalld pod-network trust when firewalld is enabled, not only when running ([#247](https://github.com/VitruvianSoftware/devx/issues/247)) ([416ffac](https://github.com/VitruvianSoftware/devx/commit/416ffacd2fa6e778642e842f49bbd0ef1090ca54))
+
 ## [0.65.0](https://github.com/VitruvianSoftware/devx/compare/v0.64.0...v0.65.0) (2026-06-13)
 
 
