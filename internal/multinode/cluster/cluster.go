@@ -43,6 +43,10 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/multinode/util"
 )
 
+// providerFor builds the NodeProvider for a node. It is a package var so tests
+// can substitute a fake; production uses provider.For.
+var providerFor = provider.For
+
 // InitOptions configures the Init operation.
 type InitOptions struct {
 	DryRun      bool
@@ -57,6 +61,12 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 		printDryRunPlan(cfg)
 		return nil
 	}
+
+	lock, err := acquireClusterLock()
+	if err != nil {
+		return err
+	}
+	defer lock.release()
 
 	// Phase 0: Ensure prerequisites on all hosts (parallel).
 	fmt.Println("🔍 Phase 0: Checking prerequisites...")
@@ -252,6 +262,14 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 func Join(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	slog.Info("joining new nodes to cluster", "name", cfg.Cluster.Name, "dry_run", dryRun)
 
+	if !dryRun {
+		lock, err := acquireClusterLock()
+		if err != nil {
+			return err
+		}
+		defer lock.release()
+	}
+
 	// Find a healthy server to read the join token + the API endpoint to join against.
 	var serverURL, token string
 	for _, n := range cfg.ServerNodes() {
@@ -361,31 +379,27 @@ func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	slog.Info("reconciling cluster nodes", "name", cfg.Cluster.Name, "nodes", len(cfg.Nodes), "dry_run", dryRun)
 
 	if dryRun {
-		fmt.Printf("📋 Dry-run: would ensure node packages (%s) on %d node(s):\n", lima.NodePackages, len(cfg.Nodes))
+		fmt.Printf("📋 Dry-run: would reconcile host prerequisites on %d node(s):\n", len(cfg.Nodes))
 		for _, node := range cfg.Nodes {
-			fmt.Printf("  [%s] %s\n", node.Host, ensureDepsCommand())
+			if node.GetKind() == "native" {
+				fmt.Printf("  [%s] (native) ensure host prereqs: deps + firewalld trust + iscsi/sleep (rpm-ostree/dnf/apt)\n", node.Host)
+			} else {
+				fmt.Printf("  [%s] (lima) ensure node packages in VM: %s\n", node.Host, lima.NodePackages)
+			}
 		}
 		fmt.Printf("\n  Then ensure cluster defaults (CoreDNS HA, single default StorageClass) via %s.\n", cfg.InitNode().Host)
 		fmt.Println("\n  No changes were made (dry-run mode).")
 		return nil
 	}
 
-	fmt.Printf("🔧 Reconciling %d node(s): ensuring packages (%s)...\n", len(cfg.Nodes), lima.NodePackages)
-
-	g, gctx := errgroup.WithContext(ctx)
-	for _, node := range cfg.Nodes {
-		node := node
-		g.Go(func() error {
-			runner := util.NewRunner(node)
-			if _, err := runner.LimaShellSudo(gctx, node.GetVMName(), ensureDepsCommand()); err != nil {
-				return fmt.Errorf("[%s] ensuring node packages: %w", node.Host, err)
-			}
-			fmt.Printf("  [%s] packages ensured\n", node.Host)
-			slog.Info("node packages ensured", "host", node.Host)
-			return nil
-		})
+	lock, err := acquireClusterLock()
+	if err != nil {
+		return err
 	}
-	if err := g.Wait(); err != nil {
+	defer lock.release()
+
+	fmt.Printf("🔧 Reconciling %d node(s) via their providers (native: host prereqs; lima: node packages)...\n", len(cfg.Nodes))
+	if err := reconcileNodes(ctx, cfg); err != nil {
 		return fmt.Errorf("node reconciliation failed: %w", err)
 	}
 
@@ -400,6 +414,27 @@ func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
 
 	fmt.Printf("\n✅ Cluster %q reconciled.\n", cfg.Cluster.Name)
 	return nil
+}
+
+// reconcileNodes converges every node's host prerequisites in parallel through
+// its NodeProvider — native hosts run ensureHostPrereqs with the correct package
+// manager + firewalld trust; Lima nodes install the node package set inside the
+// VM. Replaces a former Lima-only `apt-get` path that errored on native nodes
+// (limactl has no VM there) and used the wrong package manager for Fedora.
+func reconcileNodes(ctx context.Context, cfg *config.Config) error {
+	g, gctx := errgroup.WithContext(ctx)
+	for _, node := range cfg.Nodes {
+		node := node
+		g.Go(func() error {
+			if err := providerFor(node, cfg).Reconcile(gctx); err != nil {
+				return fmt.Errorf("[%s] reconciling node: %w", node.Host, err)
+			}
+			fmt.Printf("  [%s] reconciled (kind=%s)\n", node.Host, node.GetKind())
+			slog.Info("node reconciled", "host", node.Host, "kind", node.GetKind())
+			return nil
+		})
+	}
+	return g.Wait()
 }
 
 // ciliumExtraRoutes returns the extra tailnet subnet routes a node should
@@ -456,14 +491,6 @@ func routesSuffix(extra []string) string {
 	return " + " + strings.Join(extra, ",")
 }
 
-// ensureDepsCommand returns the shell command that idempotently installs the
-// standard node package set (lima.NodePackages) inside a node's Lima VM. It is
-// run via Runner.LimaShellSudo, which wraps it in `sudo sh -c`, so it must be a
-// plain command with no sudo prefix of its own.
-func ensureDepsCommand() string {
-	return fmt.Sprintf("apt-get update -qq && apt-get install -y -qq %s", lima.NodePackages)
-}
-
 // Remove drains and removes a specific node from the cluster.
 func Remove(ctx context.Context, cfg *config.Config, hostName string, dryRun bool) error {
 	slog.Info("removing node", "host", hostName, "dry_run", dryRun)
@@ -485,6 +512,12 @@ func Remove(ctx context.Context, cfg *config.Config, hostName string, dryRun boo
 		fmt.Printf("  Would drain and remove %s (%s) from cluster\n", hostName, target.Role)
 		return nil
 	}
+
+	lock, err := acquireClusterLock()
+	if err != nil {
+		return err
+	}
+	defer lock.release()
 
 	// Drain + delete the node from the cluster via the init (server) node.
 	initProv := provider.For(cfg.InitNode(), cfg)
@@ -515,6 +548,12 @@ func Destroy(ctx context.Context, cfg *config.Config, force, dryRun bool) error 
 		}
 		return nil
 	}
+
+	lock, err := acquireClusterLock()
+	if err != nil {
+		return err
+	}
+	defer lock.release()
 
 	if !force {
 		fmt.Printf("⚠️  This will destroy the entire cluster %q. Are you sure? [y/N] ", cfg.Cluster.Name)

@@ -97,6 +97,18 @@ func (m *Manager) UncordonNode(ctx context.Context, nodeName string) error {
 	return err
 }
 
+// IsNodeReady reports whether the named node's Ready condition is True, queried
+// via the control-plane node's kubectl. Used to poll a node back to health after
+// an Apply VM restart instead of sleeping a fixed interval.
+func (m *Manager) IsNodeReady(ctx context.Context, nodeName string) (bool, error) {
+	out, err := m.runner.LimaShellSudo(ctx, m.vmName,
+		fmt.Sprintf(`k3s kubectl get node %s -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'`, nodeName))
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) == "True", nil
+}
+
 // CreateSnapshot creates an etcd snapshot and returns the full path to the
 // resulting snapshot file on the remote VM.
 func (m *Manager) CreateSnapshot(ctx context.Context) (string, error) {

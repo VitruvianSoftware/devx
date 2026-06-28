@@ -45,6 +45,14 @@ func Upgrade(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	slog.Info("starting rolling upgrade", "target_version", targetVersion, "dry_run", dryRun)
 	fmt.Printf("🔄 Rolling upgrade to K3s %s\n", targetVersion)
 
+	if !dryRun {
+		lock, err := acquireClusterLock()
+		if err != nil {
+			return err
+		}
+		defer lock.release()
+	}
+
 	initNode := cfg.InitNode()
 	initRunner := util.NewRunner(initNode)
 	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())

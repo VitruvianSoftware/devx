@@ -156,9 +156,13 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 	fwState, _ := p.run(ctx, "firewall-cmd --state 2>/dev/null || true")
 	if strings.Contains(fwEnabled, "enabled") || strings.Contains(fwState, "running") {
 		_, _ = p.run(ctx, "systemctl start firewalld 2>/dev/null || true")
-		_, _ = p.run(ctx, fmt.Sprintf(
+		// Load-bearing: a failure here leaves pod/service traffic REJECTed, so
+		// surface it instead of silently "succeeding" with broken networking.
+		if _, err := p.run(ctx, fmt.Sprintf(
 			"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 --add-interface=cni0 --add-interface=flannel.1 --add-source=%s --add-source=%s && firewall-cmd --reload",
-			k3sClusterCIDR, k3sServiceCIDR))
+			k3sClusterCIDR, k3sServiceCIDR)); err != nil {
+			return fmt.Errorf("[%s] trusting k3s pod/service networks in firewalld: %w", p.node.Host, err)
+		}
 	}
 	return nil
 }
@@ -176,7 +180,10 @@ func (p *NativeProvider) EnsureRuntime(ctx context.Context) (string, error) {
 		// no-op when the node is already up (joined earlier without accept-routes),
 		// leaving RouteAll=false — which broke the Fedora/nuc9 nodes under Cilium
 		// native routing over tailscale. `tailscale set` re-asserts it regardless.
-		_, _ = p.run(ctx, "command -v tailscale >/dev/null 2>&1 && tailscale set --accept-routes=true")
+		// Load-bearing: surface failure (mirrors k3s.Manager.InstallTailscale).
+		if _, err := p.run(ctx, "command -v tailscale >/dev/null 2>&1 && tailscale set --accept-routes=true"); err != nil {
+			return "", fmt.Errorf("[%s] enforcing tailscale accept-routes: %w", p.node.Host, err)
+		}
 	}
 	// 4. Node IP: explicit override, else the tailscale IP.
 	if p.node.NodeIP != "" {

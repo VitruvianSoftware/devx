@@ -49,6 +49,14 @@ func nodeChanges(spec lima.Spec, vm config.VMConfig, desiredMounts []config.Moun
 func Apply(ctx context.Context, cfg *config.Config, nonInteractive, dryRun bool) error {
 	slog.Info("applying rolling updates to cluster", "name", cfg.Cluster.Name, "dry_run", dryRun)
 
+	if !dryRun {
+		lock, err := acquireClusterLock()
+		if err != nil {
+			return err
+		}
+		defer lock.release()
+	}
+
 	initNode := cfg.InitNode()
 	initRunner := util.NewRunner(initNode)
 	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
@@ -109,54 +117,56 @@ func Apply(ctx context.Context, cfg *config.Config, nonInteractive, dryRun bool)
 			}
 		}
 
-		// Step 1: Drain.
-		fmt.Printf("  [%s] Draining Kubernetes node...\n", node.Host)
-		if err := initK3s.DrainNode(ctx, node.Host); err != nil {
-			slog.Warn("drain failed, but proceeding", "host", node.Host, "error", err)
-		}
-
-		// Step 2: Stop.
-		fmt.Printf("  [%s] Stopping VM...\n", node.Host)
-		if _, err = runner.RunShell(ctx, fmt.Sprintf("limactl stop %s", vm)); err != nil {
-			return fmt.Errorf("[%s] stopping VM: %w", node.Host, err)
-		}
-
-		// Step 3a: Hardware limits (unchanged sed approach).
-		if hwChanged {
-			fmt.Printf("  [%s] Applying hardware limits (CPU=%d, Memory=%s, Disk=%s)...\n", node.Host, node.VM.CPUs, node.VM.Memory, node.VM.Disk)
-			sedCmd := fmt.Sprintf("sed -i.bak -e 's/^cpus: .*/cpus: %d/' -e 's/^memory: .*/memory: \"%s\"/' -e 's/^disk: .*/disk: \"%s\"/' ~/.lima/%s/lima.yaml",
-				node.VM.CPUs, node.VM.Memory, node.VM.Disk, vm)
-			if _, err = runner.RunShell(ctx, sedCmd); err != nil {
-				return fmt.Errorf("[%s] updating lima.yaml hardware: %w", node.Host, err)
+		// Drain → mutate VM → restart → wait Ready, with a GUARANTEED uncordon on
+		// the way out (applyNodeCycle) so a mid-cycle failure can never strand the
+		// node cordoned.
+		if err := applyNodeCycle(ctx, initK3s, node.Host, func() error {
+			// Stop the VM.
+			fmt.Printf("  [%s] Stopping VM...\n", node.Host)
+			if _, err := runner.RunShell(ctx, fmt.Sprintf("limactl stop %s", vm)); err != nil {
+				return fmt.Errorf("stopping VM: %w", err)
 			}
-			fmt.Printf("  [%s] Resizing VM disk...\n", node.Host)
-			if _, err = runner.RunShell(ctx, fmt.Sprintf("limactl disk resize %s --size %s", vm, node.VM.Disk)); err != nil {
-				slog.Warn("disk resize failed", "host", node.Host, "error", err)
+
+			// Hardware limits (sed) + disk resize.
+			if hwChanged {
+				fmt.Printf("  [%s] Applying hardware limits (CPU=%d, Memory=%s, Disk=%s)...\n", node.Host, node.VM.CPUs, node.VM.Memory, node.VM.Disk)
+				sedCmd := fmt.Sprintf("sed -i.bak -e 's/^cpus: .*/cpus: %d/' -e 's/^memory: .*/memory: \"%s\"/' -e 's/^disk: .*/disk: \"%s\"/' ~/.lima/%s/lima.yaml",
+					node.VM.CPUs, node.VM.Memory, node.VM.Disk, vm)
+				if _, err := runner.RunShell(ctx, sedCmd); err != nil {
+					return fmt.Errorf("updating lima.yaml hardware: %w", err)
+				}
+				fmt.Printf("  [%s] Resizing VM disk...\n", node.Host)
+				if _, err := runner.RunShell(ctx, fmt.Sprintf("limactl disk resize %s --size %s", vm, node.VM.Disk)); err != nil {
+					slog.Warn("disk resize failed", "host", node.Host, "error", err)
+				}
 			}
-		}
 
-		// Step 3b: Mounts (base64-piped script to avoid quoting issues).
-		if mountsChanged {
-			fmt.Printf("  [%s] Applying host mounts...\n", node.Host)
-			script := lima.MountsRewriteScript(vm, desiredMounts)
-			cmd := fmt.Sprintf("echo %s | base64 -d | bash", util.Base64Encode(script))
-			if _, err = runner.RunShell(ctx, cmd); err != nil {
-				return fmt.Errorf("[%s] rewriting lima.yaml mounts: %w", node.Host, err)
+			// Mounts (base64-piped script to avoid quoting issues).
+			if mountsChanged {
+				fmt.Printf("  [%s] Applying host mounts...\n", node.Host)
+				script := lima.MountsRewriteScript(vm, desiredMounts)
+				cmd := fmt.Sprintf("echo %s | base64 -d | bash", util.Base64Encode(script))
+				if _, err := runner.RunShell(ctx, cmd); err != nil {
+					return fmt.Errorf("rewriting lima.yaml mounts: %w", err)
+				}
 			}
-		}
 
-		// Step 4: Restart.
-		fmt.Printf("  [%s] Restarting VM...\n", node.Host)
-		if _, err = runner.RunShell(ctx, fmt.Sprintf("limactl start %s", vm)); err != nil {
-			return fmt.Errorf("[%s] starting VM: %w", node.Host, err)
-		}
+			// Restart.
+			fmt.Printf("  [%s] Restarting VM...\n", node.Host)
+			if _, err := runner.RunShell(ctx, fmt.Sprintf("limactl start %s", vm)); err != nil {
+				return fmt.Errorf("starting VM: %w", err)
+			}
 
-		// Step 5: Wait + uncordon.
-		fmt.Printf("  [%s] Waiting for Kubernetes node to become ready...\n", node.Host)
-		time.Sleep(10 * time.Second)
-		fmt.Printf("  [%s] Uncordoning node...\n", node.Host)
-		if err := initK3s.UncordonNode(ctx, node.Host); err != nil {
-			return fmt.Errorf("[%s] uncordoning node: %w", node.Host, err)
+			// Wait for the node to report Ready (replaces a fixed 10s sleep).
+			fmt.Printf("  [%s] Waiting for Kubernetes node to become Ready...\n", node.Host)
+			if err := waitNodeReady(ctx, func(c context.Context) (bool, error) {
+				return initK3s.IsNodeReady(c, node.Host)
+			}, 3*time.Minute, 5*time.Second); err != nil {
+				return fmt.Errorf("node did not become Ready: %w", err)
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("[%s] applying update: %w", node.Host, err)
 		}
 
 		fmt.Printf("  ✅ [%s] Update applied successfully.\n", node.Host)
@@ -164,4 +174,53 @@ func Apply(ctx context.Context, cfg *config.Config, nonInteractive, dryRun bool)
 
 	fmt.Println("\n🎉 All nodes are up to date.")
 	return nil
+}
+
+// nodeCordoner is the subset of k3s operations applyNodeCycle needs; *k3s.Manager
+// satisfies it. It is a seam so the uncordon-on-failure guarantee is unit
+// testable without a live cluster.
+type nodeCordoner interface {
+	DrainNode(ctx context.Context, nodeName string) error
+	UncordonNode(ctx context.Context, nodeName string) error
+}
+
+// applyNodeCycle drains the node, runs the VM-mutation body, and GUARANTEES an
+// uncordon on the way out — so a failure mid stop/restart can never strand the
+// node cordoned (the previous code returned early and left it cordoned). The
+// uncordon is best-effort on a fresh bounded context so it runs even if ctx was
+// cancelled.
+func applyNodeCycle(ctx context.Context, ops nodeCordoner, host string, body func() error) error {
+	fmt.Printf("  [%s] Draining Kubernetes node...\n", host)
+	if err := ops.DrainNode(ctx, host); err != nil {
+		slog.Warn("drain failed, but proceeding", "host", host, "error", err)
+	}
+	defer func() {
+		uctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		fmt.Printf("  [%s] Uncordoning node...\n", host)
+		if err := ops.UncordonNode(uctx, host); err != nil {
+			slog.Warn("uncordon failed", "host", host, "error", err)
+		}
+	}()
+	return body()
+}
+
+// waitNodeReady polls ready() until it reports true or timeout elapses, checking
+// every interval. It replaces a fixed sleep before uncordon so Apply waits for
+// the node to actually rejoin rather than guessing.
+func waitNodeReady(ctx context.Context, ready func(context.Context) (bool, error), timeout, interval time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		if ok, err := ready(ctx); err == nil && ok {
+			return nil
+		}
+		if !time.Now().Before(deadline) {
+			return fmt.Errorf("timed out after %s waiting for node to become Ready", timeout)
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(interval):
+		}
+	}
 }
