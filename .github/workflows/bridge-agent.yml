@@ -23,12 +23,12 @@ name: Bridge Agent
 on:
   push:
     paths:
-      - 'internal/bridge/agent/**'
+      - 'tools/bridge-agent/**'
     branches:
       - main
   pull_request:
     paths:
-      - 'internal/bridge/agent/**'
+      - 'tools/bridge-agent/**'
 
 permissions:
   contents: read
@@ -45,7 +45,7 @@ jobs:
     timeout-minutes: 45
     defaults:
       run:
-        working-directory: internal/bridge/agent
+        working-directory: tools/bridge-agent
 
     steps:
       - uses: actions/checkout@v6
@@ -78,7 +78,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
-          context: internal/bridge/agent
+          context: tools/bridge-agent
           push: true
           tags: |
             ghcr.io/vitruviansoftware/devx-bridge-agent:latest
