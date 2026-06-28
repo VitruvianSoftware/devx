@@ -27,12 +27,12 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/VitruvianSoftware/devx/internal/ai"
 	"github.com/VitruvianSoftware/devx/internal/bridge"
 	"github.com/VitruvianSoftware/devx/internal/devcontainer"
 	"github.com/VitruvianSoftware/devx/internal/envvault"
+	"github.com/VitruvianSoftware/devx/internal/projectcfg"
 	"github.com/VitruvianSoftware/devx/internal/telemetry"
 )
 
@@ -116,41 +116,17 @@ func runShell(_ *cobra.Command, _ []string) error {
 	// Dynamic secret injection from devx.yaml (1password, gcp, bitwarden, etc.)
 	userSecrets := make(map[string]string)
 	aiBridgeEnabled := true // Enabled by default
-	yamlPath, configErr := findDevxConfig()
-	var yamlData []byte
-	if configErr == nil {
-		yamlData, _ = os.ReadFile(yamlPath)
-	}
+	if settings, found := projectcfg.LoadSettings(); found {
+		aiBridgeEnabled = settings.AIBridgeEnabled()
 
-	if len(yamlData) > 0 {
-		type devxConfig struct {
-			Env []string `yaml:"env"`
-			AI  struct {
-				Bridge *bool `yaml:"bridge"`
-			} `yaml:"ai"`
-		}
-		var devxCfg devxConfig
-		_ = yaml.Unmarshal(yamlData, &devxCfg)
-
-		if devxCfg.AI.Bridge != nil && !*devxCfg.AI.Bridge {
-			aiBridgeEnabled = false
-		}
-
-		// "mix and match which ones, multiple, or none which will default back to using plain .env"
-		if len(devxCfg.Env) == 0 {
-			devxCfg.Env = []string{"file://.env"}
-		}
-
-		if len(devxCfg.Env) > 0 {
-			if secrets, sErr := envvault.PullAll(devxCfg.Env); sErr == nil {
-				for k, v := range secrets {
-					userSecrets[k] = v
-					args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
-				}
-				fmt.Printf("🔒 Injected %d secrets from remote vaults seamlessly.\n", len(secrets))
-			} else {
-				_, _ = fmt.Fprintf(os.Stderr, "⚠️ Warning: Failed to fetch secrets from vault: %v\n", sErr)
+		if secrets, sErr := envvault.PullAll(settings.Env); sErr == nil {
+			for k, v := range secrets {
+				userSecrets[k] = v
+				args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
 			}
+			fmt.Printf("🔒 Injected %d secrets from remote vaults seamlessly.\n", len(secrets))
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "⚠️ Warning: Failed to fetch secrets from vault: %v\n", sErr)
 		}
 	} else if _, sErr := os.Stat(".env"); sErr == nil {
 		// Fallback straight to .env if devx.yaml doesn't even exist
