@@ -82,8 +82,8 @@ func TestNative_EnsureRuntime_EnforcesAcceptRoutes(t *testing.T) {
 		"tailscale ip -4":       "100.97.82.15",
 	})
 	// A cluster auth key must be configured for the tailscale-up step to run.
-	p.cfg.Cluster.Tailscale.Enabled = true
-	p.cfg.Cluster.Tailscale.AuthKey = "tskey-abc"
+	p.spec.Tailscale.Enabled = true
+	p.spec.Tailscale.AuthKey = "tskey-abc"
 	if _, err := p.EnsureRuntime(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestNative_EnsureRuntime_EnforcesAcceptRoutes(t *testing.T) {
 
 func TestNative_EnsureRuntime_NodeIPOverride(t *testing.T) {
 	p, _ := nativeWithRunner(nil)
-	p.node.NodeIP = "10.0.0.9"
+	p.spec.NodeIP = "10.0.0.9"
 	ip, err := p.EnsureRuntime(context.Background())
 	if err != nil || ip != "10.0.0.9" {
 		t.Errorf("nodeIP override should win: %q,%v", ip, err)

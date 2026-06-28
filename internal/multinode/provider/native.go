@@ -40,8 +40,7 @@ type sshSudo func(ctx context.Context, command string) (string, error)
 // Handles immutable-OS deps (rpm-ostree), firewalld, Permissive SELinux, and
 // tailnet networking. Supports both agent and server roles.
 type NativeProvider struct {
-	node   config.NodeConfig
-	cfg    *config.Config
+	spec   ProviderSpec
 	runner *remote.Runner
 	run    sshSudo
 	k3s    *k3s.Manager
@@ -51,7 +50,7 @@ type NativeProvider struct {
 func NewNativeProvider(node config.NodeConfig, cfg *config.Config) *NativeProvider {
 	r := util.NewRunner(node)
 	p := &NativeProvider{
-		node: node, cfg: cfg, runner: r,
+		spec: specFor(node, cfg), runner: r,
 		run: func(ctx context.Context, cmd string) (string, error) { return r.RunSudo(ctx, cmd) },
 	}
 	// The k3s.Manager runs through p.run dynamically (honors a test-injected run).
@@ -121,7 +120,7 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 	// 1. Install K3s deps via the detected package manager.
 	pm := p.detectPkgManager(ctx)
 	if _, err := p.run(ctx, depInstallCmd(pm, append(append([]string{}, k3sDeps...), iscsiPkg(pm)))); err != nil {
-		return fmt.Errorf("[%s] installing deps: %w", p.node.Host, err)
+		return fmt.Errorf("[%s] installing deps: %w", p.spec.Host, err)
 	}
 	// Longhorn needs the iscsid daemon and the iscsi_tcp module. Persist the
 	// module via modules-load.d so it auto-loads after a reboot (a live modprobe
@@ -161,7 +160,7 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 		if _, err := p.run(ctx, fmt.Sprintf(
 			"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 --add-interface=cni0 --add-interface=flannel.1 --add-source=%s --add-source=%s && firewall-cmd --reload",
 			k3sClusterCIDR, k3sServiceCIDR)); err != nil {
-			return fmt.Errorf("[%s] trusting k3s pod/service networks in firewalld: %w", p.node.Host, err)
+			return fmt.Errorf("[%s] trusting k3s pod/service networks in firewalld: %w", p.spec.Host, err)
 		}
 	}
 	return nil
@@ -172,26 +171,26 @@ func (p *NativeProvider) EnsureRuntime(ctx context.Context) (string, error) {
 		return "", err
 	}
 	// 3. Bring Tailscale up if a cluster auth key is configured (else assume it is up).
-	if p.cfg.Cluster.Tailscale.Enabled && p.cfg.Cluster.Tailscale.AuthKey != "" {
+	if p.spec.Tailscale.Enabled && p.spec.Tailscale.AuthKey != "" {
 		_, _ = p.run(ctx, fmt.Sprintf(
 			"command -v tailscale >/dev/null 2>&1 && (tailscale status >/dev/null 2>&1 || tailscale up --authkey=%s --accept-routes)",
-			p.cfg.Cluster.Tailscale.AuthKey))
+			p.spec.Tailscale.AuthKey))
 		// Enforce --accept-routes idempotently. The `|| tailscale up` above is a
 		// no-op when the node is already up (joined earlier without accept-routes),
 		// leaving RouteAll=false — which broke the Fedora/nuc9 nodes under Cilium
 		// native routing over tailscale. `tailscale set` re-asserts it regardless.
 		// Load-bearing: surface failure (mirrors k3s.Manager.InstallTailscale).
 		if _, err := p.run(ctx, "command -v tailscale >/dev/null 2>&1 && tailscale set --accept-routes=true"); err != nil {
-			return "", fmt.Errorf("[%s] enforcing tailscale accept-routes: %w", p.node.Host, err)
+			return "", fmt.Errorf("[%s] enforcing tailscale accept-routes: %w", p.spec.Host, err)
 		}
 	}
 	// 4. Node IP: explicit override, else the tailscale IP.
-	if p.node.NodeIP != "" {
-		return p.node.NodeIP, nil
+	if p.spec.NodeIP != "" {
+		return p.spec.NodeIP, nil
 	}
 	out, err := p.run(ctx, "tailscale ip -4")
 	if err != nil {
-		return "", fmt.Errorf("[%s] reading tailscale ip: %w", p.node.Host, err)
+		return "", fmt.Errorf("[%s] reading tailscale ip: %w", p.spec.Host, err)
 	}
 	return strings.TrimSpace(out), nil
 }
@@ -224,11 +223,11 @@ func (p *NativeProvider) installScript(role string, o JoinOpts) string {
 		}
 		return fmt.Sprintf(
 			`curl -sfL https://get.k3s.io | %s INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s%s%s --node-label=pool=%s`,
-			common, o.ServerURL, p.node.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, cilium, o.Pool)
+			common, o.ServerURL, p.spec.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, cilium, o.Pool)
 	}
 	return fmt.Sprintf(
 		`curl -sfL https://get.k3s.io | %s K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s --node-label=pool=%s`,
-		common, o.ServerURL, p.node.Host, o.NodeIP, flannel, o.Pool)
+		common, o.ServerURL, p.spec.Host, o.NodeIP, flannel, o.Pool)
 }
 
 func (p *NativeProvider) InstallAgent(ctx context.Context, o JoinOpts) error {
@@ -308,7 +307,7 @@ func (p *NativeProvider) Uninstall(ctx context.Context, role string) error {
 
 // Destroy uninstalls K3s; there is no VM to remove on a native host.
 func (p *NativeProvider) Destroy(ctx context.Context) error {
-	return p.k3s.Uninstall(ctx, p.node.Role)
+	return p.k3s.Uninstall(ctx, p.spec.Role)
 }
 
 func (p *NativeProvider) Reconcile(ctx context.Context) error {

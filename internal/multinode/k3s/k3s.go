@@ -137,37 +137,7 @@ func (m *Manager) InitCluster(ctx context.Context, nodeIP, pool, k3sVersion stri
 	slog.Info("initializing K3s cluster", "host", m.runner.Host, "node_ip", nodeIP, "pool", pool)
 	fmt.Printf("  [%s] Initializing K3s cluster...\n", m.runner.Host)
 
-	var sanFlags string
-	for _, san := range tlsSANs {
-		sanFlags += fmt.Sprintf(" --tls-san=%s", san)
-	}
-
-	versionEnv := ""
-	if k3sVersion != "" {
-		versionEnv = fmt.Sprintf("INSTALL_K3S_VERSION=%q ", k3sVersion)
-	}
-
-	extraArgs := ""
-	if disableServiceLB {
-		extraArgs += " --disable servicelb"
-	}
-	if useTailscale {
-		extraArgs += " --flannel-iface=tailscale0"
-	} else {
-		extraArgs += " --flannel-iface=lima0"
-	}
-	if useDocker {
-		extraArgs += " --docker"
-	}
-	if useCilium {
-		// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
-		extraArgs += " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
-	}
-
-	script := fmt.Sprintf(
-		`curl -sfL https://get.k3s.io | %sINSTALL_K3S_EXEC="server" sh -s - --cluster-init --node-name=%s --node-ip=%s --advertise-address=%s%s%s --node-label=pool=%s`,
-		versionEnv, m.runner.Host, nodeIP, nodeIP, sanFlags, extraArgs, pool,
-	)
+	script := buildServerInitScript(m.runner.Host, nodeIP, pool, k3sVersion, tlsSANs, disableServiceLB, useTailscale, useDocker, useCilium)
 
 	slog.Debug("K3s install script", "host", m.runner.Host, "script", script)
 	_, err = m.sudo(ctx, script)
@@ -307,39 +277,9 @@ func (m *Manager) JoinServer(ctx context.Context, nodeIP, serverURL, token, pool
 	slog.Info("joining cluster as server", "host", m.runner.Host, "node_ip", nodeIP, "server_url", serverURL)
 	fmt.Printf("  [%s] Joining cluster as server...\n", m.runner.Host)
 
-	var sanFlags string
-	for _, san := range tlsSANs {
-		sanFlags += fmt.Sprintf(" --tls-san=%s", san)
-	}
-
-	versionEnv := ""
-	if k3sVersion != "" {
-		versionEnv = fmt.Sprintf("INSTALL_K3S_VERSION=%q ", k3sVersion)
-	}
-
-	extraArgs := ""
-	if disableServiceLB {
-		extraArgs += " --disable servicelb"
-	}
-	if useTailscale {
-		extraArgs += " --flannel-iface=tailscale0"
-	} else {
-		extraArgs += " --flannel-iface=lima0"
-	}
-	if useDocker {
-		extraArgs += " --docker"
-	}
-	if useCilium {
-		// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
-		extraArgs += " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
-	}
-
-	// Install K3s binary and create systemd service without starting it,
-	// because the join may need multiple retries as etcd stabilizes.
-	script := fmt.Sprintf(
-		`curl -sfL https://get.k3s.io | %sINSTALL_K3S_SKIP_START=true K3S_TOKEN=%q INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s --node-label=pool=%s`,
-		versionEnv, token, serverURL, m.runner.Host, nodeIP, nodeIP, sanFlags, extraArgs, pool,
-	)
+	// Install the K3s binary + systemd service without starting it, because the
+	// join may need multiple retries as etcd stabilizes.
+	script := buildServerJoinScript(m.runner.Host, nodeIP, serverURL, token, pool, k3sVersion, tlsSANs, disableServiceLB, useTailscale, useDocker, useCilium)
 
 	slog.Debug("K3s join script", "host", m.runner.Host)
 	_, err = m.sudo(ctx, script)
@@ -401,30 +341,12 @@ func (m *Manager) JoinAgent(ctx context.Context, nodeIP, serverURL, token, pool,
 	slog.Info("joining cluster as agent", "host", m.runner.Host, "node_ip", nodeIP, "server_url", serverURL)
 	fmt.Printf("  [%s] Joining cluster as agent...\n", m.runner.Host)
 
-	versionEnv := ""
-	if k3sVersion != "" {
-		versionEnv = fmt.Sprintf("INSTALL_K3S_VERSION=%q ", k3sVersion)
-	}
-
-	extraArgs := ""
-	if useTailscale {
-		extraArgs += " --flannel-iface=tailscale0"
-	} else {
-		extraArgs += " --flannel-iface=lima0"
-	}
-	if useDocker {
-		extraArgs += " --docker"
-	}
-	// NOTE: a k3s AGENT takes no Cilium disable flags. --flannel-backend=none,
-	// --disable-kube-proxy and --disable-network-policy are SERVER-only flags (the
-	// agent CLI rejects them); agents inherit "none" from the servers' cluster config
-	// and keep --flannel-iface (harmless once Flannel is off). useCilium is unused here.
+	// A k3s AGENT takes no Cilium disable flags — --flannel-backend=none,
+	// --disable-kube-proxy and --disable-network-policy are SERVER-only (the agent
+	// CLI rejects them); agents inherit the CNI config from the servers.
 	_ = useCilium
 
-	script := fmt.Sprintf(
-		`curl -sfL https://get.k3s.io | %sK3S_TOKEN=%q K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s --node-label=pool=%s`,
-		versionEnv, token, serverURL, m.runner.Host, nodeIP, extraArgs, pool,
-	)
+	script := buildAgentJoinScript(m.runner.Host, nodeIP, serverURL, token, pool, k3sVersion, useTailscale, useDocker)
 
 	slog.Debug("K3s agent join script", "host", m.runner.Host)
 	_, err = m.sudo(ctx, script)

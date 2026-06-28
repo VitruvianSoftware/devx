@@ -36,8 +36,7 @@ import (
 // behavior, now behind the NodeProvider interface. It is a thin wrapper over the
 // existing lima.Manager and k3s.Manager.
 type LimaProvider struct {
-	node config.NodeConfig
-	cfg  *config.Config
+	spec ProviderSpec
 	run  *remote.Runner
 	lima *lima.Manager
 	k3s  *k3s.Manager
@@ -47,22 +46,22 @@ type LimaProvider struct {
 func NewLimaProvider(node config.NodeConfig, cfg *config.Config) *LimaProvider {
 	run := util.NewRunner(node)
 	return &LimaProvider{
-		node: node, cfg: cfg, run: run,
+		spec: specFor(node, cfg), run: run,
 		lima: lima.NewManager(run, node),
 		k3s:  k3s.NewManagerWithVM(run, node.GetVMName()),
 	}
 }
 
 func (p *LimaProvider) EnsureRuntime(ctx context.Context) (string, error) {
-	if err := p.lima.Provision(ctx, p.cfg.Cluster.Docker, p.cfg.Cluster.Mounts); err != nil {
+	if err := p.lima.Provision(ctx, p.spec.Docker, p.spec.Mounts); err != nil {
 		return "", err
 	}
 	ip, err := p.lima.GetBridgedIP(ctx)
 	if err != nil {
 		return "", err
 	}
-	if p.cfg.Cluster.Tailscale.Enabled && p.cfg.Cluster.Tailscale.AuthKey != "" {
-		tsIP, err := p.k3s.InstallTailscale(ctx, p.cfg.Cluster.Tailscale.AuthKey)
+	if p.spec.Tailscale.Enabled && p.spec.Tailscale.AuthKey != "" {
+		tsIP, err := p.k3s.InstallTailscale(ctx, p.spec.Tailscale.AuthKey)
 		if err != nil {
 			return "", err
 		}
@@ -100,11 +99,11 @@ func (p *LimaProvider) Uninstall(ctx context.Context, role string) error {
 	return p.k3s.Uninstall(ctx, role)
 }
 func (p *LimaProvider) Destroy(ctx context.Context) error {
-	_ = p.k3s.Uninstall(ctx, p.node.Role)
+	_ = p.k3s.Uninstall(ctx, p.spec.Role)
 	return p.lima.Destroy(ctx)
 }
 func (p *LimaProvider) Reconcile(ctx context.Context) error {
-	_, err := p.run.LimaShellSudo(ctx, p.node.GetVMName(),
+	_, err := p.run.LimaShellSudo(ctx, p.spec.VMName,
 		fmt.Sprintf("apt-get update -qq && apt-get install -y -qq %s", lima.NodePackages))
 	return err
 }

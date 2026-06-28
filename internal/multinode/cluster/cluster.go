@@ -68,170 +68,56 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	}
 	defer lock.release()
 
-	// Phase 0: Ensure prerequisites on all hosts (parallel).
-	fmt.Println("🔍 Phase 0: Checking prerequisites...")
-	g, gctx := errgroup.WithContext(ctx)
-	for _, node := range cfg.Nodes {
-		node := node
-		g.Go(func() error {
-			return prereqs.EnsureAll(gctx, node, opts.AutoInstall)
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return fmt.Errorf("prerequisite check failed: %w", err)
+	// Phase 0: prerequisites on every host.
+	if err := ensurePrereqs(ctx, cfg, opts.AutoInstall); err != nil {
+		return err
 	}
 
-	// Phase 1: Provision all Lima VMs (parallel).
-	fmt.Println("\n📦 Phase 1: Provisioning VMs (parallel)...")
-	var mu sync.Mutex
-	ipMap := make(map[string]string)
-
-	g, gctx = errgroup.WithContext(ctx)
-	for i, node := range cfg.Nodes {
-		node := node
-		idx := i + 1
-		total := len(cfg.Nodes)
-		g.Go(func() error {
-			runner := util.NewRunner(node)
-			mgr := lima.NewManager(runner, node)
-
-			if err := mgr.Provision(gctx, cfg.Cluster.Docker, cfg.Cluster.Mounts); err != nil {
-				return fmt.Errorf("[%s] provisioning VM: %w", node.Host, err)
-			}
-
-			ip, err := mgr.GetBridgedIP(gctx)
-			if err != nil {
-				return fmt.Errorf("[%s] getting bridged IP: %w", node.Host, err)
-			}
-
-			mu.Lock()
-			ipMap[node.Host] = ip
-			mu.Unlock()
-
-			fmt.Printf("  [%d/%d] %s: VM ready (IP: %s)\n", idx, total, node.Host, ip)
-			slog.Info("VM provisioned", "host", node.Host, "ip", ip)
-			return nil
-		})
+	// Phase 1 + 1.5: provision VMs (and Tailscale, if enabled), collecting node IPs.
+	ipMap, err := provisionVMs(ctx, cfg)
+	if err != nil {
+		return err
 	}
-	if err := g.Wait(); err != nil {
-		return fmt.Errorf("VM provisioning failed: %w\n\nRecovery: re-run 'cluster init' to retry", err)
+	if err := configureTailscale(ctx, cfg, ipMap); err != nil {
+		return err
 	}
 
-	// Phase 1.5: Configure Tailscale networking if enabled.
-	if cfg.Cluster.Tailscale.Enabled && cfg.Cluster.Tailscale.AuthKey != "" {
-		fmt.Println("\n🔒 Phase 1.5: Installing and configuring Tailscale (parallel)...")
-		g, gctx = errgroup.WithContext(ctx)
-		for _, node := range cfg.Nodes {
-			node := node
-			g.Go(func() error {
-				runner := util.NewRunner(node)
-				k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
-				tsIP, err := k3sMgr.InstallTailscale(gctx, cfg.Cluster.Tailscale.AuthKey)
-				if err != nil {
-					return fmt.Errorf("[%s] tailscale setup failed: %w", node.Host, err)
-				}
-				mu.Lock()
-				ipMap[node.Host] = tsIP
-				mu.Unlock()
-				fmt.Printf("  [%s] Tailscale ready (IP: %s)\n", node.Host, tsIP)
-				return nil
-			})
-		}
-		if err := g.Wait(); err != nil {
-			return fmt.Errorf("tailscale provisioning failed: %w", err)
-		}
-	}
-
-	// Phase 2: Validate cross-VM network connectivity.
+	// Phase 2: cross-node network connectivity.
 	fmt.Println("\n🌐 Phase 2: Validating network connectivity...")
 	if err := validateNetwork(ctx, cfg, ipMap); err != nil {
 		return err
 	}
 
-	// Collect all server IPs for TLS SANs.
-	var serverIPs []string
-	for _, node := range cfg.ServerNodes() {
-		serverIPs = append(serverIPs, ipMap[node.Host])
-	}
-
-	// Phase 3: Initialize the first control plane node.
-	fmt.Println("\n🔧 Phase 3: Bootstrapping control plane (CP-1)...")
-	initNode := cfg.InitNode()
-	initRunner := util.NewRunner(initNode)
-	initK3s := k3s.NewManagerWithVM(initRunner, initNode.GetVMName())
-
-	if err := initK3s.InitCluster(ctx, ipMap[initNode.Host], initNode.Pool, cfg.Cluster.K3sVersion, serverIPs, cfg.Cluster.MetalLB.Enabled || cfg.Cluster.Cilium.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled, cfg.Cluster.Cilium.Enabled); err != nil {
-		return fmt.Errorf("[%s] initializing K3s: %w\n\nRecovery: re-run 'cluster init' to retry", initNode.Host, err)
-	}
-
-	if err := initK3s.WaitForReady(ctx, 5*time.Minute); err != nil {
-		return err
-	}
-
-	token, err := initK3s.GetToken(ctx)
+	// Phase 3: bootstrap the first control plane.
+	initK3s, token, serverURL, err := bootstrapControlPlane(ctx, cfg, ipMap)
 	if err != nil {
-		return fmt.Errorf("[%s] getting token: %w", initNode.Host, err)
-	}
-	slog.Info("cluster initialized, token acquired", "host", initNode.Host)
-
-	serverURL := fmt.Sprintf("https://%s:6443", ipMap[initNode.Host])
-
-	// Phase 4: Join remaining server nodes.
-	servers := cfg.ServerNodes()
-	if len(servers) > 1 {
-		fmt.Println("\n🔗 Phase 4: Joining control plane nodes...")
-		for _, node := range servers[1:] {
-			runner := util.NewRunner(node)
-			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
-
-			if err := k3sMgr.JoinServer(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{ipMap[node.Host]}, cfg.Cluster.MetalLB.Enabled || cfg.Cluster.Cilium.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled, cfg.Cluster.Cilium.Enabled); err != nil {
-				return fmt.Errorf("[%s] joining as server: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
-			}
-
-			if err := k3sMgr.WaitForReady(ctx, 5*time.Minute); err != nil {
-				return err
-			}
-			slog.Info("node joined as server", "host", node.Host)
-		}
-	}
-
-	// Phase 5: Join agent nodes.
-	agents := cfg.AgentNodes()
-	if len(agents) > 0 {
-		fmt.Println("\n🔗 Phase 5: Joining worker nodes...")
-		for _, node := range agents {
-			runner := util.NewRunner(node)
-			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
-
-			if err := k3sMgr.JoinAgent(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled, cfg.Cluster.Cilium.Enabled); err != nil {
-				return fmt.Errorf("[%s] joining as agent: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
-			}
-			slog.Info("node joined as agent", "host", node.Host)
-		}
-	}
-
-	// Phase 6: Export kubeconfig.
-	fmt.Println("\n📋 Phase 6: Exporting kubeconfig...")
-	if err := exportKubeconfig(ctx, initK3s, ipMap[initNode.Host], cfg.Cluster.Kubeconfig); err != nil {
 		return err
 	}
 
-	// Phase 6.5: Bake in cluster resilience defaults (CoreDNS HA + single default
+	// Phase 4 + 5: join the remaining servers, then the agents.
+	if err := joinServerNodes(ctx, cfg, ipMap, serverURL, token); err != nil {
+		return err
+	}
+	if err := joinAgentNodes(ctx, cfg, ipMap, serverURL, token); err != nil {
+		return err
+	}
+
+	// Phase 6: export the kubeconfig.
+	fmt.Println("\n📋 Phase 6: Exporting kubeconfig...")
+	if err := exportKubeconfig(ctx, initK3s, ipMap[cfg.InitNode().Host], cfg.Cluster.Kubeconfig); err != nil {
+		return err
+	}
+
+	// Phase 6.5: bake in cluster resilience defaults (CoreDNS HA + single default
 	// StorageClass) so they are part of provisioning, not one-off live edits.
 	fmt.Println("\n⚙️  Phase 6.5: Ensuring cluster defaults (CoreDNS HA, single default StorageClass)...")
 	if err := initK3s.EnsureClusterDefaults(ctx); err != nil {
 		return fmt.Errorf("ensuring cluster defaults: %w", err)
 	}
 
-	// Phase 7: Deploy MetalLB if enabled.
-	switch {
-	case cfg.Cluster.Cilium.Enabled:
-		fmt.Println("\n🛜 Phase 7: Cilium enabled — LB-IPAM via GitOps; skipping MetalLB.")
-	case cfg.Cluster.MetalLB.Enabled && cfg.Cluster.MetalLB.IPRange != "":
-		fmt.Println("\n🛜 Phase 7: Deploying MetalLB...")
-		if err := initK3s.DeployMetalLB(ctx, cfg.Cluster.MetalLB.IPRange, cfg.Cluster.MetalLB.L2Hostnames); err != nil {
-			return fmt.Errorf("deploying metallb: %w", err)
-		}
+	// Phase 7: load balancing (MetalLB unless Cilium owns LB-IPAM).
+	if err := deployLoadBalancing(ctx, cfg, initK3s); err != nil {
+		return err
 	}
 
 	// Phase 7.5: Cilium native routing over tailscale — advertise each node's pod
@@ -245,15 +131,174 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 		}
 	}
 
-	// Phase 8: Final validation.
+	// Phase 8: final validation.
 	fmt.Println("\n✅ Phase 8: Validating cluster...")
 	out, err := initK3s.GetNodeStatus(ctx)
 	if err != nil {
-		return fmt.Errorf("[%s] getting node status: %w", initNode.Host, err)
+		return fmt.Errorf("[%s] getting node status: %w", cfg.InitNode().Host, err)
 	}
 	fmt.Println(out)
 	fmt.Printf("\n🎉 Cluster %q is ready!\n", cfg.Cluster.Name)
 
+	return nil
+}
+
+// --- Init phases (each is a named, self-contained step orchestrated by Init) ---
+
+// ensurePrereqs runs prereqs.EnsureAll on every node in parallel (Phase 0).
+func ensurePrereqs(ctx context.Context, cfg *config.Config, autoInstall bool) error {
+	fmt.Println("🔍 Phase 0: Checking prerequisites...")
+	g, gctx := errgroup.WithContext(ctx)
+	for _, node := range cfg.Nodes {
+		node := node
+		g.Go(func() error { return prereqs.EnsureAll(gctx, node, autoInstall) })
+	}
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("prerequisite check failed: %w", err)
+	}
+	return nil
+}
+
+// provisionVMs provisions every node's Lima VM in parallel and returns the
+// host → bridged-IP map (Phase 1).
+func provisionVMs(ctx context.Context, cfg *config.Config) (map[string]string, error) {
+	fmt.Println("\n📦 Phase 1: Provisioning VMs (parallel)...")
+	var mu sync.Mutex
+	ipMap := make(map[string]string)
+	total := len(cfg.Nodes)
+	g, gctx := errgroup.WithContext(ctx)
+	for i, node := range cfg.Nodes {
+		node := node
+		idx := i + 1
+		g.Go(func() error {
+			runner := util.NewRunner(node)
+			mgr := lima.NewManager(runner, node)
+			if err := mgr.Provision(gctx, cfg.Cluster.Docker, cfg.Cluster.Mounts); err != nil {
+				return fmt.Errorf("[%s] provisioning VM: %w", node.Host, err)
+			}
+			ip, err := mgr.GetBridgedIP(gctx)
+			if err != nil {
+				return fmt.Errorf("[%s] getting bridged IP: %w", node.Host, err)
+			}
+			mu.Lock()
+			ipMap[node.Host] = ip
+			mu.Unlock()
+			fmt.Printf("  [%d/%d] %s: VM ready (IP: %s)\n", idx, total, node.Host, ip)
+			slog.Info("VM provisioned", "host", node.Host, "ip", ip)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, fmt.Errorf("VM provisioning failed: %w\n\nRecovery: re-run 'cluster init' to retry", err)
+	}
+	return ipMap, nil
+}
+
+// configureTailscale brings Tailscale up on every node and rewrites ipMap to the
+// tailnet IPs (Phase 1.5). No-op when Tailscale is disabled.
+func configureTailscale(ctx context.Context, cfg *config.Config, ipMap map[string]string) error {
+	if !cfg.Cluster.Tailscale.Enabled || cfg.Cluster.Tailscale.AuthKey == "" {
+		return nil
+	}
+	fmt.Println("\n🔒 Phase 1.5: Installing and configuring Tailscale (parallel)...")
+	var mu sync.Mutex
+	g, gctx := errgroup.WithContext(ctx)
+	for _, node := range cfg.Nodes {
+		node := node
+		g.Go(func() error {
+			runner := util.NewRunner(node)
+			k3sMgr := k3s.NewManagerWithVM(runner, node.GetVMName())
+			tsIP, err := k3sMgr.InstallTailscale(gctx, cfg.Cluster.Tailscale.AuthKey)
+			if err != nil {
+				return fmt.Errorf("[%s] tailscale setup failed: %w", node.Host, err)
+			}
+			mu.Lock()
+			ipMap[node.Host] = tsIP
+			mu.Unlock()
+			fmt.Printf("  [%s] Tailscale ready (IP: %s)\n", node.Host, tsIP)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("tailscale provisioning failed: %w", err)
+	}
+	return nil
+}
+
+// bootstrapControlPlane initialises CP-1, waits for it to be ready, and returns
+// its k3s.Manager, the join token, and the server URL other nodes join against
+// (Phase 3).
+func bootstrapControlPlane(ctx context.Context, cfg *config.Config, ipMap map[string]string) (*k3s.Manager, string, string, error) {
+	var serverIPs []string
+	for _, node := range cfg.ServerNodes() {
+		serverIPs = append(serverIPs, ipMap[node.Host])
+	}
+	fmt.Println("\n🔧 Phase 3: Bootstrapping control plane (CP-1)...")
+	initNode := cfg.InitNode()
+	initK3s := k3s.NewManagerWithVM(util.NewRunner(initNode), initNode.GetVMName())
+	if err := initK3s.InitCluster(ctx, ipMap[initNode.Host], initNode.Pool, cfg.Cluster.K3sVersion, serverIPs, cfg.Cluster.MetalLB.Enabled || cfg.Cluster.Cilium.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled, cfg.Cluster.Cilium.Enabled); err != nil {
+		return nil, "", "", fmt.Errorf("[%s] initializing K3s: %w\n\nRecovery: re-run 'cluster init' to retry", initNode.Host, err)
+	}
+	if err := initK3s.WaitForReady(ctx, 5*time.Minute); err != nil {
+		return nil, "", "", err
+	}
+	token, err := initK3s.GetToken(ctx)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("[%s] getting token: %w", initNode.Host, err)
+	}
+	slog.Info("cluster initialized, token acquired", "host", initNode.Host)
+	return initK3s, token, fmt.Sprintf("https://%s:6443", ipMap[initNode.Host]), nil
+}
+
+// joinServerNodes joins every non-init server node to the control plane (Phase 4).
+func joinServerNodes(ctx context.Context, cfg *config.Config, ipMap map[string]string, serverURL, token string) error {
+	servers := cfg.ServerNodes()
+	if len(servers) <= 1 {
+		return nil
+	}
+	fmt.Println("\n🔗 Phase 4: Joining control plane nodes...")
+	for _, node := range servers[1:] {
+		k3sMgr := k3s.NewManagerWithVM(util.NewRunner(node), node.GetVMName())
+		if err := k3sMgr.JoinServer(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, []string{ipMap[node.Host]}, cfg.Cluster.MetalLB.Enabled || cfg.Cluster.Cilium.Enabled, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled, cfg.Cluster.Cilium.Enabled); err != nil {
+			return fmt.Errorf("[%s] joining as server: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
+		}
+		if err := k3sMgr.WaitForReady(ctx, 5*time.Minute); err != nil {
+			return err
+		}
+		slog.Info("node joined as server", "host", node.Host)
+	}
+	return nil
+}
+
+// joinAgentNodes joins every agent node to the control plane (Phase 5).
+func joinAgentNodes(ctx context.Context, cfg *config.Config, ipMap map[string]string, serverURL, token string) error {
+	agents := cfg.AgentNodes()
+	if len(agents) == 0 {
+		return nil
+	}
+	fmt.Println("\n🔗 Phase 5: Joining worker nodes...")
+	for _, node := range agents {
+		k3sMgr := k3s.NewManagerWithVM(util.NewRunner(node), node.GetVMName())
+		if err := k3sMgr.JoinAgent(ctx, ipMap[node.Host], serverURL, token, node.Pool, cfg.Cluster.K3sVersion, cfg.Cluster.Tailscale.Enabled, cfg.Cluster.Docker.Enabled, cfg.Cluster.Cilium.Enabled); err != nil {
+			return fmt.Errorf("[%s] joining as agent: %w\n\nRecovery: re-run 'cluster init' to retry", node.Host, err)
+		}
+		slog.Info("node joined as agent", "host", node.Host)
+	}
+	return nil
+}
+
+// deployLoadBalancing deploys MetalLB unless Cilium owns LB-IPAM via GitOps
+// (Phase 7).
+func deployLoadBalancing(ctx context.Context, cfg *config.Config, initK3s *k3s.Manager) error {
+	switch {
+	case cfg.Cluster.Cilium.Enabled:
+		fmt.Println("\n🛜 Phase 7: Cilium enabled — LB-IPAM via GitOps; skipping MetalLB.")
+	case cfg.Cluster.MetalLB.Enabled && cfg.Cluster.MetalLB.IPRange != "":
+		fmt.Println("\n🛜 Phase 7: Deploying MetalLB...")
+		if err := initK3s.DeployMetalLB(ctx, cfg.Cluster.MetalLB.IPRange, cfg.Cluster.MetalLB.L2Hostnames); err != nil {
+			return fmt.Errorf("deploying metallb: %w", err)
+		}
+	}
 	return nil
 }
 

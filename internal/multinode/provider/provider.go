@@ -72,3 +72,36 @@ func For(node config.NodeConfig, cfg *config.Config) NodeProvider {
 	}
 	return NewLimaProvider(node, cfg)
 }
+
+// ProviderSpec is the resolved, provider-facing view of a node + cluster config.
+// Providers depend on this stable contract instead of reaching into
+// config.NodeConfig / config.Config directly, so adding a config field ripples
+// only to specFor (and the providers that actually need the new field) — not to
+// every provider method.
+type ProviderSpec struct {
+	Host      string
+	Role      string
+	Pool      string
+	Kind      string
+	NodeIP    string
+	VMName    string
+	Tailscale config.TailscaleConfig
+	Docker    config.DockerConfig
+	Mounts    []config.MountConfig
+}
+
+// specFor builds the ProviderSpec for a node — the single adapter point between
+// config.* and the providers.
+func specFor(node config.NodeConfig, cfg *config.Config) ProviderSpec {
+	return ProviderSpec{
+		Host:      node.Host,
+		Role:      node.Role,
+		Pool:      node.Pool,
+		Kind:      node.GetKind(),
+		NodeIP:    node.NodeIP,
+		VMName:    node.GetVMName(),
+		Tailscale: cfg.Cluster.Tailscale,
+		Docker:    cfg.Cluster.Docker,
+		Mounts:    cfg.Cluster.Mounts,
+	}
+}
