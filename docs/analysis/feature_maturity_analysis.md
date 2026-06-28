@@ -68,6 +68,14 @@ These features handle heavy lifting and complex orchestration. They work excepti
 
 These features are either fresh off the press, rely on external tools that can be brittle, or are awaiting further iteration based on user behavior.
 
+> **Gating policy (#371):** the brittle third-party-dependent alphas — `devx cloud`
+> (local GCP/S3 emulators), `devx k8s` (zero-config k3s-in-container), `devx mock`
+> (OpenAPI mocking via Prism), and `devx mail` (local email catcher) — are gated
+> behind **`--experimental`** (or `DEVX_EXPERIMENTAL=1`) and tagged `[experimental]`
+> in `--help`, so the GA core's reliability isn't diluted by accidental use. The
+> multi-node `cluster` suite and the hybrid `bridge` are intentionally **not** gated
+> despite their tier here — they are in active use. See `cmd/experimental.go`.
+
 1.  **Multi-Node Cluster Manager / Distributed K3s (Idea 49)**
     *   *Readiness:* Newly Shipped (Alpha). Extremely ambitious. Orchestrating Lima VMs and `socket_vmnet` layer-2 bridging across physical hosts introduces significant networking complexity, firewall considerations, and cross-host auth challenges.
 2.  **Zero-Config Local Kubernetes (Idea 32)**
