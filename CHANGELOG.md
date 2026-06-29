@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.2](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.1...devx-v0.66.2) (2026-06-29)
+
+
+### Bug Fixes
+
+* **devx:** re-assert MetalLB controller HA via EnsureClusterDefaults (reconcile) ([#419](https://github.com/VitruvianSoftware/vitruvian-core/issues/419)) ([4acc3f8](https://github.com/VitruvianSoftware/vitruvian-core/commit/4acc3f84382e3a10ae4fa87e9a3b591f45af29b1))
+
 ## [0.66.1](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.0...devx-v0.66.1) (2026-06-29)
 
 
