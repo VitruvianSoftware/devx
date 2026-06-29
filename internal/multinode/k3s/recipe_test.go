@@ -52,6 +52,7 @@ func TestBuildServerInitScript(t *testing.T) {
 		"--node-name=fedora", "--node-ip=10.0.0.1", "--advertise-address=10.0.0.1",
 		"--tls-san=san1", "--tls-san=san2", "--disable servicelb",
 		"--flannel-iface=tailscale0", "--flannel-backend=none", "--disable-kube-proxy",
+		"--disable metrics-server",
 		"--node-label=pool=linux")
 	mustContainNone(t, "init script", s, "--docker", "--flannel-iface=lima0")
 }
@@ -64,7 +65,8 @@ func TestBuildServerJoinScript(t *testing.T) {
 		"INSTALL_K3S_SKIP_START=true", `K3S_TOKEN="tok"`, "--server=https://cp:6443",
 		"--node-name=mbp", "--flannel-iface=lima0", "--docker", "--tls-san=s1")
 	mustContainNone(t, "join-server script", s,
-		"INSTALL_K3S_VERSION", "--disable servicelb", "--flannel-backend=none", "--cluster-init")
+		"INSTALL_K3S_VERSION", "--disable servicelb", "--flannel-backend=none", "--cluster-init",
+		"--disable metrics-server")
 }
 
 func TestBuildAgentJoinScript_NoServerOnlyFlags(t *testing.T) {
@@ -75,5 +77,5 @@ func TestBuildAgentJoinScript_NoServerOnlyFlags(t *testing.T) {
 	// Agents must NOT carry server-only flags (the agent CLI rejects them).
 	mustContainNone(t, "agent script", s,
 		"--flannel-backend=none", "--disable-kube-proxy", "--disable-network-policy",
-		"--cluster-init", "--disable servicelb", "--docker")
+		"--cluster-init", "--disable servicelb", "--docker", "--disable metrics-server")
 }

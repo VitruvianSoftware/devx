@@ -69,6 +69,12 @@ func serverExtraArgs(disableServiceLB, useTailscale, useDocker, useCilium bool) 
 	if useCilium {
 		// k3s embeds Flannel + kube-proxy + the netpol controller; Cilium replaces all three.
 		b.WriteString(" --flannel-backend=none --disable-kube-proxy --disable-network-policy")
+		// Platform (Cilium/ArgoCD) clusters replace k3s's single-replica bundled
+		// metrics-server with the HA metrics-server gitops appset (2 replicas).
+		// Disable the built-in so the two don't fight the same kube-system Deployment
+		// and the single v1beta1.metrics.k8s.io APIService. Non-platform k3s (lima,
+		// etc.) keeps the bundled metrics-server. (useCilium is the platform signal.)
+		b.WriteString(" --disable metrics-server")
 	}
 	return b.String()
 }
