@@ -34,24 +34,29 @@ const (
 	// manifests can deterministically reference localhost:<RegistryNodePort>/<img>.
 	RegistryNodePort = 30500
 	registryName     = "registry"
+
+	// minioNamespace / minioRootSecret / minioService describe the in-cluster
+	// MinIO the registry's S3 (HA) backend talks to. minioRootSecret holds the
+	// rootUser/rootPassword the chart provisions (existingSecret: minio-root).
+	minioNamespace  = "minio"
+	minioService    = "minio-amd64"
+	minioRootSecret = "minio-root"
+	// registryBucket is the MinIO bucket holding registry blobs (declared in the
+	// minio-amd64 AppSet; also ensured idempotently here for fresh-cluster ordering).
+	registryBucket = "registry"
+	// registryS3Secret holds the S3 access/secret keys (copied from minioRootSecret)
+	// the registry pods consume via REGISTRY_STORAGE_S3_ACCESSKEY/SECRETKEY.
+	registryS3Secret = "registry-s3-creds"
 )
 
-// registryManifest deploys the in-cluster registry: a registry:2 Deployment plus
-// a NodePort Service. Nodes pull via localhost:<NodePort> (Docker's 127.0.0.0/8
-// insecure default covers it — validated on the target cluster, no per-node
-// config).
-//
-// Storage is a PersistentVolumeClaim (not emptyDir): pushed images survive a
-// registry pod restart. registryStorage picks the class per target — the off-node
-// `nfs` class (NAS-backed) when it exists, so on dev-local the registry survives a
-// node napping; otherwise the k3s built-in node-local `local-path` (single-node
-// lima, etc.). Images are re-pullable, so even on local-path a node nap just means
-// the registry waits for that node. Picking explicitly avoids depending on
-// whichever StorageClass happens to be default.
-// Because the single replica holds an RWO volume, the Deployment uses the Recreate
-// strategy — a rolling update would otherwise deadlock (the new pod can't mount a
-// volume the old pod still holds).
-const registryManifestTmpl = `apiVersion: v1
+// registryManifestPVCTmpl deploys the SINGLE-replica registry backed by a
+// ReadWriteOnce PVC. Used when MinIO is absent (single-node lima, etc.). Because
+// the single replica holds an RWO volume, the Deployment uses Recreate — a
+// rolling update would deadlock (new pod can't mount a volume the old pod holds).
+// registryStorage picks the class: off-node `nfs` when present (survives a node
+// nap), else node-local `local-path`. Images are re-pullable, so even on
+// local-path a node nap just means the registry waits for that node.
+const registryManifestPVCTmpl = `apiVersion: v1
 kind: Namespace
 metadata:
   name: devx-registry
@@ -118,14 +123,121 @@ spec:
       nodePort: 30500
 `
 
-// registryManifest renders the registry manifest for the given StorageClass and
-// PVC name.
-func registryManifest(storageClass, pvcName string) string {
-	m := strings.ReplaceAll(registryManifestTmpl, "__STORAGE_CLASS__", storageClass)
+// registryManifestS3Tmpl deploys the HA registry: 2 replicas (RollingUpdate, soft
+// hostname anti-affinity) sharing object storage in MinIO via the registry's S3
+// driver, so a node loss never takes the registry down. No PVC — the S3 backend is
+// the shared, off-node store. config.yml comes from a ConfigMap; only the S3
+// access/secret keys are injected from the registryS3Secret (so no creds in git or
+// in the ConfigMap). EnsureRegistry guarantees the bucket + the creds secret before
+// this is applied.
+const registryManifestS3Tmpl = `apiVersion: v1
+kind: Namespace
+metadata:
+  name: devx-registry
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-config
+  namespace: devx-registry
+  labels:
+    app: devx-registry
+data:
+  config.yml: |
+    version: 0.1
+    log:
+      level: info
+    http:
+      addr: :5000
+    storage:
+      delete:
+        enabled: true
+      s3:
+        regionendpoint: http://minio-amd64.minio.svc.cluster.local:9000
+        region: us-east-1
+        bucket: registry
+        forcepathstyle: true
+        secure: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: devx-registry
+  labels:
+    app: devx-registry
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: devx-registry
+  template:
+    metadata:
+      labels:
+        app: devx-registry
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: devx-registry
+      containers:
+        - name: registry
+          image: registry:2
+          ports:
+            - containerPort: 5000
+          env:
+            # S3 creds injected from the registryS3Secret (copied from minio-root);
+            # they override the (credential-free) storage.s3 block in config.yml.
+            - name: REGISTRY_STORAGE_S3_ACCESSKEY
+              valueFrom:
+                secretKeyRef:
+                  name: registry-s3-creds
+                  key: accesskey
+            - name: REGISTRY_STORAGE_S3_SECRETKEY
+              valueFrom:
+                secretKeyRef:
+                  name: registry-s3-creds
+                  key: secretkey
+          volumeMounts:
+            - name: config
+              mountPath: /etc/docker/registry
+      volumes:
+        - name: config
+          configMap:
+            name: registry-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: devx-registry
+spec:
+  type: NodePort
+  selector:
+    app: devx-registry
+  ports:
+    - port: 5000
+      targetPort: 5000
+      nodePort: 30500
+`
+
+// registryManifestPVC renders the PVC-backed manifest for the given StorageClass
+// and PVC name.
+func registryManifestPVC(storageClass, pvcName string) string {
+	m := strings.ReplaceAll(registryManifestPVCTmpl, "__STORAGE_CLASS__", storageClass)
 	return strings.ReplaceAll(m, "__PVC_NAME__", pvcName)
 }
 
-// registryStorage picks the StorageClass + PVC name for the target cluster: the
+// registryStorage picks the StorageClass + PVC name for the PVC fallback: the
 // off-node `nfs` class when present (dev-local, NAS-backed — survives a node
 // napping), otherwise the k3s built-in `local-path` (single-node lima, etc.). The
 // PVC name differs by class because a PVC's storageClassName is immutable, so a
@@ -135,6 +247,14 @@ func registryStorage(ctx context.Context, kubeconfig, kctx string) (storageClass
 		return "nfs", "registry-data-nfs"
 	}
 	return "local-path", "registry-data"
+}
+
+// minioAvailable reports whether the in-cluster MinIO (the registry's S3 HA
+// backend) is present on the target. When it is, the registry runs HA (2 replicas
+// on S3); otherwise it falls back to the single-replica PVC deployment.
+func minioAvailable(ctx context.Context, kubeconfig, kctx string) bool {
+	_, err := kubectl(ctx, kubeconfig, kctx, "-n", minioNamespace, "get", "service", minioService)
+	return err == nil
 }
 
 // LocalRegistry describes a deployed in-cluster registry and the addresses needed
@@ -161,12 +281,28 @@ func (r *LocalRegistry) PushRef(name, tag string) string {
 
 // EnsureRegistry idempotently deploys the in-cluster registry to the target
 // cluster, waits for it to become Available, and returns the addresses to push to
-// and reference it. kubeconfig and kctx target the cluster (already resolved by
-// the caller); kctx may be empty to use the current context.
+// and reference it. When MinIO is present the registry runs HA (2 replicas on S3);
+// otherwise it falls back to a single-replica PVC deployment. kubeconfig and kctx
+// target the cluster (already resolved by the caller); kctx may be empty to use the
+// current context.
 func EnsureRegistry(ctx context.Context, kubeconfig, kctx string) (*LocalRegistry, error) {
-	storageClass, pvcName := registryStorage(ctx, kubeconfig, kctx)
-	if out, err := kubectlApplyStdin(ctx, kubeconfig, kctx, registryManifest(storageClass, pvcName)); err != nil {
-		return nil, fmt.Errorf("deploying in-cluster registry (%s/%s): %w\n%s", pvcName, storageClass, err, strings.TrimSpace(out))
+	var manifest string
+	if minioAvailable(ctx, kubeconfig, kctx) {
+		// HA path: ensure the bucket + S3 creds exist before the registry pods
+		// (which crash-loop without them), then deploy the 2-replica S3 manifest.
+		if err := ensureRegistryBucket(ctx, kubeconfig, kctx); err != nil {
+			return nil, err
+		}
+		if err := ensureRegistryS3Creds(ctx, kubeconfig, kctx); err != nil {
+			return nil, err
+		}
+		manifest = registryManifestS3Tmpl
+	} else {
+		storageClass, pvcName := registryStorage(ctx, kubeconfig, kctx)
+		manifest = registryManifestPVC(storageClass, pvcName)
+	}
+	if out, err := kubectlApplyStdin(ctx, kubeconfig, kctx, manifest); err != nil {
+		return nil, fmt.Errorf("deploying in-cluster registry: %w\n%s", err, strings.TrimSpace(out))
 	}
 	if out, err := kubectl(ctx, kubeconfig, kctx, "-n", RegistryNamespace, "wait",
 		"--for=condition=Available", "deployment/"+registryName, "--timeout=120s"); err != nil {
@@ -180,6 +316,70 @@ func EnsureRegistry(ctx context.Context, kubeconfig, kctx string) (*LocalRegistr
 		PushAddr:  fmt.Sprintf("%s:%d", nodeAddr, RegistryNodePort),
 		RefPrefix: fmt.Sprintf("localhost:%d", RegistryNodePort),
 	}, nil
+}
+
+// ensureRegistryBucket idempotently creates the registry's MinIO bucket via mc
+// inside a MinIO pod (which already has the root creds in its env). Safe to run
+// repeatedly (mc mb --ignore-existing).
+func ensureRegistryBucket(ctx context.Context, kubeconfig, kctx string) error {
+	pod, err := kubectl(ctx, kubeconfig, kctx, "-n", minioNamespace, "get", "pods",
+		"-l", "app=minio", "-o", "jsonpath={.items[0].metadata.name}")
+	if err != nil {
+		return fmt.Errorf("finding a MinIO pod to ensure the registry bucket: %w\n%s", err, strings.TrimSpace(pod))
+	}
+	pod = strings.TrimSpace(pod)
+	if pod == "" {
+		return fmt.Errorf("no MinIO pod found to ensure the registry bucket")
+	}
+	mc := "mc alias set local http://localhost:9000 \"$MINIO_ROOT_USER\" \"$MINIO_ROOT_PASSWORD\" >/dev/null && " +
+		"mc mb --ignore-existing local/" + registryBucket
+	if out, err := kubectl(ctx, kubeconfig, kctx, "-n", minioNamespace, "exec", pod, "--",
+		"sh", "-c", mc); err != nil {
+		return fmt.Errorf("ensuring registry bucket %q in MinIO: %w\n%s", registryBucket, err, strings.TrimSpace(out))
+	}
+	return nil
+}
+
+// ensureRegistryS3Creds copies the MinIO root credentials into a Secret in the
+// registry namespace (keys accesskey/secretkey) for the registry's S3 driver. The
+// values are read base64-encoded from minioRootSecret and written through verbatim
+// (a Secret's `data` is base64), so plaintext never appears in a command line.
+func ensureRegistryS3Creds(ctx context.Context, kubeconfig, kctx string) error {
+	ak, err := kubectl(ctx, kubeconfig, kctx, "-n", minioNamespace, "get", "secret", minioRootSecret,
+		"-o", "jsonpath={.data.rootUser}")
+	if err != nil {
+		return fmt.Errorf("reading MinIO root user for registry S3 creds: %w\n%s", err, strings.TrimSpace(ak))
+	}
+	sk, err := kubectl(ctx, kubeconfig, kctx, "-n", minioNamespace, "get", "secret", minioRootSecret,
+		"-o", "jsonpath={.data.rootPassword}")
+	if err != nil {
+		return fmt.Errorf("reading MinIO root password for registry S3 creds: %w\n%s", err, strings.TrimSpace(sk))
+	}
+	ak, sk = strings.TrimSpace(ak), strings.TrimSpace(sk)
+	if ak == "" || sk == "" {
+		return fmt.Errorf("MinIO root creds (%s/%s) are empty; cannot build registry S3 creds", minioNamespace, minioRootSecret)
+	}
+	secret := fmt.Sprintf(`apiVersion: v1
+kind: Namespace
+metadata:
+  name: %s
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+  labels:
+    app: devx-registry
+type: Opaque
+data:
+  accesskey: %s
+  secretkey: %s
+`, RegistryNamespace, registryS3Secret, RegistryNamespace, ak, sk)
+	if out, err := kubectlApplyStdin(ctx, kubeconfig, kctx, secret); err != nil {
+		return fmt.Errorf("applying registry S3 creds secret: %w\n%s", err, strings.TrimSpace(out))
+	}
+	return nil
 }
 
 // firstNodeAddress resolves a node InternalIP reachable from the host for pushing

@@ -30,7 +30,7 @@ import (
 // with a PersistentVolumeClaim on local-path (node-local; images are re-pullable,
 // so node-pinning is acceptable — dev-local removed Longhorn).
 func TestRegistryManifest_UsesDurablePVC(t *testing.T) {
-	m := registryManifest("local-path", "registry-data")
+	m := registryManifestPVC("local-path", "registry-data")
 
 	if strings.Contains(m, "emptyDir") {
 		t.Errorf("registry manifest still uses emptyDir; images are lost on pod restart")
@@ -73,20 +73,56 @@ func TestRegistryManifest_RendersStorageClassAndPVC(t *testing.T) {
 		{"nfs", "registry-data-nfs"},
 	}
 	for _, c := range cases {
-		m := registryManifest(c.sc, c.pvc)
+		m := registryManifestPVC(c.sc, c.pvc)
 		for _, want := range []string{
 			"storageClassName: " + c.sc,
 			"name: " + c.pvc,
 			"claimName: " + c.pvc,
 		} {
 			if !strings.Contains(m, want) {
-				t.Errorf("registryManifest(%q,%q) missing %q", c.sc, c.pvc, want)
+				t.Errorf("registryManifestPVC(%q,%q) missing %q", c.sc, c.pvc, want)
 			}
 		}
 		for _, ph := range []string{"__STORAGE_CLASS__", "__PVC_NAME__"} {
 			if strings.Contains(m, ph) {
-				t.Errorf("registryManifest(%q,%q) left placeholder %q unrendered", c.sc, c.pvc, ph)
+				t.Errorf("registryManifestPVC(%q,%q) left placeholder %q unrendered", c.sc, c.pvc, ph)
 			}
+		}
+	}
+}
+
+// The S3 (HA) manifest must run 2 replicas on shared object storage with NO PVC
+// (an RWO PVC would cap it at one pod). It backs storage with the registry's S3
+// driver against MinIO and injects only the creds from the registry-s3-creds
+// Secret (no plaintext creds in the manifest).
+func TestRegistryManifestS3_IsHA(t *testing.T) {
+	m := registryManifestS3Tmpl
+
+	if !strings.Contains(m, "replicas: 2") {
+		t.Errorf("S3 registry manifest must run 2 replicas for HA")
+	}
+	if strings.Contains(m, "kind: PersistentVolumeClaim") {
+		t.Errorf("S3 registry manifest must NOT use a PVC (it caps replicas at 1)")
+	}
+	for _, want := range []string{
+		"type: RollingUpdate",
+		"podAntiAffinity",
+		"storage:",
+		"s3:",
+		"bucket: registry",
+		"REGISTRY_STORAGE_S3_ACCESSKEY",
+		"name: registry-s3-creds",
+	} {
+		if !strings.Contains(m, want) {
+			t.Errorf("S3 registry manifest missing %q", want)
+		}
+	}
+	// Creds come from the Secret, never inline in the manifest.
+	for _, leak := range []string{"accesskey:", "secretkey:"} {
+		// the env names contain ACCESSKEY/SECRETKEY (upper); guard against a
+		// lowercase inline value key sneaking into the rendered manifest.
+		if strings.Contains(m, "\n        "+leak) {
+			t.Errorf("S3 registry manifest appears to inline creds (%q)", leak)
 		}
 	}
 }
