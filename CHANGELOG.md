@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.1](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.0...devx-v0.66.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* **devx/multinode:** converge stock Fedora hosts (SELinux + iptables) on native join ([#404](https://github.com/VitruvianSoftware/vitruvian-core/issues/404)) ([fa11683](https://github.com/VitruvianSoftware/vitruvian-core/commit/fa116835e032aabe92d3ee9f945549c3ffc80137)), closes [#403](https://github.com/VitruvianSoftware/vitruvian-core/issues/403)
+
 ## [0.66.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.65.0...devx-v0.66.0) (2026-06-28)
 
 
