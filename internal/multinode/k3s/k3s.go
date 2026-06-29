@@ -163,9 +163,10 @@ func (m *Manager) DeployMetalLB(ctx context.Context, ipRange string, l2Hostnames
 	// HA: the upstream manifest ships the controller as a single replica with no
 	// anti-affinity, making it a single point of failure for LoadBalancer IP
 	// allocation (existing VIPs keep working via the speaker DaemonSet, but new or
-	// changed Services stall while it is down). Apply the same HA patch
-	// EnsureClusterDefaults re-asserts (see metallbControllerHAPatch) so a fresh
-	// install is HA from the start. Idempotent; re-applied every run.
+	// changed Services stall while it is down). Patch it to 2 replicas with soft
+	// anti-affinity (see metallbControllerHAPatch). Idempotent; re-applied every run.
+	// NOTE: MetalLB is legacy — dev-local moved LoadBalancer IPAM/L2 to Cilium
+	// LB-IPAM (GitOps); this path only runs when metallb.enabled && !cilium.enabled.
 	fmt.Printf("  [%s] Patching MetalLB controller for HA (2 replicas)...\n", m.runner.Host)
 	_, err = m.sudo(ctx, fmt.Sprintf("k3s kubectl -n metallb-system patch deployment controller --type=merge -p '%s'", metallbControllerHAPatch))
 	if err != nil {
@@ -244,20 +245,13 @@ const metallbControllerHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"aff
 // `cluster apply`, instead of living as one-off live edits:
 //
 //   - CoreDNS → 2 replicas + required hostname anti-affinity (see corednsHAPatch).
-//   - MetalLB controller → 2 replicas + soft hostname anti-affinity (see
-//     metallbControllerHAPatch), but ONLY when MetalLB is installed — guarded so
-//     Cilium-LB-IPAM clusters (no metallb-system) are a clean no-op. This re-asserts
-//     the HA patch DeployMetalLB applies at install time, so `cluster reconcile`
-//     converges it (and a MetalLB upgrade re-applying metallb-native.yaml can't
-//     silently revert the controller to a single replica).
 //   - Exactly one default StorageClass: k3s marks its bundled local-path as
 //     default, but Longhorn (installed by the Pulumi dev-local stack) is the real
 //     default. Two defaults is invalid, so local-path is un-defaulted here.
 //
-// It is idempotent and safe to re-run: the CoreDNS/MetalLB patches are a no-op
-// once applied, and the MetalLB and StorageClass steps are guarded so they do
-// nothing if metallb-system / local-path are absent (local-path is never deleted —
-// workloads may still request it explicitly).
+// It is idempotent and safe to re-run: the CoreDNS patch is a no-op once applied,
+// and the StorageClass step is guarded so it does nothing if local-path is absent
+// (it never deletes local-path — workloads may still request it explicitly).
 //
 // Note on durability: a plain k3s restart preserves these (k3s only re-applies a
 // bundled addon when its on-disk manifest changes), but a k3s *version upgrade*
@@ -276,20 +270,6 @@ func (m *Manager) EnsureClusterDefaults(ctx context.Context) error {
 	)
 	if _, err := m.sudo(ctx, corednsCmd); err != nil {
 		return fmt.Errorf("patching coredns for HA: %w", err)
-	}
-
-	// MetalLB controller HA. Guarded so a cluster without MetalLB (e.g. Cilium owns
-	// LB-IPAM) is a clean no-op — this only ever patches an existing controller, it
-	// never installs MetalLB. Delivered via base64 + --patch-file like CoreDNS.
-	fmt.Printf("  [%s] Ensuring MetalLB controller HA (2 replicas, if installed)...\n", m.runner.Host)
-	mlEnc := base64.StdEncoding.EncodeToString([]byte(metallbControllerHAPatch))
-	metallbCmd := fmt.Sprintf(
-		"if k3s kubectl -n metallb-system get deployment controller >/dev/null 2>&1; then "+
-			"echo '%s' | base64 -d | k3s kubectl -n metallb-system patch deployment controller --type=merge --patch-file=/dev/stdin; fi",
-		mlEnc,
-	)
-	if _, err := m.sudo(ctx, metallbCmd); err != nil {
-		return fmt.Errorf("patching metallb controller for HA: %w", err)
 	}
 
 	// Single default StorageClass: un-default local-path if present. Guarded so a

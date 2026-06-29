@@ -99,53 +99,6 @@ func TestEnsureClusterDefaults_PatchesCoreDNSAndStorageClass(t *testing.T) {
 	}
 }
 
-// EnsureClusterDefaults must also re-assert MetalLB controller HA so the patch
-// DeployMetalLB applies at install time survives a MetalLB upgrade (which
-// re-applies metallb-native.yaml and would otherwise revert the controller to a
-// single replica). It must be GUARDED on metallb-system existing so a Cilium-only
-// (no MetalLB) cluster is a clean no-op, and must never install MetalLB itself.
-func TestEnsureClusterDefaults_PatchesMetalLBControllerGuarded(t *testing.T) {
-	var got []string
-	m := NewManagerWithExec(remote.NewRunner("cp-1"), func(ctx context.Context, cmd string) (string, error) {
-		got = append(got, cmd)
-		return "", nil
-	})
-
-	if err := m.EnsureClusterDefaults(context.Background()); err != nil {
-		t.Fatalf("EnsureClusterDefaults: %v", err)
-	}
-
-	joined := strings.Join(got, "\n")
-
-	// The controller patch must be guarded behind an existence check on the
-	// metallb-system controller Deployment (clean no-op when MetalLB is absent).
-	if !strings.Contains(joined, "metallb-system get deployment controller") {
-		t.Errorf("expected a guard checking metallb-system controller exists; got:\n%s", joined)
-	}
-	if !strings.Contains(joined, "patch deployment controller") {
-		t.Errorf("expected a metallb controller deployment patch; got:\n%s", joined)
-	}
-	// Must only ever patch — never apply/install MetalLB from this path.
-	if strings.Contains(joined, "metallb-native.yaml") {
-		t.Errorf("EnsureClusterDefaults must not install MetalLB, only patch it; got:\n%s", joined)
-	}
-
-	// The decoded patch must carry 2 replicas and a SOFT (preferred) hostname
-	// pod-anti-affinity keyed on the controller component.
-	patches := strings.Join(b64Payloads(got), "\n")
-	for _, want := range []string{
-		`"replicas":2`,
-		"podAntiAffinity",
-		"preferredDuringSchedulingIgnoredDuringExecution",
-		"kubernetes.io/hostname",
-		`"component":"controller"`,
-	} {
-		if !strings.Contains(patches, want) {
-			t.Errorf("metallb controller patch missing %q; decoded payloads:\n%s", want, patches)
-		}
-	}
-}
-
 // DeployMetalLB with a non-empty l2Hostnames list must pin the L2Advertisement to
 // those stable nodes via spec.nodeSelectors (one matchLabels per hostname). Without
 // a nodeSelector the speaker VIP can flap onto a high-latency Mac node.
