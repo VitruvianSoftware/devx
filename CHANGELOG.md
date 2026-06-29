@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.65.0...devx-v0.66.0) (2026-06-28)
+
+
+### Features
+
+* **devx:** gate Tier-3 alpha commands behind --experimental ([#371](https://github.com/VitruvianSoftware/vitruvian-core/issues/371)) ([#378](https://github.com/VitruvianSoftware/vitruvian-core/issues/378)) ([1c8857e](https://github.com/VitruvianSoftware/vitruvian-core/commit/1c8857e2a61e5351e6e8d485efd9dbdb11243e61))
+
+
+### Bug Fixes
+
+* **multinode:** cluster-ops correctness — native reconcile, locking, Apply rollback, loud convergence ([#372](https://github.com/VitruvianSoftware/vitruvian-core/issues/372) [#366](https://github.com/VitruvianSoftware/vitruvian-core/issues/366) [#365](https://github.com/VitruvianSoftware/vitruvian-core/issues/365)) ([#374](https://github.com/VitruvianSoftware/vitruvian-core/issues/374)) ([355044f](https://github.com/VitruvianSoftware/vitruvian-core/commit/355044f499d31e8933838b558fb8f203b2e9039c))
+
 ## [0.65.0](https://github.com/VitruvianSoftware/devx/compare/v0.64.0...v0.65.0) (2026-06-13)
 
 
