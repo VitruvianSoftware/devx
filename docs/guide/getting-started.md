@@ -41,7 +41,11 @@ If multiple are found, you will be prompted to choose. You can override this beh
 ### From Homebrew (recommended for macOS/Linux)
 
 ```bash
-brew install vitruviansoftware/tap/devx
+# Trust our tap once: newer Homebrew blocks untrusted third-party taps
+# (without this, brew upgrade devx silently does nothing).
+brew tap vitruviansoftware/tap
+brew trust vitruviansoftware/tap
+brew install devx
 ```
 
 ### From GitHub Releases

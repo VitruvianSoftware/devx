@@ -65,8 +65,14 @@ We go far beyond basic container networking by natively integrating the premium 
 ### From Homebrew (recommended for macOS/Linux)
 
 ```bash
-brew install vitruviansoftware/tap/devx
+# Trust our tap once: newer Homebrew refuses to load (and silently skips
+# brew upgrade for) formulae from untrusted third-party taps.
+brew tap vitruviansoftware/tap
+brew trust vitruviansoftware/tap
+brew install devx
 ```
+
+> **Already installed but stuck on an old version?** Homebrew silently skips `brew upgrade` / `brew outdated` for untrusted taps, so `devx` can freeze on an old release. Run `brew trust vitruviansoftware/tap && brew upgrade devx` to unstick it.
 
 ### From Releases
 
