@@ -160,6 +160,20 @@ func (m *Manager) DeployMetalLB(ctx context.Context, ipRange string, l2Hostnames
 		return fmt.Errorf("applying metallb manifests: %w", err)
 	}
 
+	// HA: the upstream manifest ships the controller as a single replica with no
+	// anti-affinity, making it a single point of failure for LoadBalancer IP
+	// allocation (existing VIPs keep working via the speaker DaemonSet, but new or
+	// changed Services stall while it is down). The controller is leader-elected,
+	// so run 2 replicas — one active, one hot standby — spread across nodes with
+	// soft hostname anti-affinity so a single node loss cannot take both. Patched
+	// post-apply (re-applied every run; the merge patch is idempotent).
+	fmt.Printf("  [%s] Patching MetalLB controller for HA (2 replicas)...\n", m.runner.Host)
+	metallbHAPatch := `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"podAntiAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"weight":100,"podAffinityTerm":{"topologyKey":"kubernetes.io/hostname","labelSelector":{"matchLabels":{"component":"controller"}}}}]}}}}}}`
+	_, err = m.sudo(ctx, fmt.Sprintf("k3s kubectl -n metallb-system patch deployment controller --type=merge -p '%s'", metallbHAPatch))
+	if err != nil {
+		slog.Warn("failed to patch metallb controller for HA, continuing with single replica", "error", err)
+	}
+
 	fmt.Printf("  [%s] Waiting for MetalLB controller to be ready...\n", m.runner.Host)
 	// Give it a moment to create the pods
 	time.Sleep(5 * time.Second)
