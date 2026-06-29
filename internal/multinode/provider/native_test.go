@@ -93,6 +93,33 @@ func TestNative_EnsureRuntime_EnforcesAcceptRoutes(t *testing.T) {
 	}
 }
 
+func TestNative_EnsureRuntime_ConvergesStockFedora(t *testing.T) {
+	// #403: the install skips the k3s-selinux RPM, so a STOCK Fedora host (SELinux
+	// enforcing + nft iptables — the default, and what an in-place upgrade resets to)
+	// breaks: systemd can't exec the k3s binary (203/EXEC Permission denied) and
+	// iptables-restore fails ("COMMIT expected at line N"). EnsureRuntime must converge
+	// the host to permissive SELinux + the iptables-legacy backend so the common case
+	// (a freshly-installed or upgraded node) joins without hand-holding.
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
+		"tailscale ip -4":       "100.86.106.117",
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	for _, want := range []string{
+		"setenforce 0",       // SELinux permissive at runtime
+		"SELINUX=permissive", // ...persisted across reboot
+		"iptables-legacy",    // install the legacy backend
+		"alternatives --set iptables /usr/sbin/iptables-legacy", // ...and select it
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("EnsureRuntime must converge stock Fedora: missing %q in:\n%s", want, joined)
+		}
+	}
+}
+
 func TestNative_EnsureRuntime_NodeIPOverride(t *testing.T) {
 	p, _ := nativeWithRunner(nil)
 	p.spec.NodeIP = "10.0.0.9"

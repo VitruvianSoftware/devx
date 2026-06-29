@@ -122,6 +122,25 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 	if _, err := p.run(ctx, depInstallCmd(pm, append(append([]string{}, k3sDeps...), iscsiPkg(pm)))); err != nil {
 		return fmt.Errorf("[%s] installing deps: %w", p.spec.Host, err)
 	}
+	// SELinux: the K3s install skips the k3s-selinux RPM (INSTALL_K3S_SKIP_SELINUX_RPM
+	// in installScript), so on a STOCK enforcing host systemd cannot exec the freshly
+	// downloaded k3s binary (labeled user_tmp_t) → "Permission denied" (203/EXEC). Make
+	// SELinux permissive at runtime AND persist it, matching the skip-RPM intent. Both
+	// are idempotent: setenforce errors when SELinux is already disabled/permissive, and
+	// the sed only rewrites a still-enforcing config. Best-effort — a stuck SELinux
+	// surfaces loudly at the post-join readiness poll, not silently. (#403)
+	_, _ = p.run(ctx, "setenforce 0 2>/dev/null || true; "+
+		"if [ -f /etc/selinux/config ]; then sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config; fi")
+	// iptables backend: on Fedora's default nft backend, K3s's iptables-restore
+	// mis-parses the host ruleset ("iptables-restore: COMMIT expected at line N") and
+	// the agent dies at startup. Install the legacy backend and select it. Scoped to the
+	// Fedora package managers (the `alternatives` tool and the package name are
+	// RHEL-family); idempotent and a no-op where legacy is already active. (#403)
+	if pm == "rpm-ostree" || pm == "dnf" {
+		_, _ = p.run(ctx, depInstallCmd(pm, []string{"iptables-legacy"}))
+		_, _ = p.run(ctx, "alternatives --set iptables /usr/sbin/iptables-legacy 2>/dev/null || true; "+
+			"alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true")
+	}
 	// Longhorn needs the iscsid daemon and the iscsi_tcp module. Persist the
 	// module via modules-load.d so it auto-loads after a reboot (a live modprobe
 	// alone is lost — Longhorn then can't attach volumes on the rebooted node).
