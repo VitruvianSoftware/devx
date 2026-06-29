@@ -111,6 +111,41 @@ nodes:
 	}
 }
 
+// LBIPRange / LBL2Hostnames must prefer the backend-neutral loadBalancer.* fields
+// and fall back to the legacy metallb.* fields — so existing configs keep working
+// and a Cilium-LB-IPAM cluster can drop the metallb block entirely while still
+// getting its VIPs advertised over tailscale.
+func TestLBResolvers_PreferLoadBalancerFallBackToMetalLB(t *testing.T) {
+	// Neutral fields set → used; legacy metallb fields ignored.
+	neutral := ClusterConfig{
+		LoadBalancer: LoadBalancerConfig{IPRange: "10.0.0.1-10.0.0.9", L2Hostnames: []string{"a"}},
+		MetalLB:      MetalLBConfig{IPRange: "10.9.9.1-10.9.9.9", L2Hostnames: []string{"z"}},
+	}
+	if got := neutral.LBIPRange(); got != "10.0.0.1-10.0.0.9" {
+		t.Errorf("LBIPRange neutral = %q, want loadBalancer.ipRange", got)
+	}
+	if got := neutral.LBL2Hostnames(); len(got) != 1 || got[0] != "a" {
+		t.Errorf("LBL2Hostnames neutral = %v, want [a]", got)
+	}
+
+	// Only legacy metallb fields set → fall back to them.
+	legacy := ClusterConfig{MetalLB: MetalLBConfig{IPRange: "10.9.9.1-10.9.9.9", L2Hostnames: []string{"z"}}}
+	if got := legacy.LBIPRange(); got != "10.9.9.1-10.9.9.9" {
+		t.Errorf("LBIPRange fallback = %q, want metallb.ipRange", got)
+	}
+	if got := legacy.LBL2Hostnames(); len(got) != 1 || got[0] != "z" {
+		t.Errorf("LBL2Hostnames fallback = %v, want [z]", got)
+	}
+
+	// Nothing set → empty / nil.
+	if got := (ClusterConfig{}).LBIPRange(); got != "" {
+		t.Errorf("LBIPRange empty = %q, want empty", got)
+	}
+	if got := (ClusterConfig{}).LBL2Hostnames(); len(got) != 0 {
+		t.Errorf("LBL2Hostnames empty = %v, want none", got)
+	}
+}
+
 func TestLoad_FileNotFound(t *testing.T) {
 	_, err := Load("/nonexistent/path/config.yaml")
 	if err == nil {

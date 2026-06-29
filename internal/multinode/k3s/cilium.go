@@ -66,9 +66,10 @@ func (m *Manager) AdvertiseNodeRoutes(ctx context.Context, podCIDR string, extra
 	return nil
 }
 
-// LBRangeCIDR derives the /24 subnet carrying a MetalLB IP range so the LB IPs
-// can be advertised as a single tailnet subnet route. It accepts the range in
-// any of the forms MetalLB allows: an explicit CIDR ("10.44.86.0/24"), a dashed
+// LBRangeCIDR derives the /24 subnet carrying a LoadBalancer IP range (MetalLB or
+// Cilium LB-IPAM) so the LB VIPs can be advertised as a single tailnet subnet
+// route. It accepts the range in any of the forms MetalLB allows: an explicit
+// CIDR ("10.44.86.0/24"), a dashed
 // range with full endpoints ("10.44.86.210-10.44.86.215") or a bare-suffix
 // endpoint ("10.44.86.210-215"), or a single IP ("10.44.86.210"). The host octet
 // is always zeroed to a /24. An empty input yields an empty string.

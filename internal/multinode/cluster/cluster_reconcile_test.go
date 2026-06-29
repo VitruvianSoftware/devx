@@ -39,8 +39,8 @@ func TestNodePackagesIncludesSocat(t *testing.T) {
 
 func TestCiliumExtraRoutes(t *testing.T) {
 	// Cilium native routing over tailscale: every node advertises its pod CIDR,
-	// and the stable L2Hostnames nodes ALSO advertise the MetalLB LB range (the
-	// /24 covering the ipRange) so the LB IPs are tailnet-reachable.
+	// and the stable L2 nodes ALSO advertise the LoadBalancer /24 so the LB VIPs are
+	// tailnet-reachable. Legacy metallb.* fields are honoured via the LB resolvers.
 	cfg := &config.Config{}
 	cfg.Cluster.MetalLB.IPRange = "10.44.86.210-10.44.86.215"
 	cfg.Cluster.MetalLB.L2Hostnames = []string{"fedora", "nuc9"}
@@ -56,11 +56,23 @@ func TestCiliumExtraRoutes(t *testing.T) {
 		t.Errorf("ciliumExtraRoutes(james-mbp) = %v, want none", got)
 	}
 
-	// No MetalLB range => no LB route even for an L2 node.
+	// No LB range => no LB route even for an L2 node.
 	cfg2 := &config.Config{}
 	cfg2.Cluster.MetalLB.L2Hostnames = []string{"fedora"}
 	if got := ciliumExtraRoutes("fedora", cfg2); len(got) != 0 {
 		t.Errorf("ciliumExtraRoutes with no ipRange = %v, want none", got)
+	}
+
+	// Backend-neutral config (Cilium LB-IPAM, no metallb block): the LB range +
+	// L2 nodes come from cluster.loadBalancer, and the route still advertises.
+	cfg3 := &config.Config{}
+	cfg3.Cluster.LoadBalancer.IPRange = "10.44.86.210-10.44.86.215"
+	cfg3.Cluster.LoadBalancer.L2Hostnames = []string{"fedora", "nuc9i5"}
+	if got := ciliumExtraRoutes("nuc9i5", cfg3); len(got) != 1 || got[0] != "10.44.86.0/24" {
+		t.Errorf("ciliumExtraRoutes(nuc9i5, loadBalancer.*) = %v, want [10.44.86.0/24]", got)
+	}
+	if got := ciliumExtraRoutes("james-mbp", cfg3); len(got) != 0 {
+		t.Errorf("ciliumExtraRoutes(james-mbp, loadBalancer.*) = %v, want none", got)
 	}
 }
 

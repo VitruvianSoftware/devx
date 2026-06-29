@@ -38,15 +38,16 @@ type Config struct {
 
 // ClusterConfig holds cluster-wide settings.
 type ClusterConfig struct {
-	Name       string          `yaml:"name"`
-	K3sVersion string          `yaml:"k3sVersion"`
-	Kubeconfig string          `yaml:"kubeconfig"`
-	MetalLB    MetalLBConfig   `yaml:"metallb"`
-	Cilium     CiliumConfig    `yaml:"cilium"`
-	Tailscale  TailscaleConfig `yaml:"tailscale"`
-	Docker     DockerConfig    `yaml:"docker"`
-	Mounts     []MountConfig   `yaml:"mounts"`
-	USB        USBConfig       `yaml:"usb"`
+	Name         string             `yaml:"name"`
+	K3sVersion   string             `yaml:"k3sVersion"`
+	Kubeconfig   string             `yaml:"kubeconfig"`
+	MetalLB      MetalLBConfig      `yaml:"metallb"`
+	LoadBalancer LoadBalancerConfig `yaml:"loadBalancer"`
+	Cilium       CiliumConfig       `yaml:"cilium"`
+	Tailscale    TailscaleConfig    `yaml:"tailscale"`
+	Docker       DockerConfig       `yaml:"docker"`
+	Mounts       []MountConfig      `yaml:"mounts"`
+	USB          USBConfig          `yaml:"usb"`
 }
 
 // USBConfig holds defaults for `devx cluster usb`, which builds a GPT Fedora
@@ -84,7 +85,48 @@ type MetalLBConfig struct {
 	// per-hostname nodeSelector (kubernetes.io/hostname). Empty = advertise from
 	// all nodes (default MetalLB behaviour). Pinning stops the speaker VIP from
 	// flapping onto high-latency Mac nodes.
+	//
+	// Legacy: prefer the backend-neutral cluster.loadBalancer.{ipRange,l2Hostnames}.
+	// IPRange and L2Hostnames here remain a supported fallback (see
+	// ClusterConfig.LBIPRange / LBL2Hostnames) so existing configs keep working.
+	// (Not marked `Deprecated:` on purpose — the resolvers and their tests still
+	// read these fields intentionally.)
 	L2Hostnames []string `yaml:"l2Hostnames"`
+}
+
+// LoadBalancerConfig holds backend-neutral LoadBalancer settings shared by BOTH
+// the MetalLB path and Cilium LB-IPAM: the VIP range and the stable nodes that
+// advertise it over the tailnet (L2). It supersedes the metallb-specific
+// ipRange/l2Hostnames, so a Cilium-LB-IPAM cluster no longer needs a metallb
+// block just to get its VIPs tailnet-reachable. The legacy metallb fields are
+// still honoured as a fallback (see LBIPRange / LBL2Hostnames).
+type LoadBalancerConfig struct {
+	// IPRange is the LoadBalancer VIP range (any MetalLB-style form: CIDR, dashed
+	// range, bare-suffix range, or single IP). Used both to configure the chosen
+	// LB backend and to derive the /24 tailnet subnet route for the VIPs.
+	IPRange string `yaml:"ipRange"`
+	// L2Hostnames are the stable nodes that advertise the LB range over the
+	// tailnet (and, for MetalLB, pin the L2Advertisement). Empty = no pinning.
+	L2Hostnames []string `yaml:"l2Hostnames"`
+}
+
+// LBIPRange returns the LoadBalancer VIP range, preferring the backend-neutral
+// cluster.loadBalancer.ipRange and falling back to the legacy metallb.ipRange.
+func (c ClusterConfig) LBIPRange() string {
+	if c.LoadBalancer.IPRange != "" {
+		return c.LoadBalancer.IPRange
+	}
+	return c.MetalLB.IPRange
+}
+
+// LBL2Hostnames returns the stable L2-advertising nodes, preferring the
+// backend-neutral cluster.loadBalancer.l2Hostnames and falling back to the legacy
+// metallb.l2Hostnames.
+func (c ClusterConfig) LBL2Hostnames() []string {
+	if len(c.LoadBalancer.L2Hostnames) > 0 {
+		return c.LoadBalancer.L2Hostnames
+	}
+	return c.MetalLB.L2Hostnames
 }
 
 // DockerConfig holds configuration for Docker runtime integration.

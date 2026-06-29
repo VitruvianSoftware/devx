@@ -293,9 +293,9 @@ func deployLoadBalancing(ctx context.Context, cfg *config.Config, initK3s *k3s.M
 	switch {
 	case cfg.Cluster.Cilium.Enabled:
 		fmt.Println("\n🛜 Phase 7: Cilium enabled — LB-IPAM via GitOps; skipping MetalLB.")
-	case cfg.Cluster.MetalLB.Enabled && cfg.Cluster.MetalLB.IPRange != "":
+	case cfg.Cluster.MetalLB.Enabled && cfg.Cluster.LBIPRange() != "":
 		fmt.Println("\n🛜 Phase 7: Deploying MetalLB...")
-		if err := initK3s.DeployMetalLB(ctx, cfg.Cluster.MetalLB.IPRange, cfg.Cluster.MetalLB.L2Hostnames); err != nil {
+		if err := initK3s.DeployMetalLB(ctx, cfg.Cluster.LBIPRange(), cfg.Cluster.LBL2Hostnames()); err != nil {
 			return fmt.Errorf("deploying metallb: %w", err)
 		}
 	}
@@ -484,16 +484,17 @@ func reconcileNodes(ctx context.Context, cfg *config.Config) error {
 
 // ciliumExtraRoutes returns the extra tailnet subnet routes a node should
 // advertise (beyond its own pod CIDR) under Cilium native routing. The stable
-// L2 nodes (cfg.Cluster.MetalLB.L2Hostnames) additionally advertise the /24
-// covering the MetalLB IP range, so the LB IPs are tailnet-reachable; all other
-// nodes advertise only their pod CIDR (empty extras here). Returns nil when the
-// node is not an L2 node or no MetalLB range is configured.
+// L2 nodes (cfg.Cluster.LBL2Hostnames) additionally advertise the /24 covering
+// the LoadBalancer IP range, so the LB VIPs are tailnet-reachable regardless of
+// backend (MetalLB or Cilium LB-IPAM); all other nodes advertise only their pod
+// CIDR (empty extras here). Returns nil when the node is not an L2 node or no LB
+// range is configured.
 func ciliumExtraRoutes(host string, cfg *config.Config) []string {
-	lbCIDR := k3s.LBRangeCIDR(cfg.Cluster.MetalLB.IPRange)
+	lbCIDR := k3s.LBRangeCIDR(cfg.Cluster.LBIPRange())
 	if lbCIDR == "" {
 		return nil
 	}
-	for _, h := range cfg.Cluster.MetalLB.L2Hostnames {
+	for _, h := range cfg.Cluster.LBL2Hostnames() {
 		if h == host {
 			return []string{lbCIDR}
 		}

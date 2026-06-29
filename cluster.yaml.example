@@ -71,19 +71,32 @@ cluster:
     #   writable: false
 
 
-  # MetalLB provides LoadBalancer services on bare-metal/Lima setups.
-  # The ipRange must be reachable on the LAN your nodes share — pick a
-  # block outside your DHCP server's allocation pool.
+  # Backend-neutral LoadBalancer settings, shared by BOTH the MetalLB path and
+  # Cilium LB-IPAM. The ipRange must be reachable on the LAN your nodes share —
+  # pick a block outside your DHCP server's allocation pool. l2Hostnames (optional)
+  # pins L2/ARP advertisement to stable nodes and is also the set of nodes that
+  # advertise the LB /24 over tailscale. Prefer this over the legacy metallb.ipRange
+  # / metallb.l2Hostnames below (which are still honoured as a fallback).
+  loadBalancer:
+    ipRange: 192.168.1.240-192.168.1.250
+    # l2Hostnames:
+    #   - node-a
+    #   - node-b
+
+  # MetalLB provides LoadBalancer services on bare-metal/Lima setups. Set
+  # enabled: true to install it (it reads loadBalancer.ipRange above; legacy
+  # metallb.ipRange/l2Hostnames still work as a fallback). Mutually exclusive with
+  # Cilium LB-IPAM — see cilium below.
   metallb:
     enabled: true
-    ipRange: 192.168.1.240-192.168.1.250
 
   # Cilium CNI. When enabled, k3s ships with Flannel, kube-proxy, the network
   # policy controller, and servicelb all disabled — Cilium replaces them and
-  # provides LoadBalancer IPs via LB-IPAM (configured in GitOps, not here).
-  # Mutually exclusive with MetalLB: with cilium.enabled the MetalLB phase is
-  # skipped. The version below is informational; the Helm chart pin lives in
-  # GitOps.
+  # provides LoadBalancer IPs via LB-IPAM (CiliumLoadBalancerIPPool +
+  # CiliumL2AnnouncementPolicy, configured in GitOps, not here). Mutually exclusive
+  # with MetalLB: with cilium.enabled the MetalLB phase is skipped, but
+  # loadBalancer.ipRange/l2Hostnames are still used to advertise the LB /24 over
+  # tailscale. The version below is informational; the Helm chart pin lives in GitOps.
   cilium:
     enabled: false
     version: "1.17.17"
