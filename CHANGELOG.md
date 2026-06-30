@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.67.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.3...devx-v0.67.0) (2026-06-30)
+
+
+### Features
+
+* **devx/multinode:** per-node dataDir to relocate k3s onto a larger volume ([#450](https://github.com/VitruvianSoftware/vitruvian-core/issues/450)) ([d11f44d](https://github.com/VitruvianSoftware/vitruvian-core/commit/d11f44d1741dcfb43c7acc0797b6607de3efd746))
+* **devx/multinode:** steer local-path PVs to dataDir + symlink kubelet for CSI ([#452](https://github.com/VitruvianSoftware/vitruvian-core/issues/452)) ([17780ee](https://github.com/VitruvianSoftware/vitruvian-core/commit/17780ee99b09cc9368d222ca83cfe830dece0f73))
+
 ## [0.66.3](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.2...devx-v0.66.3) (2026-06-30)
 
 
