@@ -199,6 +199,41 @@ func TestNative_InstallServer_Recipe(t *testing.T) {
 	}
 }
 
+func TestNative_InstallScript_DataDir(t *testing.T) {
+	// A node with dataDir relocates k3s's whole data tree (containerd + local-path
+	// storage via --data-dir) AND the kubelet root-dir (which is what the node reports
+	// as ephemeral-storage) onto that volume — for hosts whose default partitioning
+	// starves the k3s root, e.g. a repurposed Fedora Workstation with a tiny / and a
+	// large /home. Both server and agent recipes must carry the flags.
+	p := NewNativeProvider(config.NodeConfig{
+		Host: "nuc9i5", Kind: "native", Role: "agent", Pool: "nuc-worker-1",
+		DataDir: "/home/k3s",
+	}, &config.Config{})
+	o := JoinOpts{NodeIP: "100.97.82.16", ServerURL: "https://cp:6443", Token: "tok", Pool: "nuc-worker-1"}
+	for _, role := range []string{"agent", "server"} {
+		s := p.installScript(role, o)
+		for _, want := range []string{"--data-dir=/home/k3s", "--kubelet-arg=root-dir=/home/k3s/kubelet"} {
+			if !strings.Contains(s, want) {
+				t.Errorf("%s installScript with dataDir missing %q in:\n%s", role, want, s)
+			}
+		}
+	}
+}
+
+func TestNative_InstallScript_NoDataDir(t *testing.T) {
+	// Omitted dataDir → no relocation flags (k3s keeps its default /var/lib/rancher/k3s).
+	p, _ := nativeWithRunner(nil) // fedora node, DataDir unset
+	o := JoinOpts{NodeIP: "1.2.3.4", ServerURL: "https://cp:6443", Token: "t", Pool: "linux"}
+	for _, role := range []string{"agent", "server"} {
+		s := p.installScript(role, o)
+		for _, bad := range []string{"--data-dir", "root-dir"} {
+			if strings.Contains(s, bad) {
+				t.Errorf("%s installScript without dataDir must not contain %q in:\n%s", role, bad, s)
+			}
+		}
+	}
+}
+
 func TestNative_DepInstall_PackageManagers(t *testing.T) {
 	cases := map[string]string{
 		"rpm-ostree": "rpm-ostree install --apply-live",

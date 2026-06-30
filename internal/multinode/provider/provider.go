@@ -84,6 +84,7 @@ type ProviderSpec struct {
 	Pool      string
 	Kind      string
 	NodeIP    string
+	DataDir   string
 	VMName    string
 	Tailscale config.TailscaleConfig
 	Docker    config.DockerConfig
@@ -99,6 +100,7 @@ func specFor(node config.NodeConfig, cfg *config.Config) ProviderSpec {
 		Pool:      node.Pool,
 		Kind:      node.GetKind(),
 		NodeIP:    node.NodeIP,
+		DataDir:   node.DataDir,
 		VMName:    node.GetVMName(),
 		Tailscale: cfg.Cluster.Tailscale,
 		Docker:    cfg.Cluster.Docker,

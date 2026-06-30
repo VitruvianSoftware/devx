@@ -247,6 +247,15 @@ func (p *NativeProvider) installScript(role string, o JoinOpts) string {
 		flannel = " --flannel-iface=tailscale0"
 	}
 	common := fmt.Sprintf("%sINSTALL_K3S_SKIP_SELINUX_RPM=true K3S_TOKEN=%q", verEnv, o.Token)
+	// dataDir relocates k3s's data-dir (etcd/containerd/local-path storage) AND the
+	// kubelet root-dir (the node's reported ephemeral-storage) onto spec.DataDir. Used
+	// for native hosts whose / is too small for the cluster while the bulk of the disk
+	// sits on a separate volume (e.g. a repurposed Workstation with a large /home).
+	// Empty = k3s default (/var/lib/rancher/k3s + /var/lib/kubelet).
+	dataDir := ""
+	if p.spec.DataDir != "" {
+		dataDir = fmt.Sprintf(" --data-dir=%s --kubelet-arg=root-dir=%s/kubelet", p.spec.DataDir, p.spec.DataDir)
+	}
 	if role == "server" {
 		var sans string
 		for _, s := range o.TLSSANs {
@@ -262,12 +271,12 @@ func (p *NativeProvider) installScript(role string, o JoinOpts) string {
 			cilium = " --flannel-backend=none --disable-kube-proxy --disable-network-policy"
 		}
 		return fmt.Sprintf(
-			`curl -sfL https://get.k3s.io | %s INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s%s%s --node-label=pool=%s`,
-			common, o.ServerURL, p.spec.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, cilium, o.Pool)
+			`curl -sfL https://get.k3s.io | %s INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s%s%s%s --node-label=pool=%s`,
+			common, o.ServerURL, p.spec.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, cilium, dataDir, o.Pool)
 	}
 	return fmt.Sprintf(
-		`curl -sfL https://get.k3s.io | %s K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s --node-label=pool=%s`,
-		common, o.ServerURL, p.spec.Host, o.NodeIP, flannel, o.Pool)
+		`curl -sfL https://get.k3s.io | %s K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s%s --node-label=pool=%s`,
+		common, o.ServerURL, p.spec.Host, o.NodeIP, flannel, dataDir, o.Pool)
 }
 
 func (p *NativeProvider) InstallAgent(ctx context.Context, o JoinOpts) error {

@@ -165,11 +165,12 @@ type MountConfig struct {
 // NodeConfig describes a single node in the cluster.
 type NodeConfig struct {
 	Host       string   `yaml:"host"`
-	Role       string   `yaml:"role"`             // "server" or "agent"
-	Pool       string   `yaml:"pool"`             //
-	Kind       string   `yaml:"kind,omitempty"`   // "lima" (default, macOS+VM) | "native" (Linux host, no VM)
-	NodeIP     string   `yaml:"nodeIP,omitempty"` // native: override the auto-detected tailscale IP
-	VM         VMConfig `yaml:"vm"`               // required for kind=lima; ignored for kind=native
+	Role       string   `yaml:"role"`              // "server" or "agent"
+	Pool       string   `yaml:"pool"`              //
+	Kind       string   `yaml:"kind,omitempty"`    // "lima" (default, macOS+VM) | "native" (Linux host, no VM)
+	NodeIP     string   `yaml:"nodeIP,omitempty"`  // native: override the auto-detected tailscale IP
+	DataDir    string   `yaml:"dataDir,omitempty"` // native: relocate k3s data-dir + kubelet root-dir onto this path (e.g. a large /home when / is small); empty = k3s default /var/lib/rancher/k3s
+	VM         VMConfig `yaml:"vm"`                // required for kind=lima; ignored for kind=native
 	VMName     string   `yaml:"vmName,omitempty"`
 	SSHUser    string   `yaml:"sshUser,omitempty"`
 	SSHPort    string   `yaml:"sshPort,omitempty"`
