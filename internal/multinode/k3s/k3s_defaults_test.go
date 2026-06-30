@@ -60,7 +60,7 @@ func TestEnsureClusterDefaults_PatchesCoreDNSAndStorageClass(t *testing.T) {
 		return "", nil
 	})
 
-	if err := m.EnsureClusterDefaults(context.Background()); err != nil {
+	if err := m.EnsureClusterDefaults(context.Background(), nil); err != nil {
 		t.Fatalf("EnsureClusterDefaults: %v", err)
 	}
 
@@ -164,7 +164,79 @@ func TestEnsureClusterDefaults_PropagatesError(t *testing.T) {
 		}
 		return "", nil
 	})
-	if err := m.EnsureClusterDefaults(context.Background()); err == nil {
+	if err := m.EnsureClusterDefaults(context.Background(), nil); err == nil {
 		t.Fatal("expected error when the coredns patch fails, got nil")
+	}
+}
+
+// buildLocalPathConfigJSON renders the k3s built-in local-path provisioner's
+// nodePathMap: nodes with a custom dataDir get a per-node path (<dataDir>/storage,
+// so their local-path PVs land on the same big volume as the rest of k3s's data,
+// since the provisioner's path is independent of k3s --data-dir); all others use
+// the k3s default. Output is deterministic (sorted) and always includes DEFAULT.
+func TestBuildLocalPathConfigJSON(t *testing.T) {
+	got := buildLocalPathConfigJSON(map[string]string{"nuc9i5": "/home/k3s", "boxA": "/data"})
+	for _, want := range []string{
+		`"DEFAULT_PATH_FOR_NON_LISTED_NODES"`,
+		"/var/lib/rancher/k3s/storage",
+		`"nuc9i5"`, "/home/k3s/storage",
+		`"boxA"`, "/data/storage",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("buildLocalPathConfigJSON missing %q in:\n%s", want, got)
+		}
+	}
+	// Deterministic ordering: boxA before nuc9i5 (sorted).
+	if strings.Index(got, "boxA") > strings.Index(got, "nuc9i5") {
+		t.Errorf("node entries must be sorted; got:\n%s", got)
+	}
+	// Empty dataDirs → DEFAULT only, no per-node entries.
+	if empty := buildLocalPathConfigJSON(nil); !strings.Contains(empty, "DEFAULT_PATH_FOR_NON_LISTED_NODES") || strings.Contains(empty, "nuc9i5") {
+		t.Errorf("empty dataDirs should yield only DEFAULT; got:\n%s", empty)
+	}
+}
+
+// With dataDir nodes, EnsureClusterDefaults must patch the local-path-config
+// nodePathMap (per-node <dataDir>/storage) and restart the provisioner so it picks
+// up the new path.
+func TestEnsureClusterDefaults_SteersLocalPathForDataDir(t *testing.T) {
+	var got []string
+	m := NewManagerWithExec(remote.NewRunner("cp-1"), func(ctx context.Context, cmd string) (string, error) {
+		got = append(got, cmd)
+		return "", nil // empty get → not converged → must patch + restart
+	})
+	if err := m.EnsureClusterDefaults(context.Background(), map[string]string{"nuc9i5": "/home/k3s"}); err != nil {
+		t.Fatalf("EnsureClusterDefaults: %v", err)
+	}
+	joined := strings.Join(got, "\n")
+	if !strings.Contains(joined, "patch configmap local-path-config") {
+		t.Errorf("expected a local-path-config patch; got:\n%s", joined)
+	}
+	if !strings.Contains(joined, "rollout restart deployment local-path-provisioner") {
+		t.Errorf("expected the provisioner to be restarted; got:\n%s", joined)
+	}
+	// config.json is a JSON string nested in the patch, so its quotes arrive escaped
+	// (\"nuc9i5\") — assert on the bare tokens; the exact structure is covered by
+	// TestBuildLocalPathConfigJSON.
+	payloads := strings.Join(b64Payloads(got), "\n")
+	for _, want := range []string{"nuc9i5", "/home/k3s/storage", "DEFAULT_PATH_FOR_NON_LISTED_NODES"} {
+		if !strings.Contains(payloads, want) {
+			t.Errorf("local-path patch missing %q; decoded:\n%s", want, payloads)
+		}
+	}
+}
+
+// Without dataDir nodes, EnsureClusterDefaults must NOT touch local-path-config.
+func TestEnsureClusterDefaults_NoDataDirSkipsLocalPath(t *testing.T) {
+	var got []string
+	m := NewManagerWithExec(remote.NewRunner("cp-1"), func(ctx context.Context, cmd string) (string, error) {
+		got = append(got, cmd)
+		return "", nil
+	})
+	if err := m.EnsureClusterDefaults(context.Background(), nil); err != nil {
+		t.Fatalf("EnsureClusterDefaults: %v", err)
+	}
+	if strings.Contains(strings.Join(got, "\n"), "local-path-config") {
+		t.Errorf("no dataDir nodes → must not touch local-path-config; got:\n%s", strings.Join(got, "\n"))
 	}
 }

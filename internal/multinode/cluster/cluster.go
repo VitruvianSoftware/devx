@@ -111,7 +111,7 @@ func Init(ctx context.Context, cfg *config.Config, opts InitOptions) error {
 	// Phase 6.5: bake in cluster resilience defaults (CoreDNS HA + single default
 	// StorageClass) so they are part of provisioning, not one-off live edits.
 	fmt.Println("\n⚙️  Phase 6.5: Ensuring cluster defaults (CoreDNS HA, single default StorageClass)...")
-	if err := initK3s.EnsureClusterDefaults(ctx); err != nil {
+	if err := initK3s.EnsureClusterDefaults(ctx, dataDirMap(cfg)); err != nil {
 		return fmt.Errorf("ensuring cluster defaults: %w", err)
 	}
 
@@ -223,6 +223,19 @@ func configureTailscale(ctx context.Context, cfg *config.Config, ipMap map[strin
 		return fmt.Errorf("tailscale provisioning failed: %w", err)
 	}
 	return nil
+}
+
+// dataDirMap returns host→dataDir for every node that set a custom dataDir — the
+// input to k3s.EnsureClusterDefaults for steering the local-path provisioner onto
+// those nodes' big volumes.
+func dataDirMap(cfg *config.Config) map[string]string {
+	m := map[string]string{}
+	for _, n := range cfg.Nodes {
+		if n.DataDir != "" {
+			m[n.Host] = n.DataDir
+		}
+	}
+	return m
 }
 
 // bootstrapControlPlane initialises CP-1, waits for it to be ready, and returns
@@ -453,7 +466,7 @@ func Reconcile(ctx context.Context, cfg *config.Config, dryRun bool) error {
 	initNode := cfg.InitNode()
 	initK3s := k3s.NewManagerWithVM(util.NewRunner(initNode), initNode.GetVMName())
 	fmt.Println("⚙️  Ensuring cluster defaults (CoreDNS HA, single default StorageClass)...")
-	if err := initK3s.EnsureClusterDefaults(ctx); err != nil {
+	if err := initK3s.EnsureClusterDefaults(ctx, dataDirMap(cfg)); err != nil {
 		return fmt.Errorf("ensuring cluster defaults: %w", err)
 	}
 

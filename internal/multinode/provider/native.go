@@ -279,8 +279,27 @@ func (p *NativeProvider) installScript(role string, o JoinOpts) string {
 		common, o.ServerURL, p.spec.Host, o.NodeIP, flannel, dataDir, o.Pool)
 }
 
+// ensureKubeletSymlink points the standard /var/lib/kubelet at the relocated
+// kubelet root (<dataDir>/kubelet) when a node uses a custom dataDir.
+// --kubelet-arg=root-dir moves the kubelet, but CSI drivers and other DaemonSets
+// hardcode hostPaths under /var/lib/kubelet (pods, plugins, plugins_registry); without
+// this symlink their mounts fail with "hostPath type check failed". No-op without a
+// dataDir; idempotent (re-points an existing symlink, replaces a stray real dir).
+func (p *NativeProvider) ensureKubeletSymlink(ctx context.Context) error {
+	if p.spec.DataDir == "" {
+		return nil
+	}
+	root := strings.TrimRight(p.spec.DataDir, "/") + "/kubelet"
+	cmd := fmt.Sprintf("mkdir -p %s && { [ -L /var/lib/kubelet ] || rm -rf /var/lib/kubelet; } && ln -sfn %s /var/lib/kubelet", root, root)
+	_, err := p.run(ctx, cmd)
+	return err
+}
+
 func (p *NativeProvider) InstallAgent(ctx context.Context, o JoinOpts) error {
 	if inst, _ := p.IsInstalled(ctx); !inst {
+		if err := p.ensureKubeletSymlink(ctx); err != nil {
+			return err
+		}
 		if _, err := p.run(ctx, p.installScript("agent", o)); err != nil {
 			return err
 		}
@@ -290,6 +309,9 @@ func (p *NativeProvider) InstallAgent(ctx context.Context, o JoinOpts) error {
 
 func (p *NativeProvider) InstallServer(ctx context.Context, o JoinOpts) error {
 	if inst, _ := p.IsInstalled(ctx); !inst {
+		if err := p.ensureKubeletSymlink(ctx); err != nil {
+			return err
+		}
 		if _, err := p.run(ctx, p.installScript("server", o)); err != nil {
 			return err
 		}

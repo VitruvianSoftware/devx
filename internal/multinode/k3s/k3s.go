@@ -25,8 +25,11 @@ package k3s
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -240,6 +243,97 @@ const corednsHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"p
 // required) so a single-node cluster can still schedule both replicas.
 const metallbControllerHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"podAntiAffinity":{"preferredDuringSchedulingIgnoredDuringExecution":[{"weight":100,"podAffinityTerm":{"topologyKey":"kubernetes.io/hostname","labelSelector":{"matchLabels":{"component":"controller"}}}}]}}}}}}`
 
+// defaultLocalPathDir is the k3s built-in local-path provisioner's default node
+// storage path (used for any node without an explicit nodePathMap override).
+const defaultLocalPathDir = "/var/lib/rancher/k3s/storage"
+
+// buildLocalPathConfigJSON renders the local-path-config ConfigMap's config.json
+// nodePathMap. A node with a custom dataDir gets <dataDir>/storage, so its
+// local-path PVs land on the same large volume as the rest of k3s's data — the
+// provisioner's path is independent of k3s --data-dir, so it must be steered
+// separately. Every other node falls back to defaultLocalPathDir. Deterministic
+// (sorted) so the rendered config is stable across runs.
+func buildLocalPathConfigJSON(dataDirs map[string]string) string {
+	type npEntry struct {
+		Node  string   `json:"node"`
+		Paths []string `json:"paths"`
+	}
+	entries := []npEntry{{Node: "DEFAULT_PATH_FOR_NON_LISTED_NODES", Paths: []string{defaultLocalPathDir}}}
+	hosts := make([]string, 0, len(dataDirs))
+	for h := range dataDirs {
+		hosts = append(hosts, h)
+	}
+	sort.Strings(hosts)
+	for _, h := range hosts {
+		entries = append(entries, npEntry{Node: h, Paths: []string{strings.TrimRight(dataDirs[h], "/") + "/storage"}})
+	}
+	b, _ := json.MarshalIndent(map[string]any{"nodePathMap": entries}, "", "  ")
+	return string(b)
+}
+
+// parseNodePathMap extracts node→paths from a local-path config.json as a map, for
+// order-independent comparison.
+func parseNodePathMap(s string) (map[string][]string, bool) {
+	var c struct {
+		NodePathMap []struct {
+			Node  string   `json:"node"`
+			Paths []string `json:"paths"`
+		} `json:"nodePathMap"`
+	}
+	if json.Unmarshal([]byte(strings.TrimSpace(s)), &c) != nil {
+		return nil, false
+	}
+	m := make(map[string][]string, len(c.NodePathMap))
+	for _, e := range c.NodePathMap {
+		m[e.Node] = e.Paths
+	}
+	return m, true
+}
+
+// localPathConfigEqual reports whether two config.json strings define the same
+// nodePathMap (ignoring key order / formatting), so a converged cluster skips the
+// patch + provisioner restart.
+func localPathConfigEqual(a, b string) bool {
+	ma, oka := parseNodePathMap(a)
+	mb, okb := parseNodePathMap(b)
+	return oka && okb && reflect.DeepEqual(ma, mb)
+}
+
+// ensureLocalPathNodePaths steers the k3s built-in local-path provisioner to a
+// per-node path for each node that set a custom dataDir, so that node's local-path
+// PVs land on its big volume (<dataDir>/storage) instead of the default /
+// partition. The provisioner reads its path from the local-path-config ConfigMap,
+// NOT from k3s --data-dir, so this is the second half of a node's dataDir
+// relocation. No-op when no node sets dataDir; idempotent (patches + restarts the
+// provisioner only when the live nodePathMap differs from the desired one).
+func (m *Manager) ensureLocalPathNodePaths(ctx context.Context, dataDirs map[string]string) error {
+	if len(dataDirs) == 0 {
+		return nil
+	}
+	desired := buildLocalPathConfigJSON(dataDirs)
+	if cur, err := m.sudo(ctx, `k3s kubectl -n kube-system get configmap local-path-config -o jsonpath='{.data.config\.json}'`); err == nil && localPathConfigEqual(cur, desired) {
+		return nil // already converged
+	}
+	fmt.Printf("  [%s] Steering local-path provisioner to dataDir paths (%d node(s))...\n", m.runner.Host, len(dataDirs))
+	patch, err := json.Marshal(map[string]any{"data": map[string]string{"config.json": desired}})
+	if err != nil {
+		return fmt.Errorf("building local-path-config patch: %w", err)
+	}
+	enc := base64.StdEncoding.EncodeToString(patch)
+	patchCmd := fmt.Sprintf(
+		"echo '%s' | base64 -d | k3s kubectl -n kube-system patch configmap local-path-config --type=merge --patch-file=/dev/stdin",
+		enc,
+	)
+	if _, err := m.sudo(ctx, patchCmd); err != nil {
+		return fmt.Errorf("patching local-path-config nodePathMap: %w", err)
+	}
+	// The provisioner caches config at startup; restart so new PVCs use the new path.
+	if _, err := m.sudo(ctx, "k3s kubectl -n kube-system rollout restart deployment local-path-provisioner"); err != nil {
+		return fmt.Errorf("restarting local-path-provisioner: %w", err)
+	}
+	return nil
+}
+
 // EnsureClusterDefaults bakes the homelab resilience defaults into a running
 // cluster so they are reproducible and re-asserted on every `cluster init` /
 // `cluster apply`, instead of living as one-off live edits:
@@ -248,6 +342,8 @@ const metallbControllerHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"aff
 //   - Exactly one default StorageClass: k3s marks its bundled local-path as
 //     default, but Longhorn (installed by the Pulumi dev-local stack) is the real
 //     default. Two defaults is invalid, so local-path is un-defaulted here.
+//   - local-path nodePathMap: nodes with a custom dataDir get <dataDir>/storage,
+//     so their PVs follow k3s onto the big volume (see ensureLocalPathNodePaths).
 //
 // It is idempotent and safe to re-run: the CoreDNS patch is a no-op once applied,
 // and the StorageClass step is guarded so it does nothing if local-path is absent
@@ -257,7 +353,7 @@ const metallbControllerHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"aff
 // bundled addon when its on-disk manifest changes), but a k3s *version upgrade*
 // re-extracts the bundled manifests and can reset them — re-running this (which a
 // `cluster apply` does) re-converges.
-func (m *Manager) EnsureClusterDefaults(ctx context.Context) error {
+func (m *Manager) EnsureClusterDefaults(ctx context.Context, dataDirs map[string]string) error {
 	slog.Info("ensuring cluster resilience defaults", "host", m.runner.Host)
 
 	// CoreDNS HA. Deliver the patch via base64 + --patch-file to avoid the
@@ -279,6 +375,13 @@ func (m *Manager) EnsureClusterDefaults(ctx context.Context) error {
 		"k3s kubectl annotate --overwrite storageclass local-path storageclass.kubernetes.io/is-default-class=false; fi"
 	if _, err := m.sudo(ctx, scCmd); err != nil {
 		return fmt.Errorf("un-defaulting local-path storageclass: %w", err)
+	}
+
+	// Steer local-path PVs onto each dataDir node's big volume (the provisioner's
+	// path is independent of k3s --data-dir, so this is the second half of a node's
+	// dataDir relocation). No-op when no node sets dataDir.
+	if err := m.ensureLocalPathNodePaths(ctx, dataDirs); err != nil {
+		return err
 	}
 
 	return nil

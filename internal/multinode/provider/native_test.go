@@ -234,6 +234,35 @@ func TestNative_InstallScript_NoDataDir(t *testing.T) {
 	}
 }
 
+func TestNative_InstallAgent_KubeletSymlinkForDataDir(t *testing.T) {
+	// A dataDir node relocates the kubelet root, so /var/lib/kubelet must be symlinked
+	// to it or CSI hostPaths (pods/plugins_registry) fail to mount.
+	p := NewNativeProvider(config.NodeConfig{
+		Host: "nuc9i5", Kind: "native", Role: "agent", Pool: "nuc-worker-1", DataDir: "/home/k3s",
+	}, &config.Config{})
+	var calls []string
+	p.run = func(ctx context.Context, cmd string) (string, error) {
+		calls = append(calls, cmd)
+		return "", nil
+	}
+	if err := p.InstallAgent(context.Background(), JoinOpts{NodeIP: "1.2.3.4", ServerURL: "https://cp:6443", Token: "t", Pool: "nuc-worker-1"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(calls, "\n"); !strings.Contains(got, "ln -sfn /home/k3s/kubelet /var/lib/kubelet") {
+		t.Errorf("InstallAgent with dataDir must symlink /var/lib/kubelet -> /home/k3s/kubelet; got:\n%s", got)
+	}
+}
+
+func TestNative_InstallAgent_NoKubeletSymlinkWithoutDataDir(t *testing.T) {
+	p, calls := nativeWithRunner(nil) // fedora node, no DataDir
+	if err := p.InstallAgent(context.Background(), JoinOpts{NodeIP: "1.2.3.4", ServerURL: "https://cp:6443", Token: "t", Pool: "linux"}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(strings.Join(*calls, "\n"), "ln -sfn") {
+		t.Errorf("no dataDir → no kubelet symlink; got:\n%s", strings.Join(*calls, "\n"))
+	}
+}
+
 func TestNative_DepInstall_PackageManagers(t *testing.T) {
 	cases := map[string]string{
 		"rpm-ostree": "rpm-ostree install --apply-live",
