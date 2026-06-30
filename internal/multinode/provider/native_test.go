@@ -50,6 +50,7 @@ func TestNative_EnsureRuntime_Silverblue(t *testing.T) {
 		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
 		"firewall-cmd --state":  "running",
 		"tailscale ip -4":       "100.97.82.15",
+		"rpm -q":                "missing", // deps absent on the host → must be installed
 	})
 	ip, err := p.EnsureRuntime(context.Background())
 	if err != nil {
@@ -69,6 +70,31 @@ func TestNative_EnsureRuntime_Silverblue(t *testing.T) {
 		if !strings.Contains(joined, want) {
 			t.Errorf("EnsureRuntime missing %q in:\n%s", want, joined)
 		}
+	}
+	// rpm-ostree has no --allow-replacement flag (it aborts "Unknown option"), and
+	// iscsi-initiator-utils is obsolete now that Longhorn is gone — neither must appear.
+	for _, unwanted := range []string{"--allow-replacement", "iscsi-initiator-utils"} {
+		if strings.Contains(joined, unwanted) {
+			t.Errorf("EnsureRuntime must NOT emit %q in:\n%s", unwanted, joined)
+		}
+	}
+}
+
+func TestNative_EnsureRuntime_SilverblueSkipsPresentDeps(t *testing.T) {
+	// On rpm-ostree, re-requesting an already-present package makes it try to UPDATE
+	// (base change) which can't apply live on a stale base. So present deps must be
+	// left alone — no `rpm-ostree install conntrack-tools/socat`.
+	p, calls := nativeWithRunner(map[string]string{
+		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
+		"tailscale ip -4":       "100.97.82.15",
+		"rpm -q":                "present", // conntrack/socat already installed
+	})
+	if _, err := p.EnsureRuntime(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(*calls, "\n")
+	if strings.Contains(joined, "install --apply-live --allow-inactive --idempotent conntrack-tools socat") {
+		t.Errorf("present deps must not be re-installed on rpm-ostree:\n%s", joined)
 	}
 }
 
@@ -186,19 +212,26 @@ func TestNative_DepInstall_PackageManagers(t *testing.T) {
 	}
 }
 
-func TestNative_DepInstall_RpmOstreeAllowsReplacement(t *testing.T) {
-	// On Silverblue, a layered prereq (e.g. iscsi-initiator-utils) can replace a
-	// base-image package; without --allow-replacement, `rpm-ostree install
-	// --apply-live` aborts with "packages would be changed: N, allow replacement
-	// to override" and the prereq never lands — so it vanishes after a reboot and
-	// longhorn-manager crashloops (no iscsiadm).
-	got := depInstallCmd("rpm-ostree", []string{"iscsi-initiator-utils"})
-	if !strings.Contains(got, "--allow-replacement") {
-		t.Errorf("rpm-ostree install must pass --allow-replacement, got %q", got)
+func TestNative_DepInstall_RpmOstreeNoBogusReplacementFlag(t *testing.T) {
+	// Regression: rpm-ostree has NO --allow-replacement flag — it aborts with
+	// "Unknown option --allow-replacement" (and --force-replacefiles errors with
+	// "Non-local fileoverrides not implemented"). The install must use only valid
+	// flags; the "packages would be changed" abort is avoided by only ever passing
+	// genuinely-missing packages (see missingPkgs), not by an override flag.
+	got := depInstallCmd("rpm-ostree", []string{"conntrack-tools"})
+	for _, bad := range []string{"--allow-replacement", "--force-replacefiles"} {
+		if strings.Contains(got, bad) {
+			t.Errorf("rpm-ostree install must not use %q, got %q", bad, got)
+		}
+	}
+	for _, want := range []string{"--apply-live", "--allow-inactive", "--idempotent"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("rpm-ostree install must keep valid flag %q, got %q", want, got)
+		}
 	}
 }
 
-func TestNative_EnsureRuntime_PersistsISCSIModuleAndTailscaledEnv(t *testing.T) {
+func TestNative_EnsureRuntime_PersistsTailscaledEnv(t *testing.T) {
 	p, calls := nativeWithRunner(map[string]string{
 		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
 		"tailscale ip -4":       "100.97.82.15",
@@ -207,12 +240,6 @@ func TestNative_EnsureRuntime_PersistsISCSIModuleAndTailscaledEnv(t *testing.T) 
 		t.Fatal(err)
 	}
 	joined := strings.Join(*calls, "\n")
-
-	// iscsi_tcp must be persisted (modules-load.d) so it auto-loads after a
-	// reboot — a live `modprobe` alone is lost, leaving Longhorn unable to attach.
-	if !strings.Contains(joined, "modules-load.d") || !strings.Contains(joined, "iscsi_tcp") {
-		t.Errorf("EnsureRuntime must persist iscsi_tcp via modules-load.d, got:\n%s", joined)
-	}
 
 	// tailscaled's unit has a *required* EnvironmentFile=/etc/default/tailscaled;
 	// the rpm-ostree /etc merge can drop it on the deploy that first layers
@@ -275,43 +302,6 @@ func TestNative_InstallAgent_NoTailscaleNoDropin(t *testing.T) {
 	}
 }
 
-func TestNative_EnsureRuntime_InstallsISCSIForLonghorn(t *testing.T) {
-	p, calls := nativeWithRunner(map[string]string{
-		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
-		"tailscale ip -4":       "100.97.82.15",
-	})
-	if _, err := p.EnsureRuntime(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	joined := strings.Join(*calls, "\n")
-	for _, want := range []string{
-		"iscsi-initiator-utils",
-		"systemctl enable --now iscsid",
-		"modprobe iscsi_tcp",
-	} {
-		if !strings.Contains(joined, want) {
-			t.Errorf("EnsureRuntime missing %q in:\n%s", want, joined)
-		}
-	}
-}
-
-func TestNative_EnsureRuntime_InstallsOpenISCSIOnApt(t *testing.T) {
-	// Neither rpm-ostree nor dnf present -> apt path; Debian's package is open-iscsi.
-	p, calls := nativeWithRunner(map[string]string{
-		"tailscale ip -4": "100.64.0.7",
-	})
-	if _, err := p.EnsureRuntime(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	joined := strings.Join(*calls, "\n")
-	if !strings.Contains(joined, "open-iscsi") {
-		t.Errorf("apt path should install open-iscsi, got:\n%s", joined)
-	}
-	if strings.Contains(joined, "iscsi-initiator-utils") {
-		t.Errorf("apt path must not use the Fedora package name, got:\n%s", joined)
-	}
-}
-
 func TestNative_EnsureRuntime_FirewalldTrustsPodNetwork(t *testing.T) {
 	// Regression: trusting only tailscale0 leaves pod-bridge traffic REJECTed
 	// ("no route to host" pod-to-pod), which strands CSI volume attach.
@@ -334,6 +324,11 @@ func TestNative_EnsureRuntime_FirewalldTrustsPodNetwork(t *testing.T) {
 		if !strings.Contains(joined, want) {
 			t.Errorf("firewalld trust missing %q in:\n%s", want, joined)
 		}
+	}
+	// Regression: --add-interface and --add-source must NOT share one firewall-cmd
+	// call — newer firewall-cmd rejects "--add-source not allowed with --add-interface".
+	if strings.Contains(joined, "--add-interface=flannel.1 --add-source") {
+		t.Errorf("interfaces and sources must be separate firewall-cmd calls:\n%s", joined)
 	}
 }
 
@@ -383,9 +378,9 @@ func TestNative_EnsureRuntime_AppliesFirewalldTrustWhenEnabledButStopped(t *test
 }
 
 func TestNative_Reconcile_HealsHostPrereqs(t *testing.T) {
-	// Reconcile must converge existing nodes onto the full prereq set
-	// (deps incl. iscsi, firewalld pod-network trust), not just re-install deps —
-	// that is how already-joined nodes pick up these fixes on `cluster apply`.
+	// Reconcile must converge already-joined nodes onto the host prereq set
+	// (firewalld pod-network trust, etc.), not only on first join — that is how
+	// existing nodes pick up these fixes on `cluster apply`.
 	p, calls := nativeWithRunner(map[string]string{
 		"command -v rpm-ostree": "/usr/bin/rpm-ostree",
 		"firewall-cmd --state":  "running",
@@ -395,10 +390,9 @@ func TestNative_Reconcile_HealsHostPrereqs(t *testing.T) {
 	}
 	joined := strings.Join(*calls, "\n")
 	for _, want := range []string{
-		"iscsi-initiator-utils",
-		"systemctl enable --now iscsid",
 		"--add-source=10.42.0.0/16",
 		"--add-interface=cni0",
+		"firewall-cmd --reload",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("Reconcile missing %q in:\n%s", want, joined)

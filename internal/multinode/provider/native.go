@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -77,12 +78,14 @@ func depInstallCmd(pm string, pkgs []string) string {
 	list := strings.Join(pkgs, " ")
 	switch pm {
 	case "rpm-ostree":
-		// --allow-replacement: a layered prereq may replace a base-image package
-		// (e.g. iscsi-initiator-utils on Silverblue). Without it, --apply-live
-		// aborts ("packages would be changed: N, allow replacement to override")
-		// and the package never lands — so it's gone after a reboot and
-		// longhorn-manager crashloops on a missing iscsiadm.
-		return "rpm-ostree install --apply-live --allow-inactive --allow-replacement --idempotent " + list
+		// --apply-live avoids a reboot; --idempotent skips an already-layered package.
+		// There is deliberately no replacement override: rpm-ostree has no such flag
+		// (--allow-replacement does not exist; --force-replacefiles errors on non-local
+		// installs). The "packages would be changed: N" abort happens when a PRESENT
+		// package would be UPDATED to the repo version on a stale base, which
+		// --apply-live can't apply live — so callers gate on missingPkgs and only ever
+		// pass genuinely-missing packages here.
+		return "rpm-ostree install --apply-live --allow-inactive --idempotent " + list
 	case "dnf":
 		return "dnf install -y " + list
 	default:
@@ -101,14 +104,19 @@ const (
 	k3sServiceCIDR = "10.43.0.0/16"
 )
 
-// iscsiPkg returns the open-iscsi package name for the package manager.
-// Longhorn requires iscsiadm on every node; the Lima path already installs it
-// (lima.NodePackages), the native path must too.
-func iscsiPkg(pm string) string {
-	if pm == "apt" {
-		return "open-iscsi"
+// missingPkgs returns the subset of pkgs NOT already installed (queried via rpm -q).
+// rpm-ostree refuses to UPDATE a present package live on a stale base ("packages
+// would be changed: N"), so the native reconcile must (re)install only genuinely-
+// missing deps and leave present ones untouched.
+func (p *NativeProvider) missingPkgs(ctx context.Context, pkgs []string) []string {
+	var missing []string
+	for _, pkg := range pkgs {
+		out, _ := p.run(ctx, "rpm -q "+pkg+" >/dev/null 2>&1 && echo present || echo missing")
+		if strings.Contains(out, "missing") {
+			missing = append(missing, pkg)
+		}
 	}
-	return "iscsi-initiator-utils"
+	return missing
 }
 
 // ensureHostPrereqs converges a native host onto the full K3s/storage prereq
@@ -117,10 +125,23 @@ func iscsiPkg(pm string) string {
 // called from both EnsureRuntime (first join) and Reconcile (heal existing
 // nodes on `cluster apply`).
 func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
-	// 1. Install K3s deps via the detected package manager.
+	// 1. Install the K3s deps (conntrack, socat). On rpm-ostree/Silverblue, install
+	// ONLY genuinely-missing packages: re-requesting a present package makes rpm-ostree
+	// try to UPDATE it to the repo version, which a stale base can't apply live
+	// ("packages would be changed: N") — and these deps ship in the base image, so it's
+	// normally a no-op anyway. Best-effort + a loud warning rather than aborting the
+	// whole reconcile; a genuinely-broken node surfaces at the readiness poll.
+	// (iscsi-initiator-utils is intentionally NOT installed — Longhorn was removed;
+	// storage is now NFS + local-path.)
 	pm := p.detectPkgManager(ctx)
-	if _, err := p.run(ctx, depInstallCmd(pm, append(append([]string{}, k3sDeps...), iscsiPkg(pm)))); err != nil {
-		return fmt.Errorf("[%s] installing deps: %w", p.spec.Host, err)
+	deps := append([]string{}, k3sDeps...)
+	if pm == "rpm-ostree" {
+		deps = p.missingPkgs(ctx, deps)
+	}
+	if len(deps) > 0 {
+		if out, err := p.run(ctx, depInstallCmd(pm, deps)); err != nil {
+			slog.Warn("host dep install did not fully apply (continuing)", "host", p.spec.Host, "error", err, "output", out)
+		}
 	}
 	// SELinux: the K3s install skips the k3s-selinux RPM (INSTALL_K3S_SKIP_SELINUX_RPM
 	// in installScript), so on a STOCK enforcing host systemd cannot exec the freshly
@@ -141,11 +162,6 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 		_, _ = p.run(ctx, "alternatives --set iptables /usr/sbin/iptables-legacy 2>/dev/null || true; "+
 			"alternatives --set ip6tables /usr/sbin/ip6tables-legacy 2>/dev/null || true")
 	}
-	// Longhorn needs the iscsid daemon and the iscsi_tcp module. Persist the
-	// module via modules-load.d so it auto-loads after a reboot (a live modprobe
-	// alone is lost — Longhorn then can't attach volumes on the rebooted node).
-	// Best-effort: nodes without Longhorn workloads lose nothing if this fails.
-	_, _ = p.run(ctx, "printf 'iscsi_tcp\\n' > /etc/modules-load.d/iscsi_tcp.conf 2>/dev/null || true; modprobe iscsi_tcp 2>/dev/null || true; systemctl enable --now iscsid 2>/dev/null || true")
 	// tailscaled's unit declares a *required* EnvironmentFile=/etc/default/tailscaled.
 	// On rpm-ostree/Silverblue the package ships it only as the OSTree default
 	// /usr/etc/default/tailscaled, which the /etc merge can fail to materialize on
@@ -176,8 +192,13 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 		_, _ = p.run(ctx, "systemctl start firewalld 2>/dev/null || true")
 		// Load-bearing: a failure here leaves pod/service traffic REJECTed, so
 		// surface it instead of silently "succeeding" with broken networking.
+		// --add-interface and --add-source must be in SEPARATE firewall-cmd calls:
+		// newer firewall-cmd rejects mixing them in one invocation ("--add-source: not
+		// allowed with argument --add-interface"). Add the interfaces, then the
+		// pod/service source CIDRs, then reload. Both adds are idempotent.
 		if _, err := p.run(ctx, fmt.Sprintf(
-			"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 --add-interface=cni0 --add-interface=flannel.1 --add-source=%s --add-source=%s && firewall-cmd --reload",
+			"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 --add-interface=cni0 --add-interface=flannel.1 && "+
+				"firewall-cmd --permanent --zone=trusted --add-source=%s --add-source=%s && firewall-cmd --reload",
 			k3sClusterCIDR, k3sServiceCIDR)); err != nil {
 			return fmt.Errorf("[%s] trusting k3s pod/service networks in firewalld: %w", p.spec.Host, err)
 		}
