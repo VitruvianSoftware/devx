@@ -104,7 +104,13 @@ func ExecuteInstall(plan *InstallPlan, autoConfirm bool) error {
 		}
 	}
 
-	// Run taps
+	// Run taps, then trust them. Newer Homebrew refuses to LOAD formulae from
+	// untrusted third-party taps ("Refusing to load formula <tap>/<formula> from
+	// untrusted tap <tap>. Run `brew trust <tap>` to trust it."), which is the
+	// same gate that froze the brew-installed devx itself (see #434). Without the
+	// trust the `brew install` steps below fail for cloudflared, mutagen, and our
+	// own vitruviansoftware/tap. `brew trust` is idempotent, so re-trusting an
+	// already-trusted tap is harmless.
 	for tap := range taps {
 		tapCmd := "brew tap " + tap
 		fmt.Printf("  ⏳ %s\n", tapCmd)
@@ -112,6 +118,18 @@ func ExecuteInstall(plan *InstallPlan, autoConfirm bool) error {
 			return fmt.Errorf("failed to add tap %s: %w", tap, err)
 		}
 		fmt.Printf("  ✓  %s\n", tapCmd)
+
+		// Best-effort: older Homebrew predates the `brew trust` subcommand, so a
+		// failure here must not abort the install — warn and continue. If trust
+		// was genuinely needed, the install step will surface the untrusted-tap
+		// error on its own.
+		trustCmd := "brew trust " + tap
+		fmt.Printf("  ⏳ %s\n", trustCmd)
+		if err := runShellCommand(trustCmd); err != nil {
+			fmt.Printf("  ⚠  %s — %v (continuing; older Homebrew may not support `brew trust`)\n", trustCmd, err)
+		} else {
+			fmt.Printf("  ✓  %s\n", trustCmd)
+		}
 	}
 
 	// Install each tool
@@ -128,7 +146,10 @@ func ExecuteInstall(plan *InstallPlan, autoConfirm bool) error {
 	return nil
 }
 
-func runShellCommand(cmd string) error {
+// runShellCommand executes a shell command, streaming its output to the
+// terminal. It is a package-level variable so tests can substitute a recording
+// stub for the real exec-backed runner.
+var runShellCommand = func(cmd string) error {
 	parts := strings.Fields(cmd)
 	if len(parts) == 0 {
 		return fmt.Errorf("empty command")
