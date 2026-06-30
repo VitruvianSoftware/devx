@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.3](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.2...devx-v0.66.3) (2026-06-30)
+
+
+### Bug Fixes
+
+* **devx/multinode:** repair native cluster reconcile (rpm-ostree deps + firewalld trust) ([#439](https://github.com/VitruvianSoftware/vitruvian-core/issues/439)) ([b7ac648](https://github.com/VitruvianSoftware/vitruvian-core/commit/b7ac648296415171ca16a6fc7c6653f390c1b7a3))
+* **devx:** brew trust third-party taps in doctor auto-install ([#436](https://github.com/VitruvianSoftware/vitruvian-core/issues/436)) ([0945af9](https://github.com/VitruvianSoftware/vitruvian-core/commit/0945af91c8fbf61e2849dd48f67eaaa4d49bb2b6))
+
 ## [0.66.2](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.1...devx-v0.66.2) (2026-06-29)
 
 
