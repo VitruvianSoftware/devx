@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.68.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.67.0...devx-v0.68.0) (2026-07-10)
+
+
+### Features
+
+* **build:** close the inter-app visibility firewall + conformance guard ([#82](https://github.com/VitruvianSoftware/vitruvian-core/issues/82)) ([#496](https://github.com/VitruvianSoftware/vitruvian-core/issues/496)) ([30e8a09](https://github.com/VitruvianSoftware/vitruvian-core/commit/30e8a09bfb2c19b1602e522f222ea518ca8e210a))
+* **deploy:** per-app metadata catalog + reusable _deploy-cloud-run.yaml + tabula de-race ([#500](https://github.com/VitruvianSoftware/vitruvian-core/issues/500), [#499](https://github.com/VitruvianSoftware/vitruvian-core/issues/499)) ([#511](https://github.com/VitruvianSoftware/vitruvian-core/issues/511)) ([d546651](https://github.com/VitruvianSoftware/vitruvian-core/commit/d5466512896c9aa691cdff8e1d3016798cb3cd88))
+* **gcp-bootstrap:** trigger release ([550e1df](https://github.com/VitruvianSoftware/vitruvian-core/commit/550e1dffdb3525781923eb4f3369050dd77c5aec))
+* **gcp-org:** trigger release ([3bb4b9e](https://github.com/VitruvianSoftware/vitruvian-core/commit/3bb4b9efab7fa9a8c59a9d68966d6f4c252fa89f))
+* **org-folders:** trigger release ([588230c](https://github.com/VitruvianSoftware/vitruvian-core/commit/588230c68cc864fa77efd6324dc40c511e1ba0c7))
+* **pulumi/library:** integrate Go modules into the Bazel workspace ([b95e735](https://github.com/VitruvianSoftware/vitruvian-core/commit/b95e735574f373a9f08a31acb453ae6508ccc0b3))
+
+
+### Bug Fixes
+
+* **go/logging:** grant bucketWriter for log-bucket destination ([#63](https://github.com/VitruvianSoftware/vitruvian-core/issues/63)) ([1388d02](https://github.com/VitruvianSoftware/vitruvian-core/commit/1388d02c2314a775443713c0ad070bc5afd44826))
+* **pulumi/library:** correct TS BUILD load path; revert devx/homelab go.mod ([5f125db](https://github.com/VitruvianSoftware/vitruvian-core/commit/5f125db6885a95a38886c8d2b0d618de1e7c5e9b))
+
 ## [0.67.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.66.3...devx-v0.67.0) (2026-06-30)
 
 
