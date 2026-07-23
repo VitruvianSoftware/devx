@@ -57,4 +57,4 @@ Before presenting the plan for approval, perform a self-review:
 - ❌ Skipping the self-review phase
 
 ## Gemini Added Memories
-- When asked about events, always check these calendars in addition to the primary calendar: james.nguyen@flyr.com and platform@abrial.ai
+- When asked about events, always check these calendars in addition to the primary calendar: james@abrial.ai
