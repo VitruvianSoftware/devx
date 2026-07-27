@@ -85,6 +85,13 @@ func TestGetUnknown(t *testing.T) {
 func TestGetProvider_Explicit(t *testing.T) {
 	prov, err := GetProvider("podman")
 	if err != nil {
+		// podman is an optional host tool, absent on CI runners. Mirrors the
+		// guard on Resolve()'s explicit-provider tests in detect_test.go; see
+		// the comment there for why this was invisible until the race lane ran
+		// the target instead of taking a cached result.
+		if searchSubstring(err.Error(), "not found on $PATH") {
+			t.Skipf("Skipping test: %v", err)
+		}
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if prov.VM.Name() != "podman" {

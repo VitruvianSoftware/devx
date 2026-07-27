@@ -59,6 +59,16 @@ func TestDetect_KnownProviderNames(t *testing.T) {
 func TestResolve_ExplicitPodman(t *testing.T) {
 	vm, rt, err := Resolve("podman")
 	if err != nil {
+		// Same guard its lima/colima siblings below already carry: podman is an
+		// optional host tool and is absent on the CI runners. Without this the
+		// test is environment-dependent, and it only LOOKED green because its
+		// result was served from the remote cache -- `bazel test //...` reports
+		// "Executed 5 out of 106", so this target was never actually run there.
+		// The race lane (a different configuration, hence a different cache key)
+		// executed it for real and surfaced the failure.
+		if searchSubstring(err.Error(), "not found on $PATH") {
+			t.Skipf("Skipping test: %v", err)
+		}
 		t.Fatalf("Resolve(podman) error: %v", err)
 	}
 	if vm.Name() != "podman" {
