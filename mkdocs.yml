@@ -18,23 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# Machine-readable app metadata (#500): the single per-app source for
-# ownership, deploy identity, and release model. Backstage-compatible
-# Component; consumed today by tools/conformance (owner must match
-# .github/CODEOWNERS) and by humans/agents doing impact analysis.
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: devx
-  description: Developer-experience CLI — local dev orchestration (Lima VMs, devcontainers, k3s cluster join/apply, scaffolding)
-  annotations:
-    github.com/project-slug: VitruvianSoftware/vitruvian-core
-    backstage.io/techdocs-ref: dir:.
-    vitruvian.dev/release-workflow: apps-release.yml
-    vitruvian.dev/release-model: goreleaser
-    vitruvian.dev/mirror: VitruvianSoftware/devx
-spec:
-  type: tool
-  lifecycle: production
-  owner: devx-team
-  system: vitruvian-core
+site_name: devx
+site_description: Developer-experience CLI — local dev orchestration (Lima VMs, devcontainers, k3s cluster join/apply, scaffolding)
+repo_url: https://github.com/VitruvianSoftware/vitruvian-core
+edit_uri: edit/main/devx/docs
+docs_dir: docs
+plugins:
+  - techdocs-core
