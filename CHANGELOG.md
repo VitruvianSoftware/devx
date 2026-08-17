@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.69.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.68.3...devx-v0.69.0) (2026-08-17)
+
+
+### Features
+
+* **backstage:** render mermaid diagrams in TechDocs ([#1710](https://github.com/VitruvianSoftware/vitruvian-core/issues/1710)) ([00666bd](https://github.com/VitruvianSoftware/vitruvian-core/commit/00666bd24c1a265239e1befd4a8993c392d087aa))
+
 ## [0.68.3](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.68.2...devx-v0.68.3) (2026-08-17)
 
 
