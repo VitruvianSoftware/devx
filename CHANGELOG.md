@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.68.3](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.68.2...devx-v0.68.3) (2026-08-17)
+
+
+### Bug Fixes
+
+* **backstage:** make TechDocs work for every component ([#1700](https://github.com/VitruvianSoftware/vitruvian-core/issues/1700)) ([26c6aa7](https://github.com/VitruvianSoftware/vitruvian-core/commit/26c6aa7c2953877a116bd59413b0a1d07e5f9e51))
+
 ## [0.68.2](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.68.1...devx-v0.68.2) (2026-08-07)
 
 
