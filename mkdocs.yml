@@ -25,3 +25,14 @@ edit_uri: edit/main/devx/docs
 docs_dir: docs
 plugins:
   - techdocs-core
+
+# Emit ```mermaid fences as <pre class="mermaid"> so the TechDocs mermaid addon
+# can render them in the Backstage frontend. techdocs-core alone renders them as
+# a plain code block, and TechDocs strips <script> from generated HTML, so
+# client-side mkdocs mermaid plugins cannot work here.
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
