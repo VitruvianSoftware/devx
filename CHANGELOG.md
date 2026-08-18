@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.70.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.69.0...devx-v0.70.0) (2026-08-18)
+
+
+### Features
+
+* **backstage:** surface Grafana dashboards on entity pages ([#1758](https://github.com/VitruvianSoftware/vitruvian-core/issues/1758)) ([e0d802d](https://github.com/VitruvianSoftware/vitruvian-core/commit/e0d802d1d20edc15ae8ade4520c057728d76776f))
+
 ## [0.69.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.68.3...devx-v0.69.0) (2026-08-17)
 
 
