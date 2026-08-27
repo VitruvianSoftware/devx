@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.71.0...devx-v0.72.0) (2026-08-27)
+
+
+### Features
+
+* **backstage:** establish domain taxonomy, model API entities, and enrich runtime observability ([#1996](https://github.com/VitruvianSoftware/vitruvian-core/issues/1996)) ([4566b02](https://github.com/VitruvianSoftware/vitruvian-core/commit/4566b02487b5bcbc087816414b19c5326af9782a))
+
 ## [0.71.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.70.0...devx-v0.71.0) (2026-08-27)
 
 
