@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.71.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.70.0...devx-v0.71.0) (2026-08-27)
+
+
+### Features
+
+* **catalog:** onboard missing infrastructure and enrich components with metadata links ([#1982](https://github.com/VitruvianSoftware/vitruvian-core/issues/1982)) ([bcf1c7b](https://github.com/VitruvianSoftware/vitruvian-core/commit/bcf1c7b4efb6c11d7ec3446d11044fc192aaad3d))
+
 ## [0.70.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.69.0...devx-v0.70.0) (2026-08-18)
 
 
