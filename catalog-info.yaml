@@ -36,6 +36,16 @@ metadata:
     vitruvian.dev/release-workflow: apps-release.yml
     vitruvian.dev/release-model: goreleaser
     vitruvian.dev/mirror: VitruvianSoftware/devx
+  links:
+    - url: https://github.com/VitruvianSoftware/devx
+      title: GitHub Mirror
+      icon: github
+    - url: https://github.com/VitruvianSoftware/devx/releases
+      title: Releases (GoReleaser)
+      icon: card_giftcard
+    - url: https://grafana.lab.ipv1337.dev/d/devx
+      title: Grafana Build Metrics
+      icon: dashboard
 spec:
   type: tool
   lifecycle: production
