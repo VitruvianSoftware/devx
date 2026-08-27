@@ -50,4 +50,4 @@ spec:
   type: tool
   lifecycle: production
   owner: devx-team
-  system: vitruvian-core
+  system: devx-suite
