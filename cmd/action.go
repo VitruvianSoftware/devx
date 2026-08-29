@@ -44,7 +44,7 @@ var actionCmd = &cobra.Command{
 	Use:     "action [name]",
 	GroupID: "orchestration",
 	Short:   "Run a named custom action defined in devx.yaml",
-	Long: `Execute on-demand tasks declared under 'customActions:' in devx.yaml.
+	Long: `Execute on-demand tasks declared under 'custom_actions:' in devx.yaml.
 
 Custom actions group multiple sequential commands under a single name,
 ideal for repetitive workflows like seeding data, generating code, or
@@ -57,7 +57,7 @@ Examples:
   devx action ci --dry-run # preview commands without executing
 
 Define actions in devx.yaml:
-  customActions:
+  custom_actions:
     ci:
       commands:
         - ["go", "test", "./..."]
@@ -90,7 +90,7 @@ func runAction(_ *cobra.Command, args []string) error {
 			fmt.Println("No custom actions defined in devx.yaml.")
 			return nil
 		}
-		return fmt.Errorf("no customActions defined in devx.yaml")
+		return fmt.Errorf("no custom_actions defined in devx.yaml")
 	}
 
 	// --list mode

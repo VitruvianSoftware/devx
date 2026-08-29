@@ -343,9 +343,10 @@ type DevxConfig struct {
 	Test          DevxConfigTest                    `yaml:"test"`                 // Test configuration
 	Mocks         []DevxConfigMock                  `yaml:"mocks"`                // List of OpenAPI mock servers to provision
 	Profiles      map[string]DevxConfigProfile      `yaml:"profiles"`             // Named environment overlays
-	Pipeline      *DevxConfigPipeline               `yaml:"pipeline"`             // Explicit pipeline stages (Idea 45.2)
-	CustomActions map[string]DevxConfigCustomAction `yaml:"customActions"`        // Named tasks (scaffolded for Idea 45.3)
-	Bridge        *DevxConfigBridge                 `yaml:"bridge"`               // Hybrid edge-to-local routing (Idea 46.1)
+	Pipeline            *DevxConfigPipeline               `yaml:"pipeline"`                       // Explicit pipeline stages (Idea 45.2)
+	CustomActions       map[string]DevxConfigCustomAction `yaml:"custom_actions"`                 // Named tasks (scaffolded for Idea 45.3)
+	LegacyCustomActions map[string]DevxConfigCustomAction `yaml:"customActions,omitempty"`         // Legacy field for backwards compatibility
+	Bridge              *DevxConfigBridge                 `yaml:"bridge"`                         // Hybrid edge-to-local routing (Idea 46.1)
 	State         *DevxConfigState                  `yaml:"state"`                // State replication settings (Idea 56)
 	Telemetry     *DevxConfigTelemetry              `yaml:"telemetry"`            // Telemetry export endpoints
 	Cron          []DevxConfigCron                  `yaml:"cron"`                 // Named cron jobs runnable via `devx cron run` (Idea 66)
@@ -528,6 +529,10 @@ func loadAndResolve(absPath string, depth int, seen map[string]bool) (*DevxConfi
 	var cfg DevxConfig
 	if err := yaml.Unmarshal(b, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing %s: %w", absPath, err)
+	}
+
+	if len(cfg.CustomActions) == 0 && len(cfg.LegacyCustomActions) > 0 {
+		cfg.CustomActions = cfg.LegacyCustomActions
 	}
 
 	baseDir := filepath.Dir(absPath)

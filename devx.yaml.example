@@ -311,7 +311,7 @@ profiles:
 
 # --- Idea 45.4: Custom Actions ---
 # Named, on-demand tasks triggered via 'devx action <action-name>'.
-# customActions:
+# custom_actions:
 #   seed-db:
 #     command: ["npm", "run", "db:seed"]
 #   generate-mocks:

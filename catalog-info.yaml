@@ -33,7 +33,7 @@ metadata:
     # Single word => matched as a Grafana TAG (case-sensitive).
     # Currently resolves to: devx Build Metrics
     grafana/dashboard-selector: devx
-    vitruvian.dev/release-workflow: apps-release.yml
+    vitruvian.dev/release-workflow: apps-release.yaml
     vitruvian.dev/release-model: goreleaser
     vitruvian.dev/mirror: VitruvianSoftware/devx
   links:

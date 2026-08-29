@@ -89,7 +89,7 @@ flowchart TD
 
 The sequence below demonstrates reading from the isolated Kubeconfig to execute native `kubectl` commands against the newly created local k3s cluster.
 
-![devx k8s spawn — Zero-Config Local Kubernetes](/devx_k8s_proof.png)
+![devx k8s spawn — Zero-Config Local Kubernetes](/devx-k8s-proof.png)
 
 ::: tip Fast Feedback Loops
 Booting a `devx k8s` cluster takes approximately **2-4 seconds** on an Apple Silicon Mac, making it fast enough to be utilized in CI/CD pipelines or ephemeral integration test setups.
