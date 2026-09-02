@@ -73,6 +73,7 @@ func TestSessionSaveLoadClear(t *testing.T) {
 	}
 	if loaded == nil {
 		t.Fatal("LoadSession returned nil")
+		return
 	}
 	if loaded.Context != "staging" {
 		t.Errorf("Context = %q, want %q", loaded.Context, "staging")

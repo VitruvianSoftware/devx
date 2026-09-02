@@ -267,6 +267,7 @@ services:
 	}
 	if cfg.Services[0].BridgeTarget == nil {
 		t.Fatal("expected BridgeTarget to be set")
+		return
 	}
 	if cfg.Services[0].BridgeTarget.Service != "payments-api" {
 		t.Errorf("expected target service 'payments-api', got %q", cfg.Services[0].BridgeTarget.Service)
@@ -300,6 +301,7 @@ services:
 	}
 	if cfg.Services[0].BridgeIntercept == nil {
 		t.Fatal("expected BridgeIntercept to be set")
+		return
 	}
 	if cfg.Services[0].BridgeIntercept.Mode != "steal" {
 		t.Errorf("expected mode 'steal', got %q", cfg.Services[0].BridgeIntercept.Mode)
@@ -645,6 +647,7 @@ services:
 	}
 	if svc.Container == nil {
 		t.Fatal("expected Container config, got nil")
+		return
 	}
 	if svc.Container.Image != "myorg/api:dev" {
 		t.Errorf("expected image myorg/api:dev, got %q", svc.Container.Image)
@@ -679,6 +682,7 @@ services:
 	b := cfg.Services[0].Container.Build
 	if b == nil {
 		t.Fatal("expected Build config, got nil")
+		return
 	}
 	if b.Context != "./web" || b.Dockerfile != "Dockerfile.dev" || b.Tag != "local" {
 		t.Errorf("unexpected build config: %+v", b)

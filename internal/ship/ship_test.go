@@ -37,6 +37,7 @@ func TestDetectStack_Go(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Go stack, got nil")
+		return
 	}
 	if stack.Name != "Go" {
 		t.Errorf("expected name 'Go', got %q", stack.Name)
@@ -58,6 +59,7 @@ func TestDetectStack_NodeJS(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Node stack, got nil")
+		return
 	}
 	if stack.Name != "Node/JS/TS" {
 		t.Errorf("expected name 'Node/JS/TS', got %q", stack.Name)
@@ -72,6 +74,7 @@ func TestDetectStack_Rust(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Rust stack, got nil")
+		return
 	}
 	if stack.Name != "Rust" {
 		t.Errorf("expected name 'Rust', got %q", stack.Name)
@@ -86,6 +89,7 @@ func TestDetectStack_Python(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Python stack, got nil")
+		return
 	}
 	if stack.Name != "Python" {
 		t.Errorf("expected name 'Python', got %q", stack.Name)
@@ -103,6 +107,7 @@ func TestDetectStack_JavaMaven(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Java/Maven stack, got nil")
+		return
 	}
 	if stack.Name != "Java/Maven" {
 		t.Errorf("expected name 'Java/Maven', got %q", stack.Name)
@@ -120,6 +125,7 @@ func TestDetectStack_JavaGradle(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Java/Gradle stack, got nil")
+		return
 	}
 	if stack.Name != "Java/Gradle" {
 		t.Errorf("expected name 'Java/Gradle', got %q", stack.Name)
@@ -137,6 +143,7 @@ func TestDetectStack_KotlinGradle(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Kotlin/Gradle stack, got nil")
+		return
 	}
 	if stack.Name != "Kotlin/Gradle" {
 		t.Errorf("expected name 'Kotlin/Gradle', got %q", stack.Name)
@@ -151,6 +158,7 @@ func TestDetectStack_DotNet_Csproj(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected .NET stack, got nil")
+		return
 	}
 	if stack.Name != ".NET" {
 		t.Errorf("expected name '.NET', got %q", stack.Name)
@@ -168,6 +176,7 @@ func TestDetectStack_DotNet_Sln(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected .NET stack, got nil")
+		return
 	}
 	if stack.Name != ".NET" {
 		t.Errorf("expected name '.NET', got %q", stack.Name)
@@ -182,6 +191,7 @@ func TestDetectStack_BazelWorkspace(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Bazel stack, got nil")
+		return
 	}
 	if stack.Name != "Bazel" {
 		t.Errorf("expected name 'Bazel', got %q", stack.Name)
@@ -196,6 +206,7 @@ func TestDetectStack_BazelModule(t *testing.T) {
 	stack := DetectStack(dir)
 	if stack == nil {
 		t.Fatal("expected Bazel stack, got nil")
+		return
 	}
 	if stack.Name != "Bazel" {
 		t.Errorf("expected name 'Bazel', got %q", stack.Name)

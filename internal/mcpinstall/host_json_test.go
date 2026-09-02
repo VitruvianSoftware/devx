@@ -57,10 +57,12 @@ func TestJSONInstallCreatesNewConfig(t *testing.T) {
 	servers, _ := cfg["mcpServers"].(map[string]any)
 	if servers == nil {
 		t.Fatalf("mcpServers missing: %+v", cfg)
+		return
 	}
 	entry, _ := servers["devx"].(map[string]any)
 	if entry == nil {
 		t.Fatalf("devx entry missing: %+v", servers)
+		return
 	}
 	if entry["command"] != "/usr/local/bin/devx" {
 		t.Errorf("command = %v, want /usr/local/bin/devx", entry["command"])

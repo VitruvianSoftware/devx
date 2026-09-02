@@ -58,6 +58,7 @@ func TestParseRealWorkflow(t *testing.T) {
 	buildJob := wf.Jobs["build"]
 	if buildJob == nil {
 		t.Fatal("build job not found")
+		return
 	}
 	if len(buildJob.Strategy.Matrix.Values) == 0 {
 		t.Error("build job should have matrix values")

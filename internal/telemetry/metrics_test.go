@@ -176,6 +176,7 @@ func TestLoadMetrics_MissingFile(t *testing.T) {
 	entries := LoadMetrics()
 	if entries == nil {
 		t.Fatal("expected empty slice, got nil")
+		return
 	}
 	if len(entries) != 0 {
 		t.Errorf("expected 0 entries, got %d", len(entries))

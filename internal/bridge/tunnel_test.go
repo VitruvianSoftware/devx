@@ -38,6 +38,7 @@ func TestNewTunnel(t *testing.T) {
 
 	if tunnel == nil {
 		t.Fatal("NewTunnel should not return nil")
+		return
 	}
 	if tunnel.cfg.AgentPod != "devx-bridge-agent-abc123-xxxx" {
 		t.Error("tunnel config should preserve agent pod name")

@@ -97,6 +97,7 @@ SECRET_API_KEY=supersecret
 
 	if runCmd == nil {
 		t.Fatalf("expected to find 'podman run' in execution log, got:\n%v", requests)
+		return
 	}
 
 	runCmdStr := strings.Join(runCmd, " ")

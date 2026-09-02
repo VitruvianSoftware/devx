@@ -61,10 +61,12 @@ func TestCodexInstallRoundTrip(t *testing.T) {
 	servers, _ := cfg["mcp_servers"].(map[string]any)
 	if servers == nil {
 		t.Fatalf("[mcp_servers] missing: %+v", cfg)
+		return
 	}
 	devx, _ := servers["devx"].(map[string]any)
 	if devx == nil {
 		t.Fatalf("[mcp_servers.devx] missing: %+v", servers)
+		return
 	}
 	if devx["command"] != "/usr/local/bin/devx" {
 		t.Errorf("command = %v", devx["command"])

@@ -46,6 +46,7 @@ func TestClusterMountsUnmarshal_NilVsEmptyVsExplicit(t *testing.T) {
 		}
 		if c.Mounts == nil {
 			t.Fatal("explicit empty mounts: got nil, want non-nil len 0")
+			return
 		}
 		if len(c.Mounts) != 0 {
 			t.Fatalf("explicit empty mounts: got len %d, want 0", len(c.Mounts))

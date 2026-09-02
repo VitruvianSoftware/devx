@@ -35,6 +35,7 @@ func TestToContainerNodeConfig_Image(t *testing.T) {
 	cfg := toContainerNodeConfig(svc, "lima")
 	if cfg == nil {
 		t.Fatal("expected config, got nil")
+		return
 	}
 	if cfg.Image != "myorg/api:dev" {
 		t.Errorf("image = %q", cfg.Image)
@@ -62,6 +63,7 @@ func TestToContainerNodeConfig_Build(t *testing.T) {
 	want := &image.Spec{Name: "web", Context: "./web", Dockerfile: "Dockerfile.dev", Tag: "local", Platforms: []string{"linux/arm64"}}
 	if cfg.Build == nil {
 		t.Fatal("expected build spec, got nil")
+		return
 	}
 	if cfg.Build.Name != want.Name || cfg.Build.Context != want.Context ||
 		cfg.Build.Dockerfile != want.Dockerfile || cfg.Build.Tag != want.Tag {
