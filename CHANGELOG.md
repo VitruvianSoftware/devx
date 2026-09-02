@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.73.1](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.73.0...devx-v0.73.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **devx,pulumi:** fix staticcheck SA5011 in devx and Pulumi Cloud backend resolution ([#2152](https://github.com/VitruvianSoftware/vitruvian-core/issues/2152)) ([b61c424](https://github.com/VitruvianSoftware/vitruvian-core/commit/b61c424b569ab9ed88fe9adc5fb5a733e2baf698))
+* **toolchain:** upgrade Go to 1.26.6 and add OSV advisory exemptions ([#2127](https://github.com/VitruvianSoftware/vitruvian-core/issues/2127)) ([8d9a833](https://github.com/VitruvianSoftware/vitruvian-core/commit/8d9a83352bde094c48b07eef152421435d35271b))
+
 ## [0.73.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.72.0...devx-v0.73.0) (2026-08-29)
 
 
