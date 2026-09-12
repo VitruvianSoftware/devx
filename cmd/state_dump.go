@@ -81,7 +81,7 @@ func runStateDump(_ *cobra.Command, _ []string) error {
 	}
 
 	if stateDumpFile != "" {
-		if err := os.WriteFile(stateDumpFile, []byte(output), 0644); err != nil {
+		if err := os.WriteFile(stateDumpFile, []byte(output), 0o644); err != nil {
 			return fmt.Errorf("could not write dump to file: %w", err)
 		}
 		fmt.Printf("✅ Diagnostic state dump written to %s\n", stateDumpFile)

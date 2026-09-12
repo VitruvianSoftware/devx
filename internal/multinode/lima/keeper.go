@@ -119,7 +119,8 @@ func (m *Manager) InstallNodeKeeper(ctx context.Context) error {
 
 	if _, err := m.runner.Run(ctx, fmt.Sprintf(
 		"mkdir -p %s/.devx %s/Library/LaunchAgents && echo %s | base64 -d > %s && chmod +x %s",
-		home, home, script, scriptPath, scriptPath)); err != nil {
+		home, home, script, scriptPath, scriptPath,
+	)); err != nil {
 		return fmt.Errorf("writing keeper script: %w", err)
 	}
 	if _, err := m.runner.Run(ctx, fmt.Sprintf("echo %s | base64 -d > %s", plist, plistPath)); err != nil {

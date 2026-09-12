@@ -162,9 +162,9 @@ func runAction(_ *cobra.Command, args []string) error {
 
 	// Log routing
 	logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
-	_ = os.MkdirAll(logDir, 0755)
+	_ = os.MkdirAll(logDir, 0o755)
 
-	logFile, logErr := os.OpenFile(filepath.Join(logDir, "action-"+actionName+".log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	logFile, logErr := os.OpenFile(filepath.Join(logDir, "action-"+actionName+".log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if logErr != nil {
 		fmt.Printf("Warning: Could not open log file: %v\n", logErr)
 	} else {
@@ -233,7 +233,8 @@ func runAction(_ *cobra.Command, args []string) error {
 
 			// Always record the failure span before breaking
 			cmdDuration := time.Since(cmdStart)
-			telemetry.RecordEvent("devx_run", cmdDuration,
+			telemetry.RecordEvent(
+				"devx_run", cmdDuration,
 				telemetry.Attr("devx.command", strings.Join(cmdArgs, " ")),
 				telemetry.Attr("devx.exit_code", exitCode),
 			)
@@ -243,7 +244,8 @@ func runAction(_ *cobra.Command, args []string) error {
 
 		// Record successful command run telemetry
 		cmdDuration := time.Since(cmdStart)
-		telemetry.RecordEvent("devx_run", cmdDuration,
+		telemetry.RecordEvent(
+			"devx_run", cmdDuration,
 			telemetry.Attr("devx.command", strings.Join(cmdArgs, " ")),
 			telemetry.Attr("devx.exit_code", exitCode),
 		)
@@ -257,7 +259,8 @@ func runAction(_ *cobra.Command, args []string) error {
 		projName = cfg.Name
 	}
 
-	telemetry.RecordEvent("devx_action", duration,
+	telemetry.RecordEvent(
+		"devx_action", duration,
 		telemetry.Attr("devx.action.name", actionName),
 		telemetry.Attr("devx.action.exit_code", exitCode),
 		telemetry.Attr("devx.action.command_count", len(cmds)),

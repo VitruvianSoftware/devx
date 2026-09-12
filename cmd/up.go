@@ -45,10 +45,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var upDomain string
-var upProfile string
-var upLogs bool
-var upNoLogs bool
+var (
+	upDomain  string
+	upProfile string
+	upLogs    bool
+	upNoLogs  bool
+)
 
 var upCmd = &cobra.Command{
 	Use:     "up",

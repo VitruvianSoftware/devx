@@ -48,7 +48,8 @@ func init() {
 func runMailList(_ *cobra.Command, _ []string) error {
 	runtime := mailListRuntime
 
-	out, err := exec.Command(runtime, "ps", "-a",
+	out, err := exec.Command(
+		runtime, "ps", "-a",
 		"--filter", "label=managed-by=devx",
 		"--filter", "label=devx-mail",
 		"--format", "{{.Names}}\t{{.Status}}\t{{.Ports}}",
@@ -97,7 +98,8 @@ func runMailList(_ *cobra.Command, _ []string) error {
 		if !strings.Contains(strings.ToLower(status), "up") {
 			statusStyle = tui.StyleDetailError
 		}
-		fmt.Printf("  %s  %s  %s  %s\n",
+		fmt.Printf(
+			"  %s  %s  %s  %s\n",
 			tui.StyleLabel.Render("MailHog"),
 			tui.StyleStepName.Render(name),
 			statusStyle.Render(status),
@@ -106,7 +108,8 @@ func runMailList(_ *cobra.Command, _ []string) error {
 		// Show the env vars that are/would be injected
 		envs := discoverMailEnvVars(runtime)
 		for k, v := range envs {
-			fmt.Printf("    %s  %s=%s\n",
+			fmt.Printf(
+				"    %s  %s=%s\n",
 				tui.StyleMuted.Render("env:"),
 				tui.StyleLabel.Render(k),
 				v,

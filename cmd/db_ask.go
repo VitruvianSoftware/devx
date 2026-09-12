@@ -335,7 +335,8 @@ func runNaturalLanguageQuery(runtime, engineName, question string) error {
 	// ── 3. Build prompt ─────────────────────────────────────────────────────
 	userPrompt := fmt.Sprintf(
 		"Database schema:\n\n%s\n\nQuestion: %s",
-		schema, question)
+		schema, question,
+	)
 
 	// ── 4. Dry-run gate ─────────────────────────────────────────────────────
 	if DryRun {

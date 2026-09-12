@@ -165,11 +165,13 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 			if errors.Is(err, ship.ErrNoStack) {
 				// Warn but don't fail — allow the developer to proceed
 				if !outputJSON {
-					fmt.Printf("    %s  %s\n",
+					fmt.Printf(
+						"    %s  %s\n",
 						shipStyleBlocking.Render("⚠ WARN"),
 						err.Error(),
 					)
-					fmt.Printf("    %s\n",
+					fmt.Printf(
+						"    %s\n",
 						shipStyleMuted.Render("Tip: add a pipeline: block to devx.yaml to define custom checks for your stack."),
 					)
 				}
@@ -185,7 +187,8 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		}
 
 		if !outputJSON && err == nil {
-			fmt.Printf("    %s  %s (%s)\n",
+			fmt.Printf(
+				"    %s  %s (%s)\n",
 				shipStylePass.Render("✓ PASS"),
 				"all local checks passed",
 				shipStyleMuted.Render(pfResult.Stack),
@@ -209,7 +212,8 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 	}
 
 	if !outputJSON {
-		fmt.Printf("    %s  pushed to %s\n",
+		fmt.Printf(
+			"    %s  pushed to %s\n",
 			shipStylePass.Render("✓"),
 			shipStyleMuted.Render(branch),
 		)
@@ -233,7 +237,8 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 	}
 
 	if !outputJSON {
-		fmt.Printf("    %s  %s\n",
+		fmt.Printf(
+			"    %s  %s\n",
 			shipStylePass.Render("✓"),
 			shipStyleMuted.Render(prURL),
 		)
@@ -242,11 +247,13 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 	// ── Phase 4: Synchronous CI Polling (The Wait Trap) ─────────────────
 	if !outputJSON {
 		fmt.Println()
-		fmt.Printf("  %s %s\n",
+		fmt.Printf(
+			"  %s %s\n",
 			shipStyleBlocking.Render("▸ Phase 4:"),
 			shipStyleBlocking.Render("Waiting for CI pipeline..."),
 		)
-		fmt.Printf("    %s\n",
+		fmt.Printf(
+			"    %s\n",
 			shipStyleMuted.Render("⏳ Terminal is blocked until CI completes. Do not interrupt."),
 		)
 	}
@@ -271,7 +278,8 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 		result.Phase = "ci"
 		result.Message = fmt.Sprintf("CI pipeline failed with conclusion: %s", conclusion)
 		if !outputJSON {
-			fmt.Printf("    %s  CI pipeline %s (run %s)\n",
+			fmt.Printf(
+				"    %s  CI pipeline %s (run %s)\n",
 				shipStyleFail.Render("✗ FAIL"),
 				conclusion,
 				runID,
@@ -309,7 +317,8 @@ func runAgentShip(_ *cobra.Command, _ []string) error {
 	result.Message = "shipped successfully — CI is green"
 
 	if !outputJSON {
-		fmt.Printf("    %s  CI pipeline %s (run %s)\n",
+		fmt.Printf(
+			"    %s  CI pipeline %s (run %s)\n",
 			shipStylePass.Render("✓ GREEN"),
 			shipStylePass.Render("passed"),
 			shipStyleMuted.Render(runID),
@@ -466,12 +475,14 @@ Diff:
 	msg = strings.Trim(msg, "\"'`")
 
 	if !outputJSON {
-		fmt.Printf("    %s  %s %s\n",
+		fmt.Printf(
+			"    %s  %s %s\n",
 			shipStylePass.Render("✓"),
 			"generated via",
 			shipStyleMuted.Render(string(result.Mode)),
 		)
-		fmt.Printf("    %s  %s\n\n",
+		fmt.Printf(
+			"    %s  %s\n\n",
 			shipStyleMuted.Render("→"),
 			msg,
 		)

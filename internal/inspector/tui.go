@@ -345,7 +345,8 @@ func (m TUIModel) renderRow(ex CapturedExchange, selected bool) string {
 		style = cursorStyle
 	}
 
-	return fmt.Sprintf("%s%-4s %s %-7s %-*s %s  %s%s",
+	return fmt.Sprintf(
+		"%s%-4s %s %-7s %-*s %s  %s%s",
 		prefix,
 		style.Render(fmt.Sprintf("%d", ex.ID)),
 		mutedStyle.Render(ts),

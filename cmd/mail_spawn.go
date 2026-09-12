@@ -37,9 +37,11 @@ const (
 	mailImage         = "docker.io/mailhog/mailhog:latest"
 )
 
-var mailSpawnSMTPPort int
-var mailSpawnUIPort int
-var mailSpawnRuntime string
+var (
+	mailSpawnSMTPPort int
+	mailSpawnUIPort   int
+	mailSpawnRuntime  string
+)
 
 var mailSpawnCmd = &cobra.Command{
 	Use:   "spawn",

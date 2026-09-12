@@ -34,7 +34,7 @@ func TestCryptoRoundTrip(t *testing.T) {
 	decrypted := filepath.Join(tmp, "decrypted.txt")
 
 	data := []byte("hello world state replication")
-	if err := os.WriteFile(original, data, 0644); err != nil {
+	if err := os.WriteFile(original, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -67,7 +67,7 @@ func TestCryptoBadPassphrase(t *testing.T) {
 	encrypted := filepath.Join(tmp, "encrypted.bin")
 	decrypted := filepath.Join(tmp, "decrypted.txt")
 
-	_ = os.WriteFile(original, []byte("secret"), 0644)
+	_ = os.WriteFile(original, []byte("secret"), 0o644)
 	_ = EncryptFile(original, encrypted, "correct-passphrase")
 
 	err := DecryptFile(encrypted, decrypted, "wrong-passphrase")

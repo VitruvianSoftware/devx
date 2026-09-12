@@ -37,9 +37,7 @@ var agentCmd = &cobra.Command{
 	Short:   "Manage AI Agent configuration for your project",
 }
 
-var (
-	agentForceUpdate bool
-)
+var agentForceUpdate bool
 
 // ollamaLaunchable maps devx agent IDs to ollama launch integration names.
 // Only agents supported by `ollama launch` are listed here.

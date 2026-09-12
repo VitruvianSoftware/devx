@@ -96,7 +96,8 @@ func resolveAuto() (VMProvider, ContainerRuntime, error) {
 				"  brew install podman    # recommended\n" +
 				"  brew install lima      # lightweight alternative\n" +
 				"  brew install colima    # Lima with batteries included\n" +
-				"Run 'devx doctor' for full prerequisite details")
+				"Run 'devx doctor' for full prerequisite details",
+		)
 	}
 	if len(detected) == 1 {
 		return buildProvider(detected[0].Name)

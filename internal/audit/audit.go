@@ -254,7 +254,7 @@ set -e
 echo "🔍 devx audit: scanning for secrets and vulnerabilities..."
 devx audit
 `
-	if err := os.WriteFile(hookPath, []byte(hook), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(hook), 0o755); err != nil {
 		return fmt.Errorf("failed to write hook: %w", err)
 	}
 	return nil
@@ -303,7 +303,7 @@ esac
 
 exit 0
 `
-	if err := os.WriteFile(hookPath, []byte(hook), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(hook), 0o755); err != nil {
 		return fmt.Errorf("failed to write pre-commit hook: %w", err)
 	}
 	return nil

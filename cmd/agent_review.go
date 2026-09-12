@@ -153,7 +153,8 @@ func runAgentReview(_ *cobra.Command, _ []string) error {
 		}
 
 		if !outputJSON {
-			fmt.Printf("    %s  %s (%s)\n",
+			fmt.Printf(
+				"    %s  %s (%s)\n",
 				shipStylePass.Render("✓ PASS"),
 				"all local checks passed",
 				shipStyleMuted.Render(pfResult.Stack),
@@ -185,7 +186,8 @@ func runAgentReview(_ *cobra.Command, _ []string) error {
 	}
 
 	if !outputJSON {
-		fmt.Printf("    %s  pushed to %s\n",
+		fmt.Printf(
+			"    %s  pushed to %s\n",
 			shipStylePass.Render("✓"),
 			shipStyleMuted.Render(branch),
 		)
@@ -209,7 +211,8 @@ func runAgentReview(_ *cobra.Command, _ []string) error {
 	}
 
 	if !outputJSON {
-		fmt.Printf("    %s  %s\n",
+		fmt.Printf(
+			"    %s  %s\n",
 			shipStylePass.Render("✓"),
 			shipStyleMuted.Render(prURL),
 		)
@@ -218,11 +221,13 @@ func runAgentReview(_ *cobra.Command, _ []string) error {
 	// ── Phase 4: Synchronous CI Polling (The Wait Trap) ─────────────────
 	if !outputJSON {
 		fmt.Println()
-		fmt.Printf("  %s %s\n",
+		fmt.Printf(
+			"  %s %s\n",
 			shipStyleBlocking.Render("▸ Phase 4:"),
 			shipStyleBlocking.Render("Waiting for CI pipeline..."),
 		)
-		fmt.Printf("    %s\n",
+		fmt.Printf(
+			"    %s\n",
 			shipStyleMuted.Render("⏳ Terminal is blocked until CI completes. Do not interrupt."),
 		)
 	}
@@ -247,7 +252,8 @@ func runAgentReview(_ *cobra.Command, _ []string) error {
 		result.Phase = "ci"
 		result.Message = fmt.Sprintf("CI pipeline failed with conclusion: %s", conclusion)
 		if !outputJSON {
-			fmt.Printf("    %s  CI pipeline %s (run %s)\n",
+			fmt.Printf(
+				"    %s  CI pipeline %s (run %s)\n",
 				shipStyleFail.Render("✗ FAIL"),
 				conclusion,
 				runID,
@@ -270,7 +276,8 @@ func runAgentReview(_ *cobra.Command, _ []string) error {
 	result.Message = "review PR created successfully — CI is green"
 
 	if !outputJSON {
-		fmt.Printf("    %s  CI pipeline %s (run %s)\n",
+		fmt.Printf(
+			"    %s  CI pipeline %s (run %s)\n",
 			shipStylePass.Render("✓ GREEN"),
 			shipStylePass.Render("passed"),
 			shipStyleMuted.Render(runID),
@@ -350,12 +357,14 @@ Diff:
 	msg = strings.Trim(msg, "\"'`")
 
 	if !outputJSON {
-		fmt.Printf("    %s  %s %s\n",
+		fmt.Printf(
+			"    %s  %s %s\n",
 			shipStylePass.Render("✓"),
 			"generated via",
 			shipStyleMuted.Render(string(result.Mode)),
 		)
-		fmt.Printf("    %s  %s\n\n",
+		fmt.Printf(
+			"    %s  %s\n\n",
 			shipStyleMuted.Render("→"),
 			msg,
 		)
@@ -399,7 +408,8 @@ Diff:
 	result, err := ai.RunAgentPrompt(prompt)
 	if err != nil || result.Mode == ai.AgentModeNone {
 		if !outputJSON {
-			fmt.Printf("    %s  %s\n",
+			fmt.Printf(
+				"    %s  %s\n",
 				shipStyleMuted.Render("—"),
 				"AI review skipped (no provider available)",
 			)
@@ -408,7 +418,8 @@ Diff:
 	}
 
 	if !outputJSON {
-		fmt.Printf("    %s  review via %s\n",
+		fmt.Printf(
+			"    %s  review via %s\n",
 			shipStylePass.Render("✓"),
 			shipStyleMuted.Render(string(result.Mode)),
 		)

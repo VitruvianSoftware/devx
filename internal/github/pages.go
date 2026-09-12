@@ -30,7 +30,8 @@ import (
 // EnablePages enables GitHub Pages on a repository with workflow-based deployment.
 // Uses the `gh` CLI which handles authentication via existing user session.
 func EnablePages(owner, repo string) error {
-	out, err := exec.Command("gh", "api", "-X", "POST",
+	out, err := exec.Command(
+		"gh", "api", "-X", "POST",
 		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
 		"-f", "build_type=workflow",
 	).CombinedOutput()
@@ -69,7 +70,8 @@ func PagesEndpoint(owner string) string {
 // Requires the domain to be verified at the org level first (done via GitHub UI).
 func SetCustomDomain(owner, repo, domain string) error {
 	// Step 1: Set the custom domain (without HTTPS — cert needs time to provision)
-	out, err := exec.Command("gh", "api", "-X", "PUT",
+	out, err := exec.Command(
+		"gh", "api", "-X", "PUT",
 		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
 		"-f", fmt.Sprintf("cname=%s", domain),
 	).CombinedOutput()
@@ -85,7 +87,8 @@ func SetCustomDomain(owner, repo, domain string) error {
 	// This may fail with "certificate does not exist yet" — that's OK,
 	// GitHub will auto-provision the cert and enforce HTTPS once ready.
 	//nolint:errcheck // cert provisioning is async — this may fail and that's OK
-	_, _ = exec.Command("gh", "api", "-X", "PUT",
+	_, _ = exec.Command(
+		"gh", "api", "-X", "PUT",
 		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
 		"-F", "https_enforced=true",
 	).CombinedOutput()
@@ -123,7 +126,8 @@ type HTTPSCert struct {
 
 // GetPagesStatus retrieves the current GitHub Pages configuration and SSL status.
 func GetPagesStatus(owner, repo string) (*PagesStatus, error) {
-	out, err := exec.Command("gh", "api",
+	out, err := exec.Command(
+		"gh", "api",
 		fmt.Sprintf("/repos/%s/%s/pages", owner, repo),
 	).CombinedOutput()
 	if err != nil {

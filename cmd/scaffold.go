@@ -35,13 +35,15 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/scaffold"
 )
 
-var scaffoldDir string
-var scaffoldAuthor string
-var scaffoldDomain string
-var scaffoldNoGit bool
-var scaffoldModulePath string
-var scaffoldDescription string
-var scaffoldForce bool
+var (
+	scaffoldDir         string
+	scaffoldAuthor      string
+	scaffoldDomain      string
+	scaffoldNoGit       bool
+	scaffoldModulePath  string
+	scaffoldDescription string
+	scaffoldForce       bool
+)
 
 var scaffoldCmd = &cobra.Command{
 	Use:     "scaffold [template] [project-name]",

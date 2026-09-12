@@ -162,7 +162,7 @@ func Scaffold(templateID, targetDir string, vars Vars, force bool) (Result, erro
 		targetPath := filepath.Join(targetDir, rel)
 
 		if d.IsDir() {
-			return os.MkdirAll(targetPath, 0755)
+			return os.MkdirAll(targetPath, 0o755)
 		}
 
 		// Strip .tmpl extension from the output path
@@ -173,7 +173,7 @@ func Scaffold(templateID, targetDir string, vars Vars, force bool) (Result, erro
 		}
 
 		// Ensure parent directory exists
-		if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 			return fmt.Errorf("mkdir %s: %w", filepath.Dir(outputPath), err)
 		}
 
@@ -210,7 +210,7 @@ func Scaffold(templateID, targetDir string, vars Vars, force bool) (Result, erro
 			}
 		} else {
 			// Copy verbatim
-			if err := os.WriteFile(outputPath, content, 0644); err != nil {
+			if err := os.WriteFile(outputPath, content, 0o644); err != nil {
 				return fmt.Errorf("write %s: %w", outputPath, err)
 			}
 		}

@@ -34,8 +34,10 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
 
-var auditOnlySecrets bool
-var auditOnlyVulns bool
+var (
+	auditOnlySecrets bool
+	auditOnlyVulns   bool
+)
 
 var auditCmd = &cobra.Command{
 	Use:     "audit",
@@ -233,7 +235,8 @@ func execScan(tool audit.Tool, cwd string, rt provider.ContainerRuntime) (foundI
 		modeLabel = auditStyleMode.Render("container (" + rtName + ")")
 	}
 
-	fmt.Printf("  %s %s  %s\n",
+	fmt.Printf(
+		"  %s %s  %s\n",
 		auditStyleSection.Render("▸ "+tool.Name),
 		auditStyleMuted.Render("—"),
 		modeLabel,
@@ -263,12 +266,14 @@ func execScan(tool audit.Tool, cwd string, rt provider.ContainerRuntime) (foundI
 	}
 
 	if found {
-		fmt.Printf("\n  %s  %s\n\n",
+		fmt.Printf(
+			"\n  %s  %s\n\n",
 			auditStyleFail.Render("✗ FAIL"),
 			auditStyleMuted.Render(fmt.Sprintf("(%s — issues found)", elapsed.Round(time.Millisecond))),
 		)
 	} else {
-		fmt.Printf("\n  %s  %s\n\n",
+		fmt.Printf(
+			"\n  %s  %s\n\n",
 			auditStylePass.Render("✓ PASS"),
 			auditStyleMuted.Render(fmt.Sprintf("(%s)", elapsed.Round(time.Millisecond))),
 		)

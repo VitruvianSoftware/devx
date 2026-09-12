@@ -23,20 +23,23 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
-	"github.com/charmbracelet/huh"
-	"github.com/spf13/cobra"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/charmbracelet/huh"
+	"github.com/spf13/cobra"
+
 	"github.com/VitruvianSoftware/devx/internal/database"
 )
 
-var spawnPort int
-var spawnRuntime string
-var spawnProject string
+var (
+	spawnPort    int
+	spawnRuntime string
+	spawnProject string
+)
 
 var spawnCmd = &cobra.Command{
 	Use:   "spawn <engine>",

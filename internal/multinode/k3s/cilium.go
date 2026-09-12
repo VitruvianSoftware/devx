@@ -37,7 +37,8 @@ import (
 // exec), and the node must already have joined so its podCIDR is assigned.
 func (m *Manager) ReadNodePodCIDR(ctx context.Context, nodeName string) (string, error) {
 	out, err := m.sudo(ctx, fmt.Sprintf(
-		"k3s kubectl get node %s -o jsonpath='{.spec.podCIDR}'", nodeName))
+		"k3s kubectl get node %s -o jsonpath='{.spec.podCIDR}'", nodeName,
+	))
 	if err != nil {
 		return "", fmt.Errorf("[%s] reading podCIDR for node %s: %w", m.runner.Host, nodeName, err)
 	}

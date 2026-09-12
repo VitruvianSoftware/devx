@@ -194,7 +194,8 @@ func (m SetupModel) View() string {
 	if m.authURL != "" {
 		b.WriteString("\n")
 		box := StyleBox.Render(
-			lipgloss.JoinVertical(lipgloss.Left,
+			lipgloss.JoinVertical(
+				lipgloss.Left,
 				StyleDetailRunning.Render("Tailscale Authentication Required"),
 				"",
 				StyleMuted.Render("Open this URL in your browser:"),
@@ -207,7 +208,8 @@ func (m SetupModel) View() string {
 
 	if m.done && !m.failed && m.result != nil {
 		b.WriteString("\n")
-		summary := lipgloss.JoinVertical(lipgloss.Left,
+		summary := lipgloss.JoinVertical(
+			lipgloss.Left,
 			StyleDetailDone.Render("✓  Setup complete!"),
 			"",
 			StyleLabel.Render("Public endpoint")+" "+StyleValue.Render("https://"+m.result.Domain),

@@ -38,7 +38,7 @@ services:
   - name: api
     command: ["go", "run", "./cmd/api"]
     port: 8080
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -61,7 +61,7 @@ func TestResolveConfig_BasicInclude(t *testing.T) {
 
 	// Create the included project
 	siblingDir := filepath.Join(root, "payments-api")
-	if err := os.MkdirAll(siblingDir, 0755); err != nil {
+	if err := os.MkdirAll(siblingDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	siblingYAML := filepath.Join(siblingDir, "devx.yaml")
@@ -74,7 +74,7 @@ services:
 databases:
   - engine: postgres
     port: 5432
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -88,7 +88,7 @@ services:
   - name: web-frontend
     command: ["npm", "run", "dev"]
     port: 3000
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,14 +138,14 @@ func TestResolveConfig_ServiceNameCollision(t *testing.T) {
 	root := t.TempDir()
 
 	siblingDir := filepath.Join(root, "svc-b")
-	if err := os.MkdirAll(siblingDir, 0755); err != nil {
+	if err := os.MkdirAll(siblingDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(siblingDir, "devx.yaml"), []byte(`
 services:
   - name: api
     command: ["python", "app.py"]
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -157,7 +157,7 @@ include:
 services:
   - name: api
     command: ["go", "run", "./cmd/api"]
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -178,7 +178,7 @@ func TestResolveConfig_MissingIncludePath(t *testing.T) {
 name: test
 include:
   - path: ./does-not-exist/devx.yaml
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -204,14 +204,14 @@ func TestResolveConfig_CircularInclude(t *testing.T) {
 name: project-a
 include:
   - path: ./b.yaml
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(bPath, []byte(`
 name: project-b
 include:
   - path: ./a.yaml
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -251,7 +251,7 @@ services:
     bridge_target:
       service: payments-api
       port: 8080
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -291,7 +291,7 @@ services:
       port: 3000
       local_port: 3000
       mode: steal
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -319,7 +319,7 @@ services:
     bridge_target:
       service: payments-api
       port: 8080
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -342,7 +342,7 @@ bridge:
 services:
   - name: broken
     runtime: bridge
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -372,7 +372,7 @@ services:
       service: svc-b
       port: 3000
       mode: steal
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -397,7 +397,7 @@ services:
     runtime: bridge
     bridge_target:
       port: 8080
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -423,7 +423,7 @@ services:
     bridge_target:
       service: payments-api
       port: 0
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -450,7 +450,7 @@ services:
       service: user-svc
       port: 3000
       mode: mirror
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -483,7 +483,7 @@ profiles:
         bridge_target:
           service: payments-api
           port: 8080
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -525,7 +525,7 @@ services:
     runtime: host
     command: ["go", "run", "./cmd/api"]
     port: 8080
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -545,7 +545,7 @@ func TestResolveConfig_Kubeconfig(t *testing.T) {
 	if err := os.WriteFile(yamlPath, []byte(`
 name: kc-proj
 kubeconfig: ~/.kube/cluster.yaml
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -633,7 +633,7 @@ services:
     container:
       image: myorg/api:dev
     port: 8080
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -671,7 +671,7 @@ services:
         dockerfile: Dockerfile.dev
         tag: local
     port: 3000
-`), 0644); err != nil {
+`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

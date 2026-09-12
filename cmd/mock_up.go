@@ -31,9 +31,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	mockUpRuntime string
-)
+var mockUpRuntime string
 
 var mockUpCmd = &cobra.Command{
 	Use:   "up [name...]",
@@ -54,8 +52,10 @@ Examples:
 	RunE: runMockUp,
 }
 
-var mockUpURL string
-var mockUpPort int
+var (
+	mockUpURL  string
+	mockUpPort int
+)
 
 func init() {
 	mockUpCmd.Flags().StringVar(&mockUpRuntime, "runtime", "podman",

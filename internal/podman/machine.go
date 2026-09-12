@@ -51,7 +51,8 @@ func Remove(name string) error {
 // Init provisions a new Podman machine.
 func Init(name string) error {
 	var stderr bytes.Buffer
-	cmd := exec.Command("podman", "machine", "init",
+	cmd := exec.Command(
+		"podman", "machine", "init",
 		"--rootful",
 		name,
 	)

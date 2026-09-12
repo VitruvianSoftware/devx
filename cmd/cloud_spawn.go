@@ -33,8 +33,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cloudSpawnPort int
-var cloudSpawnRuntime string
+var (
+	cloudSpawnPort    int
+	cloudSpawnRuntime string
+)
 
 var cloudSpawnCmd = &cobra.Command{
 	Use:   "spawn <service>",
@@ -143,26 +145,30 @@ func buildGCSArgs(serviceName, runtime, containerName string, port int, emulator
 	switch serviceName {
 	case "gcs":
 		// fake-gcs-server needs -scheme http -port and -backend memory flags
-		runArgs = append(runArgs,
+		runArgs = append(
+			runArgs,
 			"-scheme", "http",
 			"-port", fmt.Sprintf("%d", emulator.InternalPort),
 			"-backend", "memory",
 			"-public-host", fmt.Sprintf("localhost:%d", port),
 		)
 	case "pubsub":
-		runArgs = append(runArgs,
+		runArgs = append(
+			runArgs,
 			"gcloud", "beta", "emulators", "pubsub", "start",
 			fmt.Sprintf("--host-port=0.0.0.0:%d", emulator.InternalPort),
 		)
 	case "firestore":
-		runArgs = append(runArgs,
+		runArgs = append(
+			runArgs,
 			"gcloud", "beta", "emulators", "firestore", "start",
 			fmt.Sprintf("--host-port=0.0.0.0:%d", emulator.InternalPort),
 		)
 	case "s3":
 		// MinIO requires an explicit data dir and address. Console is left
 		// on a dynamic port — we only expose the S3 API port.
-		runArgs = append(runArgs,
+		runArgs = append(
+			runArgs,
 			"server",
 			"--address", fmt.Sprintf(":%d", emulator.InternalPort),
 			"/data",
@@ -175,7 +181,8 @@ func buildGCSArgs(serviceName, runtime, containerName string, port int, emulator
 // discoverCloudEmulatorEnvs finds all running devx-cloud-* containers and
 // returns the combined set of SDK env vars for injection into devx shell.
 func discoverCloudEmulatorEnvs(runtime string) map[string]string {
-	out, err := exec.Command(runtime, "ps",
+	out, err := exec.Command(
+		runtime, "ps",
 		"--filter", "label=managed-by=devx",
 		"--filter", "label=devx-cloud",
 		"--format", "{{.Names}}\t{{.Ports}}",

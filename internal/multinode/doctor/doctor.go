@@ -214,8 +214,10 @@ func checkBridgedIP(ctx context.Context, mgr *lima.Manager, runner *remote.Runne
 	case err != nil:
 		return CheckResult{Name: "Bridged IP", Host: host, Passed: false, Message: fmt.Sprintf("not available: %v", err)}
 	case ip != "":
-		return CheckResult{Name: "Bridged IP", Host: host, Passed: false,
-			Message: fmt.Sprintf("got Lima user-mode IP %s, not a socket_vmnet bridge — kickstart socket_vmnet + restart the VM", ip)}
+		return CheckResult{
+			Name: "Bridged IP", Host: host, Passed: false,
+			Message: fmt.Sprintf("got Lima user-mode IP %s, not a socket_vmnet bridge — kickstart socket_vmnet + restart the VM", ip),
+		}
 	default:
 		return CheckResult{Name: "Bridged IP", Host: host, Passed: false, Message: "no bridged interface (lima0)"}
 	}

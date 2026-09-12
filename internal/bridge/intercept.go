@@ -156,8 +156,10 @@ func ValidateInterceptable(info *ServiceInfo) error {
 
 // CheckInterceptConflict checks whether the Service already has an active intercept session.
 func CheckInterceptConflict(kubeconfig, kubeCtx, namespace, service string) error {
-	args := []string{"get", "service", service, "-n", namespace,
-		"-o", "jsonpath={.metadata.annotations.devx-bridge-session}"}
+	args := []string{
+		"get", "service", service, "-n", namespace,
+		"-o", "jsonpath={.metadata.annotations.devx-bridge-session}",
+	}
 	if kubeconfig != "" {
 		args = append(args, "--kubeconfig", kubeconfig)
 	}
@@ -197,8 +199,10 @@ func PatchServiceSelector(kubeconfig, kubeCtx, namespace, service string, newSel
 	selectorJSON, _ := json.Marshal(newSelector)
 	patch := fmt.Sprintf(`{"metadata":{"annotations":{"devx-bridge-session":"%s"}},"spec":{"selector":%s}}`, sessionID, string(selectorJSON))
 
-	args := []string{"patch", "service", service, "-n", namespace,
-		"--type=merge", "-p", patch}
+	args := []string{
+		"patch", "service", service, "-n", namespace,
+		"--type=merge", "-p", patch,
+	}
 	if kubeconfig != "" {
 		args = append(args, "--kubeconfig", kubeconfig)
 	}
@@ -219,8 +223,10 @@ func RestoreServiceSelector(kubeconfig, kubeCtx string, state *ServiceState) err
 	selectorJSON, _ := json.Marshal(state.OriginalSelector)
 	patch := fmt.Sprintf(`{"metadata":{"annotations":{"devx-bridge-session":null}},"spec":{"selector":%s}}`, string(selectorJSON))
 
-	args := []string{"patch", "service", state.Name, "-n", state.Namespace,
-		"--type=merge", "-p", patch}
+	args := []string{
+		"patch", "service", state.Name, "-n", state.Namespace,
+		"--type=merge", "-p", patch,
+	}
 	if kubeconfig != "" {
 		args = append(args, "--kubeconfig", kubeconfig)
 	}
@@ -236,8 +242,10 @@ func RestoreServiceSelector(kubeconfig, kubeCtx string, state *ServiceState) err
 
 // GetServiceSelector returns the current selector of a Service.
 func GetServiceSelector(kubeconfig, kubeCtx, namespace, service string) (map[string]string, error) {
-	args := []string{"get", "service", service, "-n", namespace,
-		"-o", "jsonpath={.spec.selector}"}
+	args := []string{
+		"get", "service", service, "-n", namespace,
+		"-o", "jsonpath={.spec.selector}",
+	}
 	if kubeconfig != "" {
 		args = append(args, "--kubeconfig", kubeconfig)
 	}

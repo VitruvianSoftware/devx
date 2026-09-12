@@ -56,7 +56,8 @@ var stateListCmd = &cobra.Command{
 		_, _ = fmt.Fprintln(w, "NAME\tCONTAINERS\tSIZE\tCREATED")
 		_, _ = fmt.Fprintln(w, "────\t──────────\t────\t───────")
 		for _, cp := range checkpoints {
-			_, _ = fmt.Fprintf(w, "%s\t%d\t%s\t%s\n",
+			_, _ = fmt.Fprintf(
+				w, "%s\t%d\t%s\t%s\n",
 				cp.Name,
 				cp.ContainerCount,
 				humanizeBytes(cp.SizeBytes),

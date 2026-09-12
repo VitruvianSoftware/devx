@@ -38,9 +38,11 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/webhook"
 )
 
-var webhookPort int
-var webhookExpose bool
-var webhookRuntime string
+var (
+	webhookPort    int
+	webhookExpose  bool
+	webhookRuntime string
+)
 
 var webhookCmd = &cobra.Command{
 	Use:     "webhook",

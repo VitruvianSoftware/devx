@@ -31,9 +31,11 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/database"
 )
 
-var rmRuntime string
-var rmKeepVolume bool
-var rmProject string
+var (
+	rmRuntime    string
+	rmKeepVolume bool
+	rmProject    string
+)
 
 var dbRmCmd = &cobra.Command{
 	Use:   "rm <engine>",

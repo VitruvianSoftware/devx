@@ -34,8 +34,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var traceSpawnRuntime string
-var traceSpawnPersist bool
+var (
+	traceSpawnRuntime string
+	traceSpawnPersist bool
+)
 
 var traceSpawnCmd = &cobra.Command{
 	Use:   "spawn [engine]",
@@ -91,7 +93,7 @@ func runTraceSpawn(_ *cobra.Command, args []string) error {
 			return fmt.Errorf("resolving home directory: %w", err)
 		}
 		persistDir = filepath.Join(home, ".devx", "telemetry", string(engineName))
-		if err := os.MkdirAll(persistDir, 0755); err != nil {
+		if err := os.MkdirAll(persistDir, 0o755); err != nil {
 			return fmt.Errorf("creating persist directory %s: %w", persistDir, err)
 		}
 		fmt.Printf("💾 Persisting trace data to %s\n", persistDir)

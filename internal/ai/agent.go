@@ -102,7 +102,8 @@ func tryOllamaLaunch(prompt string) (*AgentResult, error) {
 
 		// Run: ollama launch <agent> --model <model> -- -p "prompt" --permission-mode plan
 		// plan mode = read-only (safe), -p = print mode (non-interactive)
-		cmd := exec.Command(ollamaPath, "launch", agent, "--model", model, "--",
+		cmd := exec.Command(
+			ollamaPath, "launch", agent, "--model", model, "--",
 			"-p", prompt,
 			"--permission-mode", "plan",
 		)

@@ -106,7 +106,8 @@ func Spawn(runtime, name string) (*Cluster, error) {
 
 // List returns all active devx k3s clusters.
 func List(runtime string) ([]Cluster, error) {
-	out, err := exec.Command(runtime, "ps", "-a",
+	out, err := exec.Command(
+		runtime, "ps", "-a",
 		"--filter", "label="+labelK8s,
 		"--format", "{{json .}}",
 	).Output()
@@ -182,11 +183,11 @@ func extractKubeconfig(runtime, container, name string, port int) error {
 
 	cp := configPath(name)
 	dir := filepath.Dir(cp)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("failed to create ~/.kube directory: %w", err)
 	}
 
-	if err := os.WriteFile(cp, []byte(configStr), 0600); err != nil {
+	if err := os.WriteFile(cp, []byte(configStr), 0o600); err != nil {
 		return fmt.Errorf("failed to write host kubeconfig to %s: %w", cp, err)
 	}
 
@@ -209,7 +210,8 @@ func isRunning(runtime, containerName string) (bool, error) {
 }
 
 func containerPort(runtime, containerName string) (int, error) {
-	out, err := exec.Command(runtime, "inspect", containerName,
+	out, err := exec.Command(
+		runtime, "inspect", containerName,
 		"--format", "{{range $p, $conf := .NetworkSettings.Ports}}{{(index $conf 0).HostPort}}{{end}}",
 	).Output()
 	if err != nil {

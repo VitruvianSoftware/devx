@@ -71,7 +71,8 @@ func (r *Runner) Run(ctx context.Context, command string) (string, error) {
 	for attempt := 0; attempt <= r.MaxRetries; attempt++ {
 		if attempt > 0 {
 			backoff := time.Duration(math.Pow(2, float64(attempt-1))) * time.Second
-			slog.Debug("retrying SSH command",
+			slog.Debug(
+				"retrying SSH command",
 				"host", r.Host,
 				"attempt", attempt+1,
 				"backoff", backoff,
@@ -101,7 +102,8 @@ func (r *Runner) Run(ctx context.Context, command string) (string, error) {
 			return "", err
 		}
 
-		slog.Warn("transient SSH failure",
+		slog.Warn(
+			"transient SSH failure",
 			"host", r.Host,
 			"attempt", attempt+1,
 			"error", err,
@@ -136,7 +138,8 @@ func (r *Runner) runOnce(ctx context.Context, command string) (string, error) {
 	wrappedCmd := fmt.Sprintf("export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH; %s", command)
 	args = append(args, host, wrappedCmd)
 
-	slog.Debug("executing SSH command",
+	slog.Debug(
+		"executing SSH command",
 		"host", r.Host,
 		"command", command,
 	)
@@ -152,7 +155,8 @@ func (r *Runner) runOnce(ctx context.Context, command string) (string, error) {
 	}
 
 	output := strings.TrimSpace(stdout.String())
-	slog.Debug("SSH command completed",
+	slog.Debug(
+		"SSH command completed",
 		"host", r.Host,
 		"output_length", len(output),
 	)

@@ -34,8 +34,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var stateShareDbOnly bool
-var stateShareRelay string
+var (
+	stateShareDbOnly bool
+	stateShareRelay  string
+)
 
 var stateShareCmd = &cobra.Command{
 	Use:   "share",

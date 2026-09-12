@@ -202,8 +202,8 @@ func runSitesInit(cmd *cobra.Command, _ []string) error {
 	if _, statErr := os.Stat("docs/public"); os.IsNotExist(statErr) {
 		cnamePath = "CNAME"
 	}
-	if err := os.MkdirAll(strings.TrimSuffix(cnamePath, "/CNAME"), 0755); err == nil {
-		if writeErr := os.WriteFile(cnamePath, []byte(subdomain+"\n"), 0644); writeErr == nil {
+	if err := os.MkdirAll(strings.TrimSuffix(cnamePath, "/CNAME"), 0o755); err == nil {
+		if writeErr := os.WriteFile(cnamePath, []byte(subdomain+"\n"), 0o644); writeErr == nil {
 			fmt.Printf("⏳ Wrote local CNAME file: %s ✓\n", cnamePath)
 		}
 	}

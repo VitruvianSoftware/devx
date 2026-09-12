@@ -148,7 +148,8 @@ var snapshotListCmd = &cobra.Command{
 		_, _ = fmt.Fprintln(w, "NAME\tENGINE\tSIZE\tCREATED")
 		_, _ = fmt.Fprintln(w, "────\t──────\t────\t───────")
 		for _, s := range snapshots {
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			_, _ = fmt.Fprintf(
+				w, "%s\t%s\t%s\t%s\n",
 				s.Name,
 				s.Engine,
 				humanizeBytes(s.SizeBytes),

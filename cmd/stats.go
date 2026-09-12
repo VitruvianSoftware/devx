@@ -165,7 +165,8 @@ func runStats(_ *cobra.Command, _ []string) error {
 	fmt.Println()
 
 	// Table header
-	fmt.Printf("  %-25s %7s %10s %10s %10s\n",
+	fmt.Printf(
+		"  %-25s %7s %10s %10s %10s\n",
 		statsStyleHeader.Render("Event"),
 		statsStyleHeader.Render("Count"),
 		statsStyleHeader.Render("P50"),
@@ -182,14 +183,16 @@ func runStats(_ *cobra.Command, _ []string) error {
 		p90 := formatDuration(percentile(durations, 90))
 		p99 := formatDuration(percentile(durations, 99))
 
-		fmt.Printf("  %-25s %7d %10s %10s %10s\n",
+		fmt.Printf(
+			"  %-25s %7d %10s %10s %10s\n",
 			statsStyleValue.Render(name),
 			len(durations),
 			p50, p90, p99,
 		)
 	}
 
-	fmt.Printf("\n  %s\n\n",
+	fmt.Printf(
+		"\n  %s\n\n",
 		statsStyleMuted.Render(fmt.Sprintf("Data: ~/.devx/metrics.json (%d entries)", len(recent))),
 	)
 

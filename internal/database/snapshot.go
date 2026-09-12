@@ -66,7 +66,7 @@ func metaPath(engine, name string) string {
 func CreateSnapshot(rt provider.ContainerRuntime, engine, snapshotName string) (*SnapshotMeta, error) {
 	volumeName := fmt.Sprintf("devx-data-%s", engine)
 
-	if err := os.MkdirAll(filepath.Join(SnapshotDir(), engine), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(SnapshotDir(), engine), 0o755); err != nil {
 		return nil, fmt.Errorf("could not create snapshot directory: %w", err)
 	}
 
@@ -117,7 +117,7 @@ func CreateSnapshot(rt provider.ContainerRuntime, engine, snapshotName string) (
 	if err != nil {
 		return nil, fmt.Errorf("could not write snapshot metadata: %w", err)
 	}
-	if err := os.WriteFile(metaPath(engine, snapshotName), mb, 0644); err != nil {
+	if err := os.WriteFile(metaPath(engine, snapshotName), mb, 0o644); err != nil {
 		return nil, fmt.Errorf("could not persist snapshot metadata: %w", err)
 	}
 

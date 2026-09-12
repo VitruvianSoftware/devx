@@ -73,7 +73,7 @@ func LoadLocal() (*LocalConfig, error) {
 // It creates the directory if it doesn't exist.
 func SaveLocal(cfg *LocalConfig) error {
 	dir := LocalConfigDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 
@@ -81,5 +81,5 @@ func SaveLocal(cfg *LocalConfig) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(LocalConfigPath(), data, 0644)
+	return os.WriteFile(LocalConfigPath(), data, 0o644)
 }

@@ -301,7 +301,8 @@ func runBridgeIntercept(_ *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("  %s\n", tui.StyleTitle.Render("Intercept Active"))
-	fmt.Printf("    %s  %s/%s :%d → localhost:%d  %s\n",
+	fmt.Printf(
+		"    %s  %s/%s :%d → localhost:%d  %s\n",
 		tui.IconDone,
 		tui.StyleMuted.Render(namespace),
 		tui.StyleStepName.Render(serviceName),
@@ -449,7 +450,8 @@ func printInterceptDryRun(info *bridge.ServiceInfo, kubeconfig, kubeCtx, kubectl
 	fmt.Printf("  %s  %s\n", tui.StyleLabel.Render("image:"), agentImage)
 	fmt.Println()
 
-	fmt.Printf("  %s  %s/%s :%d → localhost:%d  %s\n",
+	fmt.Printf(
+		"  %s  %s/%s :%d → localhost:%d  %s\n",
 		tui.StyleDetailRunning.Render("→"),
 		tui.StyleMuted.Render(info.Namespace),
 		tui.StyleStepName.Render(info.Name),
@@ -463,7 +465,8 @@ func printInterceptDryRun(info *bridge.ServiceInfo, kubeconfig, kubeCtx, kubectl
 		if name == "" {
 			name = "<unnamed>"
 		}
-		fmt.Printf("    %s  %s :%d → targetPort:%s (%s)\n",
+		fmt.Printf(
+			"    %s  %s :%d → targetPort:%s (%s)\n",
 			tui.StyleMuted.Render("·"),
 			name, p.Port, p.TargetPort, p.Protocol,
 		)

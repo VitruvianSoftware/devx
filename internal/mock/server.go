@@ -131,7 +131,8 @@ type MockInfo struct {
 
 // List returns all running devx-managed mock containers.
 func List(runtime string) ([]MockInfo, error) {
-	out, err := exec.Command(runtime, "ps", "-a",
+	out, err := exec.Command(
+		runtime, "ps", "-a",
 		"--filter", "label="+labelMock,
 		"--format", "{{json .}}",
 	).Output()
@@ -223,7 +224,8 @@ func isRunning(runtime, containerName string) (bool, error) {
 }
 
 func containerPort(runtime, containerName string) (int, error) {
-	out, err := exec.Command(runtime, "inspect", containerName,
+	out, err := exec.Command(
+		runtime, "inspect", containerName,
 		"--format", "{{range $p, $conf := .NetworkSettings.Ports}}{{(index $conf 0).HostPort}}{{end}}",
 	).Output()
 	if err != nil {

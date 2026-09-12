@@ -82,12 +82,15 @@ func (p *LimaProvider) GetToken(ctx context.Context) (string, error) { return p.
 func (p *LimaProvider) IsInstalled(ctx context.Context) (bool, error) {
 	return p.k3s.IsInstalled(ctx)
 }
+
 func (p *LimaProvider) WaitForReady(ctx context.Context, d time.Duration) error {
 	return p.k3s.WaitForReady(ctx, d)
 }
+
 func (p *LimaProvider) NodeStatus(ctx context.Context) (string, error) {
 	return p.k3s.GetNodeStatus(ctx)
 }
+
 func (p *LimaProvider) Kubeconfig(ctx context.Context, ip string) (string, error) {
 	return p.k3s.GetKubeconfig(ctx, ip)
 }
@@ -95,13 +98,16 @@ func (p *LimaProvider) Drain(ctx context.Context, n string) error { return p.k3s
 func (p *LimaProvider) DeleteNode(ctx context.Context, n string) error {
 	return p.k3s.DeleteNode(ctx, n)
 }
+
 func (p *LimaProvider) Uninstall(ctx context.Context, role string) error {
 	return p.k3s.Uninstall(ctx, role)
 }
+
 func (p *LimaProvider) Destroy(ctx context.Context) error {
 	_ = p.k3s.Uninstall(ctx, p.spec.Role)
 	return p.lima.Destroy(ctx)
 }
+
 func (p *LimaProvider) Reconcile(ctx context.Context) error {
 	_, err := p.run.LimaShellSudo(ctx, p.spec.VMName,
 		fmt.Sprintf("apt-get update -qq && apt-get install -y -qq %s", lima.NodePackages))

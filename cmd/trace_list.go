@@ -48,7 +48,8 @@ func init() {
 func runTraceList(_ *cobra.Command, _ []string) error {
 	runtime := traceListRuntime
 
-	out, err := exec.Command(runtime, "ps", "-a",
+	out, err := exec.Command(
+		runtime, "ps", "-a",
 		"--filter", "label=managed-by=devx",
 		"--filter", "label=devx-telemetry",
 		"--format", "{{.Names}}\t{{.Status}}\t{{.Ports}}",
@@ -89,7 +90,8 @@ func runTraceList(_ *cobra.Command, _ []string) error {
 			}
 		}
 
-		fmt.Printf("  %s  %s  %s  %s\n",
+		fmt.Printf(
+			"  %s  %s  %s  %s\n",
 			tui.StyleLabel.Render(engineLabel),
 			tui.StyleStepName.Render(name),
 			statusStyle.Render(status),

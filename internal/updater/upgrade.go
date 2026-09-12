@@ -111,7 +111,7 @@ func SelfUpgrade(tag string, progress io.Writer) error {
 		_ = tmpFile.Close()
 		return fmt.Errorf("could not write new binary: %w", err)
 	}
-	if err := tmpFile.Chmod(0755); err != nil {
+	if err := tmpFile.Chmod(0o755); err != nil {
 		_ = tmpFile.Close()
 		return fmt.Errorf("could not chmod new binary: %w", err)
 	}

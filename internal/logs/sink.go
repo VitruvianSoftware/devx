@@ -44,10 +44,10 @@ func ServiceLogPath(service string) string {
 // OpenServiceLog creates/truncates the per-service log file (fresh per `up` run).
 func OpenServiceLog(service string) (*os.File, error) {
 	p := ServiceLogPath(service)
-	if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return nil, err
 	}
-	return os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	return os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 }
 
 // BuildSink returns the writer a producer should write log bytes to, plus a

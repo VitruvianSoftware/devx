@@ -197,7 +197,7 @@ ingress:
   - service: http_status:404
 `, tunnelID, credFile, fullDomain, targetPort)
 
-	err = os.WriteFile(configFile, []byte(configContent), 0644)
+	err = os.WriteFile(configFile, []byte(configContent), 0o644)
 	return configFile, err
 }
 
@@ -224,6 +224,6 @@ func WriteMultiIngressConfig(tunnelID string, entries []IngressEntry) (string, e
 	}
 	sb.WriteString("  - service: http_status:404\n")
 
-	err = os.WriteFile(configFile, []byte(sb.String()), 0644)
+	err = os.WriteFile(configFile, []byte(sb.String()), 0o644)
 	return configFile, err
 }

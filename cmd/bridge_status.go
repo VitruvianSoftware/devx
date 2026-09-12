@@ -145,7 +145,8 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 			stateLabel = tui.StyleDetailRunning.Render(e.State)
 		}
 
-		fmt.Printf("    %s  %s/%s :%d → localhost:%d  %s\n",
+		fmt.Printf(
+			"    %s  %s/%s :%d → localhost:%d  %s\n",
 			icon,
 			tui.StyleMuted.Render(e.Namespace),
 			tui.StyleStepName.Render(e.Service),
@@ -153,7 +154,8 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 			e.LocalPort,
 			stateLabel,
 		)
-		fmt.Printf("       %s %s\n",
+		fmt.Printf(
+			"       %s %s\n",
 			tui.StyleMuted.Render("env:"),
 			tui.StyleMuted.Render(fmt.Sprintf("%s=http://127.0.0.1:%d", bridgeEnvKey(e.Service), e.LocalPort)),
 		)
@@ -164,7 +166,8 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 		fmt.Printf("\n  %s\n\n", tui.StyleTitle.Render("Active Intercepts"))
 
 		for _, ic := range session.Intercepts {
-			fmt.Printf("    %s  %s/%s :%d → localhost:%d  %s  (agent: %s)\n",
+			fmt.Printf(
+				"    %s  %s/%s :%d → localhost:%d  %s  (agent: %s)\n",
 				tui.IconDone,
 				tui.StyleMuted.Render(ic.Namespace),
 				tui.StyleStepName.Render(ic.Service),
@@ -176,7 +179,8 @@ func runBridgeStatus(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	fmt.Printf("\n  %s  %s\n",
+	fmt.Printf(
+		"\n  %s  %s\n",
 		tui.StyleLabel.Render("env file:"),
 		tui.StyleMuted.Render("~/.devx/bridge.env"),
 	)

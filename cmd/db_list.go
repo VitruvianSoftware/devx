@@ -115,7 +115,8 @@ func runDbList(_ *cobra.Command, _ []string) error {
 			continue
 		}
 
-		fmt.Printf("  %s  %s  %s  %s\n",
+		fmt.Printf(
+			"  %s  %s  %s  %s\n",
 			tui.StyleLabel.Render(displayName),
 			tui.StyleStepName.Render(name),
 			statusStyle.Render(status),

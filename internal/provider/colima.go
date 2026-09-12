@@ -37,7 +37,8 @@ func (c *ColimaProvider) Name() string { return "colima" }
 
 func (c *ColimaProvider) Init(name string) error {
 	var stderr bytes.Buffer
-	cmd := exec.Command("colima", "start",
+	cmd := exec.Command(
+		"colima", "start",
 		"--profile", name,
 		"--vm-type=vz",
 		"--mount-type=virtiofs",

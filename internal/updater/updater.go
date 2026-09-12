@@ -176,10 +176,10 @@ func readCache() (*cacheFile, error) {
 }
 
 func writeCache(c cacheFile) error {
-	_ = os.MkdirAll(cacheDir(), 0755)
+	_ = os.MkdirAll(cacheDir(), 0o755)
 	raw, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(cachePath(), raw, 0644)
+	return os.WriteFile(cachePath(), raw, 0o644)
 }

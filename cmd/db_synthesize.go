@@ -35,9 +35,11 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
 
-var synthRecords int
-var synthModel string
-var synthRuntime string
+var (
+	synthRecords int
+	synthModel   string
+	synthRuntime string
+)
 
 var dbSynthesizeCmd = &cobra.Command{
 	Use:   "synthesize <engine>",
@@ -130,7 +132,8 @@ func runDBSynthesize(_ *cobra.Command, args []string) error {
 	// ── 5. Build prompt ─────────────────────────────────────────────────────
 	userPrompt := fmt.Sprintf(
 		"Generate exactly %d realistic, chaotic synthetic INSERT statements for the following database schema:\n\n%s",
-		synthRecords, schema)
+		synthRecords, schema,
+	)
 
 	// ── 6. Dry-run gate ─────────────────────────────────────────────────────
 	if DryRun {

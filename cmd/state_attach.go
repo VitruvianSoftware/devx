@@ -151,7 +151,7 @@ var stateAttachCmd = &cobra.Command{
 			}
 			// Copy extracted archives to checkpoint dir (respects DEVX_CHECKPOINT_DIR)
 			cpDir := filepath.Join(state.CheckpointsDir(), manifest.CheckpointName)
-			_ = os.MkdirAll(cpDir, 0755)
+			_ = os.MkdirAll(cpDir, 0o755)
 			for _, c := range manifest.Containers {
 				src := filepath.Join(extractDir, "containers", c)
 				dst := filepath.Join(cpDir, c)
@@ -173,7 +173,7 @@ var stateAttachCmd = &cobra.Command{
 			srcJson := filepath.Join(extractDir, "databases", fmt.Sprintf("%s_%s.json", db.Engine, db.Name))
 
 			dstDir := filepath.Join(database.SnapshotDir(), db.Engine)
-			_ = os.MkdirAll(dstDir, 0755)
+			_ = os.MkdirAll(dstDir, 0o755)
 
 			_ = os.Rename(srcTar, filepath.Join(dstDir, db.Name+".tar"))
 			_ = os.Rename(srcJson, filepath.Join(dstDir, db.Name+".json"))

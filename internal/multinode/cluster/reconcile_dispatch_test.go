@@ -34,18 +34,20 @@ import (
 // satisfies provider.NodeProvider for dispatch tests.
 type fakeNodeProvider struct{ onReconcile func() }
 
-func (f *fakeNodeProvider) EnsureRuntime(context.Context) (string, error)        { return "", nil }
+func (f *fakeNodeProvider) EnsureRuntime(context.Context) (string, error)          { return "", nil }
 func (f *fakeNodeProvider) InstallServer(context.Context, provider.JoinOpts) error { return nil }
 func (f *fakeNodeProvider) InstallAgent(context.Context, provider.JoinOpts) error  { return nil }
-func (f *fakeNodeProvider) GetToken(context.Context) (string, error)             { return "", nil }
-func (f *fakeNodeProvider) IsInstalled(context.Context) (bool, error)            { return true, nil }
-func (f *fakeNodeProvider) WaitForReady(context.Context, time.Duration) error    { return nil }
-func (f *fakeNodeProvider) NodeStatus(context.Context) (string, error)           { return "", nil }
-func (f *fakeNodeProvider) Kubeconfig(context.Context, string) (string, error)   { return "", nil }
-func (f *fakeNodeProvider) Drain(context.Context, string) error                  { return nil }
-func (f *fakeNodeProvider) DeleteNode(context.Context, string) error             { return nil }
-func (f *fakeNodeProvider) Uninstall(context.Context, string) error              { return nil }
-func (f *fakeNodeProvider) Destroy(context.Context) error                        { return nil }
+func (f *fakeNodeProvider) GetToken(context.Context) (string, error)               { return "", nil }
+
+func (f *fakeNodeProvider) IsInstalled(context.Context) (bool, error)         { return true, nil }
+func (f *fakeNodeProvider) WaitForReady(context.Context, time.Duration) error { return nil }
+func (f *fakeNodeProvider) NodeStatus(context.Context) (string, error)        { return "", nil }
+
+func (f *fakeNodeProvider) Kubeconfig(context.Context, string) (string, error) { return "", nil }
+func (f *fakeNodeProvider) Drain(context.Context, string) error                { return nil }
+func (f *fakeNodeProvider) DeleteNode(context.Context, string) error           { return nil }
+func (f *fakeNodeProvider) Uninstall(context.Context, string) error            { return nil }
+func (f *fakeNodeProvider) Destroy(context.Context) error                      { return nil }
 func (f *fakeNodeProvider) Reconcile(context.Context) error {
 	if f.onReconcile != nil {
 		f.onReconcile()

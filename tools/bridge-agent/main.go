@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen on control port %d: %v", flagControlPort, err)
 	}
-	defer func() { _ = controlLn.Close() }() 
+	defer func() { _ = controlLn.Close() }()
 	log.Printf("listening for devx CLI on :%d", flagControlPort)
 
 	// Handle shutdown
@@ -126,8 +126,8 @@ func main() {
 
 // handleCLISession manages the Yamux server session with the CLI.
 func handleCLISession(ctx context.Context, conn net.Conn, inbound <-chan net.Conn,
-	originalSelector, targetService, targetNamespace string) {
-
+	originalSelector, targetService, targetNamespace string,
+) {
 	yamuxCfg := yamux.DefaultConfig()
 	yamuxCfg.EnableKeepAlive = true
 	yamuxCfg.KeepAliveInterval = 10 * time.Second
@@ -138,7 +138,7 @@ func handleCLISession(ctx context.Context, conn net.Conn, inbound <-chan net.Con
 		log.Printf("failed to create Yamux server session: %v", err)
 		return
 	}
-	defer func() { _ = session.Close() }() 
+	defer func() { _ = session.Close() }()
 
 	log.Println("Yamux session established with CLI")
 
@@ -159,14 +159,14 @@ func handleCLISession(ctx context.Context, conn net.Conn, inbound <-chan net.Con
 
 // proxyToStream opens a new Yamux stream and proxies bytes from a cluster client.
 func proxyToStream(session *yamux.Session, clientConn net.Conn) {
-	defer func() { _ = clientConn.Close() }() 
+	defer func() { _ = clientConn.Close() }()
 
 	stream, err := session.OpenStream()
 	if err != nil {
 		log.Printf("failed to open Yamux stream: %v", err)
 		return
 	}
-	defer func() { _ = stream.Close() }() 
+	defer func() { _ = stream.Close() }()
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -191,7 +191,7 @@ func listenServicePort(ctx context.Context, port int, inbound chan<- net.Conn) {
 		log.Printf("failed to listen on service port %d: %v", port, err)
 		return
 	}
-	defer func() { _ = ln.Close() }() 
+	defer func() { _ = ln.Close() }()
 	log.Printf("listening on service port :%d", port)
 
 	for {

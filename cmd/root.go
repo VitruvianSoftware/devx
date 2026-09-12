@@ -37,11 +37,13 @@ import (
 // updateResult receives the background version check result.
 var updateResult = make(chan *updater.CheckResult, 1)
 
-var envFile string
-var outputJSON bool
-var NonInteractive bool
-var DryRun bool
-var DetailedOutput bool
+var (
+	envFile        string
+	outputJSON     bool
+	NonInteractive bool
+	DryRun         bool
+	DetailedOutput bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "devx",

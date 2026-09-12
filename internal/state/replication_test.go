@@ -99,13 +99,13 @@ func TestTarGzRoundTrip(t *testing.T) {
 	// Create a source directory with nested files
 	srcDir := filepath.Join(tmp, "source")
 	subDir := filepath.Join(srcDir, "nested")
-	if err := os.MkdirAll(subDir, 0755); err != nil {
+	if err := os.MkdirAll(subDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(srcDir, "root.txt"), []byte("root content"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(srcDir, "root.txt"), []byte("root content"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(subDir, "deep.txt"), []byte("deep content"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(subDir, "deep.txt"), []byte("deep content"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -169,10 +169,10 @@ func TestCleanupShareDir(t *testing.T) {
 
 	bundleID := "cleanup-test"
 	bundleDir := filepath.Join(tmp, bundleID)
-	_ = os.MkdirAll(bundleDir, 0755)
-	_ = os.WriteFile(filepath.Join(bundleDir, "file.txt"), []byte("data"), 0644)
-	_ = os.WriteFile(filepath.Join(tmp, bundleID+".bundle.tar.gz"), []byte("archive"), 0644)
-	_ = os.WriteFile(filepath.Join(tmp, bundleID+".encrypted"), []byte("cipher"), 0644)
+	_ = os.MkdirAll(bundleDir, 0o755)
+	_ = os.WriteFile(filepath.Join(bundleDir, "file.txt"), []byte("data"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, bundleID+".bundle.tar.gz"), []byte("archive"), 0o644)
+	_ = os.WriteFile(filepath.Join(tmp, bundleID+".encrypted"), []byte("cipher"), 0o644)
 
 	CleanupShareDir(bundleID)
 

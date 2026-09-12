@@ -49,7 +49,8 @@ var devxBinary = func() string {
 // both the structured exit code (devx codes 15-99) and any diagnostic output.
 func runDevx(ctx context.Context, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, devxBinary, args...)
-	cmd.Env = append(os.Environ(),
+	cmd.Env = append(
+		os.Environ(),
 		// Force non-interactive paths even for commands that didn't get a -y.
 		"DEVX_NON_INTERACTIVE=1",
 	)

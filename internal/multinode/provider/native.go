@@ -199,7 +199,8 @@ func (p *NativeProvider) ensureHostPrereqs(ctx context.Context) error {
 		if _, err := p.run(ctx, fmt.Sprintf(
 			"firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 --add-interface=cni0 --add-interface=flannel.1 && "+
 				"firewall-cmd --permanent --zone=trusted --add-source=%s --add-source=%s && firewall-cmd --reload",
-			k3sClusterCIDR, k3sServiceCIDR)); err != nil {
+			k3sClusterCIDR, k3sServiceCIDR,
+		)); err != nil {
 			return fmt.Errorf("[%s] trusting k3s pod/service networks in firewalld: %w", p.spec.Host, err)
 		}
 	}
@@ -214,7 +215,8 @@ func (p *NativeProvider) EnsureRuntime(ctx context.Context) (string, error) {
 	if p.spec.Tailscale.Enabled && p.spec.Tailscale.AuthKey != "" {
 		_, _ = p.run(ctx, fmt.Sprintf(
 			"command -v tailscale >/dev/null 2>&1 && (tailscale status >/dev/null 2>&1 || tailscale up --authkey=%s --accept-routes)",
-			p.spec.Tailscale.AuthKey))
+			p.spec.Tailscale.AuthKey,
+		))
 		// Enforce --accept-routes idempotently. The `|| tailscale up` above is a
 		// no-op when the node is already up (joined earlier without accept-routes),
 		// leaving RouteAll=false — which broke the Fedora/nuc9 nodes under Cilium
@@ -272,11 +274,13 @@ func (p *NativeProvider) installScript(role string, o JoinOpts) string {
 		}
 		return fmt.Sprintf(
 			`curl -sfL https://get.k3s.io | %s INSTALL_K3S_EXEC="server" sh -s - --server=%s --node-name=%s --node-ip=%s --advertise-address=%s%s%s%s%s%s --node-label=pool=%s`,
-			common, o.ServerURL, p.spec.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, cilium, dataDir, o.Pool)
+			common, o.ServerURL, p.spec.Host, o.NodeIP, o.NodeIP, sans, flannel, lb, cilium, dataDir, o.Pool,
+		)
 	}
 	return fmt.Sprintf(
 		`curl -sfL https://get.k3s.io | %s K3S_URL=%q sh -s - agent --node-name=%s --node-ip=%s%s%s --node-label=pool=%s`,
-		common, o.ServerURL, p.spec.Host, o.NodeIP, flannel, dataDir, o.Pool)
+		common, o.ServerURL, p.spec.Host, o.NodeIP, flannel, dataDir, o.Pool,
+	)
 }
 
 // ensureKubeletSymlink points the standard /var/lib/kubelet at the relocated
@@ -356,22 +360,29 @@ func (p *NativeProvider) ensureTailscaleOrdering(ctx context.Context, role strin
 // The remaining lifecycle ops are identical to Lima — delegate to the exec-backed
 // k3s.Manager, which runs the same commands directly on the host.
 func (p *NativeProvider) GetToken(ctx context.Context) (string, error) { return p.k3s.GetToken(ctx) }
+
 func (p *NativeProvider) IsInstalled(ctx context.Context) (bool, error) {
 	return p.k3s.IsInstalled(ctx)
 }
+
 func (p *NativeProvider) WaitForReady(ctx context.Context, d time.Duration) error {
 	return p.k3s.WaitForReady(ctx, d)
 }
+
 func (p *NativeProvider) NodeStatus(ctx context.Context) (string, error) {
 	return p.k3s.GetNodeStatus(ctx)
 }
+
 func (p *NativeProvider) Kubeconfig(ctx context.Context, ip string) (string, error) {
 	return p.k3s.GetKubeconfig(ctx, ip)
 }
+
 func (p *NativeProvider) Drain(ctx context.Context, n string) error { return p.k3s.DrainNode(ctx, n) }
+
 func (p *NativeProvider) DeleteNode(ctx context.Context, n string) error {
 	return p.k3s.DeleteNode(ctx, n)
 }
+
 func (p *NativeProvider) Uninstall(ctx context.Context, role string) error {
 	return p.k3s.Uninstall(ctx, role)
 }

@@ -311,7 +311,6 @@ func checkBitwardenUnlocked() error {
 			EchoMode(huh.EchoModePassword).
 			Value(&password).
 			Run()
-
 		if err != nil {
 			return fmt.Errorf("unlock cancelled")
 		}
@@ -344,7 +343,6 @@ func checkBitwardenUnlocked() error {
 			).
 			Value(&loginMethod).
 			Run()
-
 		if err != nil {
 			return fmt.Errorf("login cancelled")
 		}

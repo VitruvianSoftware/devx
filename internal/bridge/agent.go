@@ -141,9 +141,11 @@ func waitForAgentPod(cfg AgentConfig) (string, error) {
 	jobName := fmt.Sprintf("devx-bridge-agent-%s", cfg.SessionID)
 
 	for time.Now().Before(deadline) {
-		args := []string{"get", "pods", "-n", cfg.Namespace,
+		args := []string{
+			"get", "pods", "-n", cfg.Namespace,
 			"-l", fmt.Sprintf("job-name=%s", jobName),
-			"-o", "jsonpath={.items[0].metadata.name},{.items[0].status.phase}"}
+			"-o", "jsonpath={.items[0].metadata.name},{.items[0].status.phase}",
+		}
 		if cfg.Kubeconfig != "" {
 			args = append(args, "--kubeconfig", cfg.Kubeconfig)
 		}
@@ -192,7 +194,8 @@ func generateAgentManifest(cfg AgentConfig) string {
 	}
 
 	// Add control + health ports
-	containerPorts = append(containerPorts,
+	containerPorts = append(
+		containerPorts,
 		fmt.Sprintf(`        - containerPort: %d
           name: control`, AgentControlPort),
 		fmt.Sprintf(`        - containerPort: %d
@@ -202,7 +205,8 @@ func generateAgentManifest(cfg AgentConfig) string {
 	// JSON-encode original selector for env var
 	selectorJSON, _ := json.Marshal(cfg.OriginalSelector)
 
-	manifest := fmt.Sprintf(`---
+	manifest := fmt.Sprintf(
+		`---
 apiVersion: v1
 kind: ServiceAccount
 metadata:

@@ -31,7 +31,7 @@ import (
 
 func TestDetectStack_Go(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -53,7 +53,7 @@ func TestDetectStack_Go(t *testing.T) {
 
 func TestDetectStack_NodeJS(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -68,7 +68,7 @@ func TestDetectStack_NodeJS(t *testing.T) {
 
 func TestDetectStack_Rust(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte("[package]"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -83,7 +83,7 @@ func TestDetectStack_Rust(t *testing.T) {
 
 func TestDetectStack_Python(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "pyproject.toml"), []byte("[tool.ruff]"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "pyproject.toml"), []byte("[tool.ruff]"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -101,7 +101,7 @@ func TestDetectStack_Python(t *testing.T) {
 
 func TestDetectStack_JavaMaven(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project></project>"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project></project>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -119,7 +119,7 @@ func TestDetectStack_JavaMaven(t *testing.T) {
 
 func TestDetectStack_JavaGradle(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "build.gradle"), []byte("apply plugin: 'java'"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "build.gradle"), []byte("apply plugin: 'java'"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -137,7 +137,7 @@ func TestDetectStack_JavaGradle(t *testing.T) {
 
 func TestDetectStack_KotlinGradle(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "build.gradle.kts"), []byte("plugins { kotlin(\"jvm\") }"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "build.gradle.kts"), []byte("plugins { kotlin(\"jvm\") }"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -152,7 +152,7 @@ func TestDetectStack_KotlinGradle(t *testing.T) {
 
 func TestDetectStack_DotNet_Csproj(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "MyApp.csproj"), []byte("<Project></Project>"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "MyApp.csproj"), []byte("<Project></Project>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -170,7 +170,7 @@ func TestDetectStack_DotNet_Csproj(t *testing.T) {
 
 func TestDetectStack_DotNet_Sln(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "MyApp.sln"), []byte("Microsoft Visual Studio Solution File"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "MyApp.sln"), []byte("Microsoft Visual Studio Solution File"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -185,7 +185,7 @@ func TestDetectStack_DotNet_Sln(t *testing.T) {
 
 func TestDetectStack_BazelWorkspace(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "WORKSPACE"), []byte("workspace(name = \"my_workspace\")"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "WORKSPACE"), []byte("workspace(name = \"my_workspace\")"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -200,7 +200,7 @@ func TestDetectStack_BazelWorkspace(t *testing.T) {
 
 func TestDetectStack_BazelModule(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "MODULE.bazel"), []byte("module(name = \"my_module\")"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "MODULE.bazel"), []byte("module(name = \"my_module\")"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	stack := DetectStack(dir)
@@ -227,10 +227,10 @@ func TestDetectStack_UnknownReturnsNil(t *testing.T) {
 func TestDetectAllStacks_MultipleMarkers(t *testing.T) {
 	dir := t.TempDir()
 	// Go + Node monorepo
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -254,10 +254,10 @@ func TestDetectAllStacks_MultipleMarkers(t *testing.T) {
 func TestDetectAllStacks_DeduplicatesSameName(t *testing.T) {
 	dir := t.TempDir()
 	// Both .csproj and .sln should yield only one .NET entry
-	if err := os.WriteFile(filepath.Join(dir, "MyApp.csproj"), []byte("<Project/>"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "MyApp.csproj"), []byte("<Project/>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "MyApp.sln"), []byte("Solution"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "MyApp.sln"), []byte("Solution"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -286,10 +286,10 @@ func TestDetectAllStacks_EmptyDir(t *testing.T) {
 func TestDetectStack_GoPrecedenceOverNode(t *testing.T) {
 	dir := t.TempDir()
 	// When both go.mod and package.json exist, Go should win (listed first)
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -301,10 +301,10 @@ func TestDetectStack_GoPrecedenceOverNode(t *testing.T) {
 
 func TestDetectStack_MavenPrecedenceOverGradle(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project/>"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "pom.xml"), []byte("<project/>"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "build.gradle"), []byte(""), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "build.gradle"), []byte(""), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -331,7 +331,7 @@ func TestErrNoStack_NotReturnedForKnownStack(t *testing.T) {
 	dir := t.TempDir()
 	// Create a go.mod so Go is detected — the actual go test will fail
 	// but the error should NOT be ErrNoStack
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\ngo 1.21\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test\ngo 1.21\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -347,7 +347,7 @@ func TestErrNoStack_NotReturnedForKnownStack(t *testing.T) {
 func TestRunPreFlight_ExplicitPipelineOverridesAutoDetect(t *testing.T) {
 	dir := t.TempDir()
 	// Create a go.mod so auto-detect would find Go
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module test"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -478,7 +478,7 @@ func TestStackDefinitions_GlobMarkersAreFlagged(t *testing.T) {
 func TestInstallPrePushHook_NewRepo(t *testing.T) {
 	dir := t.TempDir()
 	gitDir := filepath.Join(dir, ".git", "hooks")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -498,10 +498,10 @@ func TestInstallPrePushHook_NewRepo(t *testing.T) {
 func TestInstallPrePushHook_RejectsNonDevxHook(t *testing.T) {
 	dir := t.TempDir()
 	hookPath := filepath.Join(dir, ".git", "hooks", "pre-push")
-	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\necho custom hook"), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\necho custom hook"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -514,10 +514,10 @@ func TestInstallPrePushHook_RejectsNonDevxHook(t *testing.T) {
 func TestIsPrePushHookInstalled_DetectsDevxHook(t *testing.T) {
 	dir := t.TempDir()
 	hookPath := filepath.Join(dir, ".git", "hooks", "pre-push")
-	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(hookPath, []byte(PrePushHookContent), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(PrePushHookContent), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -538,7 +538,7 @@ func TestIsPrePushHookInstalled_ReturnsFalseWhenAbsent(t *testing.T) {
 func TestInstallPreCommitHook_NewRepo(t *testing.T) {
 	dir := t.TempDir()
 	gitDir := filepath.Join(dir, ".git", "hooks")
-	if err := os.MkdirAll(gitDir, 0755); err != nil {
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -558,10 +558,10 @@ func TestInstallPreCommitHook_NewRepo(t *testing.T) {
 func TestInstallPreCommitHook_RejectsNonDevxHook(t *testing.T) {
 	dir := t.TempDir()
 	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
-	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\necho custom hook"), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\necho custom hook"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -574,10 +574,10 @@ func TestInstallPreCommitHook_RejectsNonDevxHook(t *testing.T) {
 func TestIsPreCommitHookInstalled_DetectsDevxHook(t *testing.T) {
 	dir := t.TempDir()
 	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
-	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(hookPath, []byte(PreCommitHookContent), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte(PreCommitHookContent), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -596,11 +596,11 @@ func TestIsPreCommitHookInstalled_ReturnsFalseWhenAbsent(t *testing.T) {
 func TestInstallPreCommitHook_OverwritesExistingDevxHook(t *testing.T) {
 	dir := t.TempDir()
 	hookPath := filepath.Join(dir, ".git", "hooks", "pre-commit")
-	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	// Write an old devx hook
-	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\n# devx pre-commit hook (old version)"), 0755); err != nil {
+	if err := os.WriteFile(hookPath, []byte("#!/bin/sh\n# devx pre-commit hook (old version)"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 

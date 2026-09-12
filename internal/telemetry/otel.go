@@ -143,7 +143,8 @@ func DiscoverOTEL(runtime string) map[string]string {
 		hostBridge = "host.docker.internal"
 	}
 
-	out, err := exec.Command(runtime, "ps",
+	out, err := exec.Command(
+		runtime, "ps",
 		"--filter", "label=managed-by=devx",
 		"--filter", "label=devx-telemetry",
 		"--format", "{{.Labels}}",

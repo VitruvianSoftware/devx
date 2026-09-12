@@ -325,7 +325,8 @@ func runExplicitPipeline(dir string, verbose bool, pipeline *PipelineConfig) (*P
 
 	// Record enriched preflight span
 	preflightDur := time.Since(preflightStart)
-	telemetry.RecordEvent("agent_ship_preflight", preflightDur,
+	telemetry.RecordEvent(
+		"agent_ship_preflight", preflightDur,
 		telemetry.Attr("devx.stack", "pipeline"),
 		telemetry.Attr("devx.pipeline", true),
 		telemetry.Attr("devx.test.pass", result.TestPass),
@@ -410,7 +411,8 @@ func runAutoDetectedPipeline(dir string, verbose bool) (*PreFlightResult, error)
 
 	// Record enriched preflight span with full outcomes
 	preflightDur := time.Since(preflightStart)
-	telemetry.RecordEvent("agent_ship_preflight", preflightDur,
+	telemetry.RecordEvent(
+		"agent_ship_preflight", preflightDur,
 		telemetry.Attr("devx.stack", stack.Name),
 		telemetry.Attr("devx.test.pass", result.TestPass),
 		telemetry.Attr("devx.test.skipped", result.TestSkipped),

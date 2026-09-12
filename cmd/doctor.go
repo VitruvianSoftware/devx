@@ -71,7 +71,8 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	} else if report.System.PMVersion != "" {
 		pmInfo = pmInfo + " " + report.System.PMVersion
 	}
-	fmt.Printf("  %s  %s (%s) • %s\n\n",
+	fmt.Printf(
+		"  %s  %s (%s) • %s\n\n",
 		tui.StyleLabel.Render("System:"),
 		osName,
 		report.System.Arch,
@@ -124,13 +125,15 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	cwd, _ := os.Getwd()
 	hookInstalled := ship.IsPrePushHookInstalled(cwd)
 	if hookInstalled {
-		fmt.Printf("    %s  %-24s %s\n",
+		fmt.Printf(
+			"    %s  %-24s %s\n",
 			tui.IconDone,
 			"pre-push hook",
 			tui.StyleDetailDone.Render("installed (devx agent ship enforced)"),
 		)
 	} else {
-		fmt.Printf("    %s  %-24s %s\n",
+		fmt.Printf(
+			"    %s  %-24s %s\n",
 			tui.IconFailed,
 			"pre-push hook",
 			tui.StyleDetailError.Render("not installed — run: devx agent ship --install-hook"),
@@ -183,12 +186,14 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 		if report.AI.AgentsFound > 0 {
 			parts = append(parts, fmt.Sprintf("%d coding agent(s)", report.AI.AgentsFound))
 		}
-		fmt.Printf("    %s  %s\n",
+		fmt.Printf(
+			"    %s  %s\n",
 			tui.IconDone,
 			tui.StyleDetailDone.Render("AI features available: "+strings.Join(parts, ", ")),
 		)
 	} else {
-		fmt.Printf("    %s  %s\n",
+		fmt.Printf(
+			"    %s  %s\n",
 			tui.StyleMuted.Render("—"),
 			tui.StyleMuted.Render("No AI providers detected — AI features will use rule-based fallbacks"),
 		)
@@ -204,7 +209,8 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 			}
 		}
 		if hasOllama {
-			fmt.Printf("\n    %s\n",
+			fmt.Printf(
+				"\n    %s\n",
 				tui.StyleDetailRunning.Render("💡 Tip: Run 'ollama launch claude' to connect coding agents to local models — no API keys needed."),
 			)
 		}
@@ -214,11 +220,13 @@ func runDoctor(_ *cobra.Command, _ []string) error {
 	// ── Summary ─────────────────────────────────────────────────────
 	if missingRequired > 0 {
 		fmt.Println(tui.StyleErrorBox.Render(
-			fmt.Sprintf("⚠️  %d required tool(s) missing. Install them with:\n   devx doctor install", missingRequired)))
+			fmt.Sprintf("⚠️  %d required tool(s) missing. Install them with:\n   devx doctor install", missingRequired),
+		))
 		fmt.Println()
 	} else if missingCreds > 0 {
 		fmt.Println(tui.StyleBox.Render(
-			fmt.Sprintf("ℹ️  All tools installed. %d credential(s) need attention.\n   Run: devx doctor auth", missingCreds)))
+			fmt.Sprintf("ℹ️  All tools installed. %d credential(s) need attention.\n   Run: devx doctor auth", missingCreds),
+		))
 		fmt.Println()
 	} else {
 		fmt.Println(tui.StyleSuccessBox.Render("✅ All prerequisites installed and configured. You're good to go!"))
@@ -240,7 +248,8 @@ func printToolRow(t doctor.ToolStatus) {
 		if ver == "" {
 			ver = "✓"
 		}
-		fmt.Printf("    %s  %-14s %-12s %s\n",
+		fmt.Printf(
+			"    %s  %-14s %-12s %s\n",
 			tui.IconDone,
 			t.Binary,
 			tui.StyleDetailDone.Render(ver),
@@ -255,7 +264,8 @@ func printToolRow(t doctor.ToolStatus) {
 			icon = tui.StyleMuted.Render("—")
 			style = tui.StyleMuted
 		}
-		fmt.Printf("    %s  %-14s %-12s %s\n",
+		fmt.Printf(
+			"    %s  %-14s %-12s %s\n",
 			icon,
 			t.Binary,
 			style.Render(label),
@@ -266,13 +276,15 @@ func printToolRow(t doctor.ToolStatus) {
 
 func printCredRow(c doctor.CredentialStatus) {
 	if c.Configured {
-		fmt.Printf("    %s  %-24s %s\n",
+		fmt.Printf(
+			"    %s  %-24s %s\n",
 			tui.IconDone,
 			c.Name,
 			tui.StyleDetailDone.Render(c.Detail),
 		)
 	} else {
-		fmt.Printf("    %s  %-24s %s\n",
+		fmt.Printf(
+			"    %s  %-24s %s\n",
 			tui.IconFailed,
 			c.Name,
 			tui.StyleDetailError.Render(c.Detail),
@@ -286,7 +298,8 @@ func printAIRow(p doctor.AIProviderStatus) {
 		if p.Note != "" {
 			note = tui.StyleMuted.Render(" " + p.Note)
 		}
-		fmt.Printf("    %s  %-22s %s%s\n",
+		fmt.Printf(
+			"    %s  %-22s %s%s\n",
 			tui.IconDone,
 			p.Name,
 			tui.StyleDetailDone.Render(p.Detail),
@@ -297,7 +310,8 @@ func printAIRow(p doctor.AIProviderStatus) {
 		if p.Note != "" {
 			note = tui.StyleMuted.Render(" — " + p.Note)
 		}
-		fmt.Printf("    %s  %-22s %s%s\n",
+		fmt.Printf(
+			"    %s  %-22s %s%s\n",
 			tui.StyleMuted.Render("—"),
 			p.Name,
 			tui.StyleMuted.Render(p.Detail),
@@ -484,7 +498,8 @@ func runDoctorInstall(_ *cobra.Command, _ []string) error {
 
 	for _, s := range plan.Steps {
 		reqLabel := tui.StyleMuted.Render(s.FeatureArea)
-		fmt.Printf("    %s  %-20s %s\n",
+		fmt.Printf(
+			"    %s  %-20s %s\n",
 			tui.StyleDetailRunning.Render("→"),
 			s.Tool,
 			reqLabel,
@@ -555,7 +570,8 @@ func runDoctorAuth(_ *cobra.Command, _ []string) error {
 		stepNum := fmt.Sprintf("[%d/%d]", i+1, total)
 
 		if step.Configured {
-			fmt.Printf("  %s  %s  %s\n",
+			fmt.Printf(
+				"  %s  %s  %s\n",
 				tui.StyleMuted.Render(stepNum),
 				step.Name,
 				tui.StyleDetailDone.Render("✅ "+step.Detail),
@@ -564,12 +580,14 @@ func runDoctorAuth(_ *cobra.Command, _ []string) error {
 			continue
 		}
 
-		fmt.Printf("  %s  %s  %s\n",
+		fmt.Printf(
+			"  %s  %s  %s\n",
 			tui.StyleDetailRunning.Render(stepNum),
 			step.Name,
 			tui.StyleDetailError.Render(step.Detail),
 		)
-		fmt.Printf("         %s\n\n",
+		fmt.Printf(
+			"         %s\n\n",
 			tui.StyleMuted.Render(step.Action),
 		)
 
@@ -584,10 +602,12 @@ func runDoctorAuth(_ *cobra.Command, _ []string) error {
 	fmt.Println()
 	if completed > 0 || skipped == total {
 		fmt.Println(tui.StyleSuccessBox.Render(
-			fmt.Sprintf("✅ Auth complete! %d configured, %d skipped.\n   Run 'devx doctor' to verify.", completed, skipped)))
+			fmt.Sprintf("✅ Auth complete! %d configured, %d skipped.\n   Run 'devx doctor' to verify.", completed, skipped),
+		))
 	} else {
 		fmt.Println(tui.StyleBox.Render(
-			fmt.Sprintf("ℹ️  %d step(s) skipped, %d configured.\n   Run 'devx doctor' to see remaining gaps.", skipped, completed)))
+			fmt.Sprintf("ℹ️  %d step(s) skipped, %d configured.\n   Run 'devx doctor' to see remaining gaps.", skipped, completed),
+		))
 	}
 	fmt.Println()
 

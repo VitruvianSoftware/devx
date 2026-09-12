@@ -57,5 +57,4 @@ func init() {
 		newClusterStatusCmd(&clusterConfigFile),
 		newClusterUSBCmd(&clusterConfigFile),
 	)
-
 }

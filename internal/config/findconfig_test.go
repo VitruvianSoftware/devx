@@ -32,7 +32,7 @@ func TestFindProjectConfig_InCurrentDir(t *testing.T) {
 	configName := "devx.yaml"
 	configPath := filepath.Join(tmpDir, configName)
 
-	if err := os.WriteFile(configPath, []byte("name: test"), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("name: test"), 0o644); err != nil {
 		t.Fatalf("failed to create dummy config: %v", err)
 	}
 
@@ -55,12 +55,12 @@ func TestFindProjectConfig_InParentDir(t *testing.T) {
 	configName := "devx.yaml"
 	configPath := filepath.Join(tmpDir, configName)
 
-	if err := os.WriteFile(configPath, []byte("name: test"), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("name: test"), 0o644); err != nil {
 		t.Fatalf("failed to create dummy config: %v", err)
 	}
 
 	deepDir := filepath.Join(tmpDir, "src", "nested", "module")
-	if err := os.MkdirAll(deepDir, 0755); err != nil {
+	if err := os.MkdirAll(deepDir, 0o755); err != nil {
 		t.Fatalf("failed to create nested dir: %v", err)
 	}
 
@@ -81,7 +81,7 @@ func TestFindProjectConfig_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	deepDir := filepath.Join(tmpDir, "src", "nested")
-	if err := os.MkdirAll(deepDir, 0755); err != nil {
+	if err := os.MkdirAll(deepDir, 0o755); err != nil {
 		t.Fatalf("failed to create nested dir: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestFindProjectConfig_ReturnsAbsPath(t *testing.T) {
 	configName := "devx.yaml"
 	configPath := filepath.Join(tmpDir, configName)
 
-	if err := os.WriteFile(configPath, []byte("name: test"), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte("name: test"), 0o644); err != nil {
 		t.Fatalf("failed to create dummy config: %v", err)
 	}
 

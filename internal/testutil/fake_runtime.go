@@ -45,7 +45,7 @@ func SetupFakeRuntime(t *testing.T) *FakeRuntime {
 
 	baseDir := t.TempDir()
 	binDir := filepath.Join(baseDir, "bin")
-	if err := os.MkdirAll(binDir, 0755); err != nil {
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
 		t.Fatalf("failed to create fake bin dir: %v", err)
 	}
 
@@ -61,7 +61,7 @@ with open("%s", "a") as f:
 `, callsLog)
 
 	stubPath := filepath.Join(binDir, "stub.py")
-	if err := os.WriteFile(stubPath, []byte(stubPython), 0755); err != nil {
+	if err := os.WriteFile(stubPath, []byte(stubPython), 0o755); err != nil {
 		t.Fatalf("failed to write stub: %v", err)
 	}
 

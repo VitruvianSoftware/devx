@@ -210,7 +210,7 @@ func runCloudflareTokenSetup(envFile string) bool {
 	}
 
 	// Append to .env file
-	f, err := os.OpenFile(envFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	f, err := os.OpenFile(envFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
 		fmt.Printf("    ✗ Failed to open %s: %v\n", envFile, err)
 		return false

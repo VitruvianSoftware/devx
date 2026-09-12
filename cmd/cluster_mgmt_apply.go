@@ -31,7 +31,6 @@ import (
 )
 
 func newClusterApplyCmd(configFile *string) *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:   "apply",
 		Short: "Apply configuration changes iteratively with zero downtime",

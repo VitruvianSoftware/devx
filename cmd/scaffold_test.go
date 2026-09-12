@@ -41,7 +41,6 @@ func TestScaffoldCommand(t *testing.T) {
 	NonInteractive = true
 	defer func() { NonInteractive = false }()
 	err := scaffoldCmd.RunE(scaffoldCmd, []string{"go-api", targetPath})
-
 	// The code currently checks if the command was successful.
 	// Since we mock `git`, `docker`, `podman`, they all return 0 exit codes automatically.
 	if err != nil {
@@ -73,7 +72,7 @@ func TestScaffoldForce(t *testing.T) {
 	targetPath := filepath.Join(destDir, "my-app")
 
 	// Create the directory so that "--force" is required to bypass the idempotency guard
-	if err := os.MkdirAll(targetPath, 0755); err != nil {
+	if err := os.MkdirAll(targetPath, 0o755); err != nil {
 		t.Fatal(err)
 	}
 

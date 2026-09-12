@@ -35,10 +35,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var exposeName string
-var exposeDomain string
-var basicAuth string
-var trafficProfile string
+var (
+	exposeName     string
+	exposeDomain   string
+	basicAuth      string
+	trafficProfile string
+)
 
 var exposeCmd = &cobra.Command{
 	Use:   "expose [port]",

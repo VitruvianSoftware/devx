@@ -61,7 +61,7 @@ func ShareDir() string {
 // BundleState bundles CRIU checkpoints and database snapshots into a single tar.gz archive.
 func BundleState(checkpointName, bundleID string, dbSnapshots []database.SnapshotMeta, fullMode bool) (*BundleResult, error) {
 	bundleDir := filepath.Join(ShareDir(), bundleID)
-	if err := os.MkdirAll(bundleDir, 0755); err != nil {
+	if err := os.MkdirAll(bundleDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create bundle directory: %w", err)
 	}
 
@@ -79,7 +79,7 @@ func BundleState(checkpointName, bundleID string, dbSnapshots []database.Snapsho
 		archives, err := filepath.Glob(filepath.Join(cpDir, "*.tar.gz"))
 		if err == nil && len(archives) > 0 {
 			containersDir := filepath.Join(bundleDir, "containers")
-			if err := os.MkdirAll(containersDir, 0755); err != nil {
+			if err := os.MkdirAll(containersDir, 0o755); err != nil {
 				return nil, err
 			}
 			for _, arch := range archives {
@@ -95,7 +95,7 @@ func BundleState(checkpointName, bundleID string, dbSnapshots []database.Snapsho
 	// Copy DB snapshots
 	if len(dbSnapshots) > 0 {
 		dbDir := filepath.Join(bundleDir, "databases")
-		if err := os.MkdirAll(dbDir, 0755); err != nil {
+		if err := os.MkdirAll(dbDir, 0o755); err != nil {
 			return nil, err
 		}
 		for _, db := range dbSnapshots {
@@ -114,7 +114,7 @@ func BundleState(checkpointName, bundleID string, dbSnapshots []database.Snapsho
 
 	// Write manifest.json
 	mfBytes, _ := json.MarshalIndent(manifest, "", "  ")
-	if err := os.WriteFile(filepath.Join(bundleDir, "manifest.json"), mfBytes, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(bundleDir, "manifest.json"), mfBytes, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write manifest: %w", err)
 	}
 
@@ -137,7 +137,7 @@ func BundleState(checkpointName, bundleID string, dbSnapshots []database.Snapsho
 
 // UnbundleState extracts a bundle archive to a temporary directory and parses its manifest.
 func UnbundleState(archivePath, extractDir string) (*BundleManifest, error) {
-	if err := os.MkdirAll(extractDir, 0755); err != nil {
+	if err := os.MkdirAll(extractDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create extraction directory: %w", err)
 	}
 
@@ -265,11 +265,11 @@ func untarGz(srcArchive, destDir string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(target, 0755); err != nil {
+			if err := os.MkdirAll(target, 0o755); err != nil {
 				return err
 			}
 		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
 			}
 			outFile, err := os.Create(target)

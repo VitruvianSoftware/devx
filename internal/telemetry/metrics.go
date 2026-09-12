@@ -51,9 +51,9 @@ func metricsPath() string {
 // Safe for concurrent use (file-level flock). Silently no-ops on any I/O error.
 func RecordEvent(event string, duration time.Duration, attrs ...Attribute) {
 	p := metricsPath()
-	_ = os.MkdirAll(filepath.Dir(p), 0755)
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
 
-	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(p, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		return
 	}

@@ -183,7 +183,8 @@ func IsPrePushHookInstalled(repoDir string) bool {
 }
 
 func isDevxHook(content string) bool {
-	return len(content) > 0 && containsAny(content,
+	return len(content) > 0 && containsAny(
+		content,
 		"devx agent ship",
 		"devx pre-push hook",
 		"devx pre-commit hook",

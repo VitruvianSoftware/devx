@@ -68,7 +68,7 @@ func Load(envFile string) (*Secrets, error) {
 func (s *Secrets) Save(envFile string) error {
 	content := fmt.Sprintf("CF_TUNNEL_TOKEN=%s\nDEV_HOSTNAME=%s\n",
 		s.CFTunnelToken, s.DevHostname)
-	return os.WriteFile(envFile, []byte(content), 0600)
+	return os.WriteFile(envFile, []byte(content), 0o600)
 }
 
 func (s *Secrets) promptAndSave(envFile string) error {

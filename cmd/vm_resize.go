@@ -22,11 +22,14 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
-var cpus int
-var memoryMB int
+var (
+	cpus     int
+	memoryMB int
+)
 
 var vmResizeCmd = &cobra.Command{
 	Use:   "resize",

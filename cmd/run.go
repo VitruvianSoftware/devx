@@ -72,10 +72,10 @@ Global flags are parsed before '--':
 
 		// Ensure log dir exists
 		logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
-		_ = os.MkdirAll(logDir, 0755)
+		_ = os.MkdirAll(logDir, 0o755)
 
 		// Open log file for append
-		logFile, err := os.OpenFile(filepath.Join(logDir, name+".log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		logFile, err := os.OpenFile(filepath.Join(logDir, name+".log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
 			fmt.Printf("Warning: Could not open log file: %v\n", err)
 		} else {
@@ -131,7 +131,6 @@ Global flags are parsed before '--':
 			}()
 
 			err = command.Wait()
-
 			if err != nil {
 				if exitErr, ok := err.(*exec.ExitError); ok {
 					exitCode = exitErr.ExitCode()
@@ -149,7 +148,8 @@ Global flags are parsed before '--':
 			projName = cfg.Name
 		}
 
-		telemetry.RecordEvent("devx_run", duration,
+		telemetry.RecordEvent(
+			"devx_run", duration,
 			telemetry.Attr("devx.command", cmdDisplay),
 			telemetry.Attr("devx.exit_code", exitCode),
 			telemetry.Attr("devx.project", projName),

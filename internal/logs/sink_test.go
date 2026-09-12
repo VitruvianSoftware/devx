@@ -56,8 +56,8 @@ func TestOpenServiceLog_Truncates(t *testing.T) {
 	t.Setenv("HOME", dir)
 	// Pre-existing stale content must be truncated on open.
 	p := ServiceLogPath("api")
-	_ = os.MkdirAll(filepath.Dir(p), 0755)
-	_ = os.WriteFile(p, []byte("STALE"), 0644)
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
+	_ = os.WriteFile(p, []byte("STALE"), 0o644)
 
 	f, err := OpenServiceLog("api")
 	if err != nil {

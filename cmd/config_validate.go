@@ -121,13 +121,15 @@ func runConfigValidate(_ *cobra.Command, _ []string) error {
 		case "ok":
 			fmt.Printf("  %s %s\n", tui.StyleDetailDone.Render("✓"), tui.StyleLabel.Render(r.Key))
 		case "missing":
-			fmt.Printf("  %s %s  %s\n",
+			fmt.Printf(
+				"  %s %s  %s\n",
 				tui.StyleDetailError.Render("✗"),
 				tui.StyleLabel.Render(r.Key),
 				tui.StyleMuted.Render("(missing — not found in any vault source)"),
 			)
 		case "empty":
-			fmt.Printf("  %s %s  %s\n",
+			fmt.Printf(
+				"  %s %s  %s\n",
 				tui.StyleDetailRunning.Render("⚠"),
 				tui.StyleLabel.Render(r.Key),
 				tui.StyleMuted.Render("(present but empty)"),
@@ -148,7 +150,8 @@ func runConfigValidate(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("environment validation failed: %d missing, %d empty", missing, empty)
 	}
 
-	fmt.Printf("  %s All %d required keys are present.\n",
+	fmt.Printf(
+		"  %s All %d required keys are present.\n",
 		tui.StyleDetailDone.Render("✓"),
 		len(requiredKeys),
 	)

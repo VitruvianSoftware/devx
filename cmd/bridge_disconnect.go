@@ -82,7 +82,8 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 
 		fmt.Printf("\n%s\n\n", tui.StyleTitle.Render("🔗 devx bridge disconnect [dry-run]"))
 		for _, e := range session.Entries {
-			fmt.Printf("  %s  Would stop: %s/%s :%d → localhost:%d\n",
+			fmt.Printf(
+				"  %s  Would stop: %s/%s :%d → localhost:%d\n",
 				tui.StyleDetailRunning.Render("→"),
 				tui.StyleMuted.Render(e.Namespace),
 				tui.StyleStepName.Render(e.Service),
@@ -91,7 +92,8 @@ func runBridgeDisconnect(_ *cobra.Command, _ []string) error {
 			)
 		}
 		for _, ic := range session.Intercepts {
-			fmt.Printf("  %s  Would stop intercept: %s/%s :%d → localhost:%d (%s)\n",
+			fmt.Printf(
+				"  %s  Would stop intercept: %s/%s :%d → localhost:%d (%s)\n",
 				tui.StyleDetailRunning.Render("→"),
 				tui.StyleMuted.Render(ic.Namespace),
 				tui.StyleStepName.Render(ic.Service),

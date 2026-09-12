@@ -48,7 +48,8 @@ func GenerateEnvFile(entries []SessionEntry) error {
 
 	for _, e := range entries {
 		prefix := envPrefix(e.Service)
-		lines = append(lines,
+		lines = append(
+			lines,
 			fmt.Sprintf("# %s/%s (remote :%d → local :%d)", e.Namespace, e.Service, e.RemotePort, e.LocalPort),
 			fmt.Sprintf("%s_URL=http://127.0.0.1:%d", prefix, e.LocalPort),
 			fmt.Sprintf("%s_HOST=127.0.0.1", prefix),

@@ -53,8 +53,10 @@ func TestCloudRunDeployArgs(t *testing.T) {
 	// AllowUnauthenticated true; no env; no extra flags.
 	pub := &CloudRunNodeConfig{Image: "img", Region: "r", Project: "p", AllowUnauthenticated: true}
 	gotPub := cloudRunDeployArgs(pub, "s")
-	wantPub := []string{"run", "deploy", "s", "--image", "img", "--region", "r",
-		"--project", "p", "--platform", "managed", "--quiet", "--allow-unauthenticated"}
+	wantPub := []string{
+		"run", "deploy", "s", "--image", "img", "--region", "r",
+		"--project", "p", "--platform", "managed", "--quiet", "--allow-unauthenticated",
+	}
 	if !equalArgs(gotPub, wantPub) {
 		t.Errorf("cloudRunDeployArgs(public) =\n%v\nwant\n%v", gotPub, wantPub)
 	}

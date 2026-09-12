@@ -181,7 +181,8 @@ func runStatus(_ *cobra.Command, _ []string) error {
 }
 
 func printStatusRow(label, name, status string) {
-	fmt.Printf("  %s  %s  %s\n",
+	fmt.Printf(
+		"  %s  %s  %s\n",
 		tui.StyleLabel.Render(label),
 		tui.StyleStepName.Render(name),
 		status,

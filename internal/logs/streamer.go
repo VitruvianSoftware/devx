@@ -162,7 +162,7 @@ func (s *Streamer) tailContainer(ctx context.Context, name string) {
 
 func (s *Streamer) watchHostLogs(ctx context.Context) {
 	logDir := filepath.Join(os.Getenv("HOME"), ".devx", "logs")
-	_ = os.MkdirAll(logDir, 0755)
+	_ = os.MkdirAll(logDir, 0o755)
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()

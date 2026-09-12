@@ -241,7 +241,8 @@ func RunGoTestWithTelemetry(args []string, dir string, stdout io.Writer, stderr 
 					spanName = "go_test: " + event.Package
 				}
 
-				ExportSpan(spanName, dur,
+				ExportSpan(
+					spanName, dur,
 					Attr("devx.test.name", event.Test),
 					Attr("devx.test.package", event.Package),
 					Attr("devx.test.status", event.Action),

@@ -29,7 +29,7 @@ import (
 func TestLoadStandard(t *testing.T) {
 	dir := t.TempDir()
 	dcDir := filepath.Join(dir, ".devcontainer")
-	if err := os.MkdirAll(dcDir, 0755); err != nil {
+	if err := os.MkdirAll(dcDir, 0o755); err != nil {
 		t.Fatalf("creating dir: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dcDir, "devcontainer.json"), []byte(`{
@@ -39,7 +39,7 @@ func TestLoadStandard(t *testing.T) {
 		"postCreateCommand": "go mod tidy",
 		"containerEnv": {"GOPATH": "/home/vscode/go"},
 		"forwardPorts": [8080, 3000]
-	}`), 0644); err != nil {
+	}`), 0o644); err != nil {
 		t.Fatalf("writing file: %v", err)
 	}
 
@@ -75,7 +75,7 @@ func TestLoadRootLevel(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".devcontainer.json"), []byte(`{
 		"name": "Root",
 		"image": "ubuntu:22.04"
-	}`), 0644); err != nil {
+	}`), 0o644); err != nil {
 		t.Fatalf("writing file: %v", err)
 	}
 

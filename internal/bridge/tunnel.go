@@ -72,9 +72,11 @@ func (t *Tunnel) Start(ctx context.Context) error {
 	}
 
 	// Start kubectl port-forward
-	pfArgs := []string{"port-forward", t.cfg.AgentPod,
+	pfArgs := []string{
+		"port-forward", t.cfg.AgentPod,
 		fmt.Sprintf("%d:%d", pfLocalPort, t.cfg.ControlPort),
-		"-n", t.cfg.Namespace}
+		"-n", t.cfg.Namespace,
+	}
 	if t.cfg.Kubeconfig != "" {
 		pfArgs = append(pfArgs, "--kubeconfig", t.cfg.Kubeconfig)
 	}

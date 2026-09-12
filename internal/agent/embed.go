@@ -70,7 +70,7 @@ func Install(targetAgent string, skillName string, force bool) error {
 	}
 
 	// Make sure the target directory exists (for things like .github/ or .agents/)
-	if err := os.MkdirAll(filepath.Dir(relPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(relPath), 0o755); err != nil {
 		return fmt.Errorf("creating directory for %q: %w", relPath, err)
 	}
 
@@ -84,7 +84,7 @@ func Install(targetAgent string, skillName string, force bool) error {
 		}
 	}
 
-	if err := os.WriteFile(relPath, content, 0644); err != nil {
+	if err := os.WriteFile(relPath, content, 0o644); err != nil {
 		return fmt.Errorf("writing %q: %w", relPath, err)
 	}
 

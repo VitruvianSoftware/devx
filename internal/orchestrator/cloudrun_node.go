@@ -135,8 +135,10 @@ func cloudRunURL(ctx context.Context, project, region, service string) (string, 
 // against the installed gcloud during integration; if unavailable, fall back to
 // `gcloud logging tail` with a `resource.type=cloud_run_revision` filter.
 func cloudRunLogsTailArgs(project, region, service string) []string {
-	return []string{"beta", "run", "services", "logs", "tail", service,
-		"--project", project, "--region", region}
+	return []string{
+		"beta", "run", "services", "logs", "tail", service,
+		"--project", project, "--region", region,
+	}
 }
 
 // streamCloudRunLogs tails a deployed Cloud Run service's logs into the sink.

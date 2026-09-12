@@ -31,8 +31,10 @@ import (
 	"time"
 )
 
-var otlpEndpoint = "http://localhost:4318/v1/traces"
-var serviceVersion = "dev"
+var (
+	otlpEndpoint   = "http://localhost:4318/v1/traces"
+	serviceVersion = "dev"
+)
 
 func init() {
 	if ep := os.Getenv("DEVX_OTLP_ENDPOINT"); ep != "" {

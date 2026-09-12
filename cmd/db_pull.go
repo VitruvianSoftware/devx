@@ -36,8 +36,10 @@ import (
 	"github.com/VitruvianSoftware/devx/internal/tui"
 )
 
-var dbPullRuntime string
-var dbPullJobs int
+var (
+	dbPullRuntime string
+	dbPullJobs    int
+)
 
 var dbPullCmd = &cobra.Command{
 	Use:   "pull <engine>",
@@ -232,21 +234,27 @@ func runDbPull(_ *cobra.Command, args []string) error {
 			"--single-transaction",
 		}
 	case engineName == "postgres":
-		ingestArgs = []string{"exec", "-i", containerName,
-			"psql", "-U", engine.Env["POSTGRES_USER"], "-d", engine.Env["POSTGRES_DB"]}
+		ingestArgs = []string{
+			"exec", "-i", containerName,
+			"psql", "-U", engine.Env["POSTGRES_USER"], "-d", engine.Env["POSTGRES_DB"],
+		}
 	case engineName == "mysql":
-		ingestArgs = []string{"exec", "-i", containerName,
+		ingestArgs = []string{
+			"exec", "-i", containerName,
 			"mysql", "-u", engine.Env["MYSQL_USER"], "-p" + engine.Env["MYSQL_ROOT_PASSWORD"],
-			engine.Env["MYSQL_DATABASE"]}
+			engine.Env["MYSQL_DATABASE"],
+		}
 	case engineName == "redis":
 		ingestArgs = []string{"exec", "-i", containerName, "redis-cli"}
 	case engineName == "mongo":
-		ingestArgs = []string{"exec", "-i", containerName,
+		ingestArgs = []string{
+			"exec", "-i", containerName,
 			"mongorestore",
 			"--username", engine.Env["MONGO_INITDB_ROOT_USERNAME"],
 			"--password", engine.Env["MONGO_INITDB_ROOT_PASSWORD"],
 			"--authenticationDatabase", "admin",
-			"--archive"}
+			"--archive",
+		}
 	default:
 		return fmt.Errorf("pull ingestion not yet supported for engine %q", engineName)
 	}
@@ -265,7 +273,8 @@ func runDbPull(_ *cobra.Command, args []string) error {
 	ingestProc.Stdout = os.Stdout
 
 	fmt.Printf("\n  %s %s\n", tui.StyleMuted.Render("pull →"), pullCommand)
-	fmt.Printf("  %s %s %s\n\n",
+	fmt.Printf(
+		"  %s %s %s\n\n",
 		tui.StyleMuted.Render("ingest →"),
 		dbPullRuntime,
 		strings.Join(ingestArgs, " "),

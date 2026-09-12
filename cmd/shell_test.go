@@ -45,7 +45,7 @@ func TestShellCommand(t *testing.T) {
 			"STATIC_ENV": "static_value"
 		}
 	}`
-	err := os.WriteFile(filepath.Join(testDir, ".devcontainer.json"), []byte(devcontainerJSON), 0644)
+	err := os.WriteFile(filepath.Join(testDir, ".devcontainer.json"), []byte(devcontainerJSON), 0o644)
 	if err != nil {
 		t.Fatalf("failed to write devcontainer.json: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestShellCommand(t *testing.T) {
 	envFile := `
 SECRET_API_KEY=supersecret
 `
-	err = os.WriteFile(filepath.Join(testDir, ".env"), []byte(envFile), 0644)
+	err = os.WriteFile(filepath.Join(testDir, ".env"), []byte(envFile), 0o644)
 	if err != nil {
 		t.Fatalf("failed to write .env: %v", err)
 	}

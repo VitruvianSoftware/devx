@@ -28,7 +28,8 @@ import (
 func TestSocketVMNetBridgedPlist(t *testing.T) {
 	p := socketVMNetBridgedPlist(
 		"/opt/socket_vmnet/bin/socket_vmnet", "en0",
-		"/opt/homebrew/var/run/socket_vmnet", "/opt/homebrew/var/log/socket_vmnet")
+		"/opt/homebrew/var/run/socket_vmnet", "/opt/homebrew/var/log/socket_vmnet",
+	)
 	for _, want := range []string{
 		"<string>/opt/socket_vmnet/bin/socket_vmnet</string>",
 		"<string>--vmnet-mode=bridged</string>",

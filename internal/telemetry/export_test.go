@@ -30,7 +30,8 @@ import (
 )
 
 func TestBuildOTLPPayload_StructureCompliance(t *testing.T) {
-	payload, err := BuildOTLPPayload("test_build", 5*time.Second,
+	payload, err := BuildOTLPPayload(
+		"test_build", 5*time.Second,
 		Attr("devx.stack", "Go"),
 		Attr("devx.build.pass", true),
 		Attr("devx.test.pass", false),

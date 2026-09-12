@@ -83,7 +83,7 @@ func TestLoadLocal_InvalidYAML(t *testing.T) {
 
 	// Write invalid YAML
 	path := filepath.Join(dir, "config.yaml")
-	if err := os.WriteFile(path, []byte("{{not yaml"), 0644); err != nil {
+	if err := os.WriteFile(path, []byte("{{not yaml"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

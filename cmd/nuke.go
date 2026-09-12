@@ -229,7 +229,8 @@ func printNukeManifest(manifest *nuke.Manifest, selected []nuke.Item) {
 		fmt.Printf("  %s\n", headerStyle.Render(cat))
 		for _, item := range items {
 			sizeStr := tui.StyleMuted.Render(fmt.Sprintf("(%s)", item.SizeDisplay))
-			fmt.Printf("    %s  %-45s  %s\n",
+			fmt.Printf(
+				"    %s  %-45s  %s\n",
 				tui.StyleDetailError.Render("✗"),
 				item.Label,
 				sizeStr,

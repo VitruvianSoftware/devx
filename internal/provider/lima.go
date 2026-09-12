@@ -37,7 +37,8 @@ func (l *LimaProvider) Name() string { return "lima" }
 
 func (l *LimaProvider) Init(name string) error {
 	var stderr bytes.Buffer
-	cmd := exec.Command("limactl", "create",
+	cmd := exec.Command(
+		"limactl", "create",
 		"--name="+name,
 		"--vm-type=vz",
 		"--mount-type=virtiofs",

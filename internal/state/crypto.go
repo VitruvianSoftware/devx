@@ -154,7 +154,7 @@ func DecryptFile(inputPath, outputPath, passphrase string) error {
 	}
 
 	// Write to output file
-	if err := os.WriteFile(outputPath, plaintext, 0644); err != nil {
+	if err := os.WriteFile(outputPath, plaintext, 0o644); err != nil {
 		return fmt.Errorf("failed to write decrypted file: %w", err)
 	}
 

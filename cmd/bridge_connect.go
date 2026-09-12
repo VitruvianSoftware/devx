@@ -362,7 +362,8 @@ func printBridgeDryRun(forwards []*bridge.PortForward, kubeconfig, kubeCtx, kube
 	fmt.Println()
 
 	for _, pf := range forwards {
-		fmt.Printf("  %s  %s/%s :%d → localhost:%d\n",
+		fmt.Printf(
+			"  %s  %s/%s :%d → localhost:%d\n",
 			tui.StyleDetailRunning.Render("→"),
 			tui.StyleMuted.Render(pf.Namespace),
 			tui.StyleStepName.Render(pf.Service),
@@ -394,7 +395,8 @@ func printBridgeStatus(forwards []*bridge.PortForward) {
 			stateLabel = tui.StyleMuted.Render("stopped")
 		}
 
-		fmt.Printf("    %s  %s/%s :%d → localhost:%d  %s\n",
+		fmt.Printf(
+			"    %s  %s/%s :%d → localhost:%d  %s\n",
 			icon,
 			tui.StyleMuted.Render(pf.Namespace),
 			tui.StyleStepName.Render(pf.Service),

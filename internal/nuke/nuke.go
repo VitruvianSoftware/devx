@@ -169,7 +169,8 @@ func (m *Manifest) collectLocalFS(root string) {
 // collectDevxContainers lists all devx-managed containers and volumes.
 func (m *Manifest) collectDevxContainers(runtime provider.ContainerRuntime) {
 	// Containers
-	out, err := runtime.Exec("ps", "-a",
+	out, err := runtime.Exec(
+		"ps", "-a",
 		"--filter", "label=managed-by=devx",
 		"--format", "{{.Names}}\t{{.Status}}",
 	)
@@ -189,7 +190,8 @@ func (m *Manifest) collectDevxContainers(runtime provider.ContainerRuntime) {
 	}
 
 	// Volumes
-	out, err = runtime.Exec("volume", "ls",
+	out, err = runtime.Exec(
+		"volume", "ls",
 		"--filter", "label=managed-by=devx",
 		"--format", "{{.Name}}",
 	)

@@ -84,8 +84,8 @@ func TestRecordEvent_CorruptedFileRecovery(t *testing.T) {
 	defer cleanup()
 
 	p := metricsPath()
-	_ = os.MkdirAll(filepath.Dir(p), 0755)
-	_ = os.WriteFile(p, []byte("{{{{not json!!!!"), 0644)
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
+	_ = os.WriteFile(p, []byte("{{{{not json!!!!"), 0o644)
 
 	// Should not panic — silently recovers
 	RecordEvent("after_corrupt", 1*time.Second)

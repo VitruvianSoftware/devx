@@ -55,7 +55,7 @@ func CreateCheckpoint(providerName, name string, rt provider.ContainerRuntime) e
 		return fmt.Errorf("checkpoint %q already exists at %s", name, targetDir)
 	}
 
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
+	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create checkpoint directory: %w", err)
 	}
 

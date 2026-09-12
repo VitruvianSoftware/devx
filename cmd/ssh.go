@@ -87,8 +87,10 @@ var sshCmd = &cobra.Command{
 		}
 
 		// Fallback: privileged nsenter into Docker Desktop VM
-		dockerArgs := []string{"run", "--rm", "-it", "--privileged", "--pid=host",
-			"alpine:latest", "nsenter", "-t", "1", "-m", "-u", "-n", "-i", "sh"}
+		dockerArgs := []string{
+			"run", "--rm", "-it", "--privileged", "--pid=host",
+			"alpine:latest", "nsenter", "-t", "1", "-m", "-u", "-n", "-i", "sh",
+		}
 		pCmd := exec.Command("docker", dockerArgs...)
 		pCmd.Stdin = os.Stdin
 		pCmd.Stdout = os.Stdout
