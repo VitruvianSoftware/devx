@@ -34,7 +34,7 @@ jobs:
           go-version: "{{.GoVersion}}"
           cache: true
       - run: go test ./...
-      - uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           # Pin the linter: `version: latest` silently breaks green builds when a
           # new golangci-lint release changes its rules or config schema.
@@ -56,7 +56,7 @@ jobs:
         with:
           go-version: "{{.GoVersion}}"
           cache: true
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           version: "~> v2"
           args: release --clean
