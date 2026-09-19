@@ -39,7 +39,7 @@ var mcpInstallCmd = &cobra.Command{
 	Use:   "install [host...]",
 	Short: "Install the devx MCP server into one or more agent hosts",
 	Long: `Configures supported AI coding agents (Claude Code, Cursor, Codex CLI,
-Gemini CLI, Zed, Continue.dev, Windsurf, OpenCode) to launch devx as their
+Antigravity CLI, Zed, Continue.dev, Windsurf, OpenCode) to launch devx as their
 Model Context Protocol server.
 
 Run with no args to auto-detect every installed host and configure each one.

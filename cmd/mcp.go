@@ -27,7 +27,7 @@ var mcpCmd = &cobra.Command{
 	GroupID: "ci",
 	Short:   "Expose devx as a Model Context Protocol (MCP) server for AI coding agents",
 	Long: `Run devx as a Model Context Protocol server so AI coding agents (Claude Code,
-Cursor, Codex CLI, Gemini CLI, Zed, Continue, Windsurf, and more) can call
+Cursor, Codex CLI, Antigravity CLI, Zed, Continue, Windsurf, and more) can call
 devx commands as first-class typed tools instead of shelling out and parsing
 text.
 

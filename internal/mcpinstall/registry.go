@@ -60,13 +60,16 @@ func Hosts() []Host {
 		// Codex CLI — OpenAI's terminal coding agent. TOML config.
 		codexHost{},
 
-		// Gemini CLI — Google's open-source CLI. JSON config under settings.
+		// Antigravity CLI (agy) — Google's successor to Gemini CLI, which was
+		// retired for individual accounts. MCP servers live in a plain
+		// `mcpServers` map at ~/.gemini/config/mcp_config.json (NOT
+		// ~/.gemini/settings.json, which only the old Gemini CLI read).
 		&jsonHost{
-			displayName: "Gemini CLI",
-			key:         "gemini-cli",
-			detectBins:  []string{"gemini"},
-			detectPaths: []string{"~/.gemini"},
-			userConfig:  "~/.gemini/settings.json",
+			displayName: "Antigravity CLI",
+			key:         "antigravity",
+			detectBins:  []string{"agy"},
+			detectPaths: []string{"~/.gemini/antigravity-cli", "~/.gemini/config"},
+			userConfig:  "~/.gemini/config/mcp_config.json",
 		},
 
 		// Zed — Rust-based editor. Uses `context_servers` key.
@@ -117,17 +120,6 @@ func Hosts() []Host {
 			instructions: "Cowork integrates MCP via its plugin/connector system. " +
 				"In Cowork: Settings → Connectors → Add MCP Server. " +
 				"Use the JSON snippet below as the server definition.",
-		},
-
-		// Antigravity — Google's IDE (late 2025). Config layout still
-		// stabilizing; emit instructions.
-		&manualHost{
-			displayName: "Antigravity",
-			key:         "antigravity",
-			detectBins:  []string{"antigravity"},
-			detectPaths: []string{"/Applications/Antigravity.app", "~/.antigravity"},
-			instructions: "Antigravity supports MCP servers via its settings UI. " +
-				"Open Settings → AI → Model Context Protocol → Add Server, then paste the snippet below.",
 		},
 	}
 }

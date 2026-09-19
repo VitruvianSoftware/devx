@@ -192,7 +192,7 @@ Open an issue using the **Feature Request** template. Include:
 
 ## Contributing with AI Agents
 
-AI coding agents (Gemini CLI, Claude Code, Cursor, GitHub Copilot Workspace, etc.) are welcome contributors to `devx`. This section documents the exact workflow an agent should follow when implementing a feature from the project's `IDEAS.md` roadmap.
+AI coding agents (Antigravity CLI, Claude Code, Cursor, GitHub Copilot Workspace, etc.) are welcome contributors to `devx`. This section documents the exact workflow an agent should follow when implementing a feature from the project's `IDEAS.md` roadmap.
 
 ### Quick-Start Prompt
 

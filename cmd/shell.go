@@ -226,11 +226,10 @@ func runShell(_ *cobra.Command, _ []string) error {
 			".claude.json",
 			".config/claude",
 			".config/opencode",
-			".config/gemini-cli",
 			".codex",
 			".openai",
 			".agent",  // Global skills vault
-			".gemini", // Common gemini state / antigravity
+			".gemini", // Antigravity CLI (agy) state and config
 		}
 
 		mountedAgents := 0

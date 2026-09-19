@@ -4,7 +4,7 @@
 
 ## What Are Agent Skills?
 
-Agent skills are structured markdown files that teach AI coding assistants about your project's conventions, workflows, and SOPs. They live in your repository and are automatically discovered by tools like [Antigravity/Gemini CLI](https://github.com/google-gemini/gemini-cli), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Cursor, and GitHub Copilot.
+Agent skills are structured markdown files that teach AI coding assistants about your project's conventions, workflows, and SOPs. They live in your repository and are automatically discovered by tools like [Antigravity CLI](https://antigravity.google), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), Cursor, and GitHub Copilot.
 
 Each skill targets a specific concern — keeping CLI tooling rules separate from general engineering best practices.
 
@@ -22,7 +22,7 @@ This launches a **two-step TUI**:
 
 ```
 Which AI Agent(s) do you use?
-  [•] Antigravity/Gemini (Standard Agent Skills)
+  [•] Antigravity (Standard Agent Skills)
   [ ] Cursor IDE
   [ ] Claude Code (Anthropic)
   [ ] GitHub Copilot Chat
@@ -48,7 +48,7 @@ Would you like to configure your agents to use local LLMs via Ollama?
 
 | Agent | Skill destination |
 |---|---|
-| Antigravity/Gemini | `.agents/skills/<skill>/SKILL.md` |
+| Antigravity | `.agents/skills/<skill>/SKILL.md` |
 | Cursor | `.cursor/skills/<skill>/SKILL.md` |
 | Claude Code | `.claude/skills/<skill>/SKILL.md` |
 | GitHub Copilot | `.github/skills/<skill>/SKILL.md` |

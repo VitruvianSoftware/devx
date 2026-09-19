@@ -1,6 +1,6 @@
 # MCP Server for AI Agents
 
-`devx mcp` exposes the entire devx command surface as a [Model Context Protocol](https://modelcontextprotocol.io) server, so AI coding agents (Claude Code, Cursor, Codex CLI, Gemini CLI, Zed, Continue.dev, Windsurf, Cowork, Antigravity, OpenCode, and any other MCP-aware host) can call devx commands as **first-class typed tools** instead of shelling out and parsing text.
+`devx mcp` exposes the entire devx command surface as a [Model Context Protocol](https://modelcontextprotocol.io) server, so AI coding agents (Claude Code, Cursor, Codex CLI, Antigravity CLI, Zed, Continue.dev, Windsurf, Cowork, OpenCode, and any other MCP-aware host) can call devx commands as **first-class typed tools** instead of shelling out and parsing text.
 
 ## Why
 
@@ -23,7 +23,7 @@ Example output:
    ✓ claude-code     → ./.mcp.json [project]  (added devx MCP entry)
    ✓ cursor          → ./.cursor/mcp.json [project]  (added devx MCP entry)
    ✓ codex           → ~/.codex/config.toml [user]  (added devx MCP entry)
-   • gemini-cli      → ~/.gemini/settings.json [user]  (already up to date)
+   • antigravity     → ~/.gemini/config/mcp_config.json [user]  (already up to date)
 
   Restart your agent (or open a new chat) to load devx tools.
 ```
@@ -46,13 +46,12 @@ devx mcp install --json              # machine-readable output
 | `claude-code` | Claude Code | `.mcp.json` or `~/.claude.json` | JSON | project / user |
 | `cursor` | Cursor | `.cursor/mcp.json` or `~/.cursor/mcp.json` | JSON | project / user |
 | `codex` | OpenAI Codex CLI | `~/.codex/config.toml` | TOML | user |
-| `gemini-cli` | Google Gemini CLI | `~/.gemini/settings.json` | JSON | user |
+| `antigravity` | Google Antigravity CLI (`agy`) | `~/.gemini/config/mcp_config.json` | JSON | user |
 | `zed` | Zed editor | `~/.config/zed/settings.json` (key `context_servers`) | JSON | user |
 | `continue` | Continue.dev | `~/.continue/config.json` | JSON | user |
 | `windsurf` | Windsurf (Codeium) | `~/.codeium/windsurf/mcp_config.json` | JSON | user |
 | `opencode` | OpenCode | `.opencode/mcp.json` or `~/.config/opencode/mcp.json` | JSON | project / user |
 | `cowork` | Cowork | plugin/connector UI | manual snippet | manual |
-| `antigravity` | Google Antigravity IDE | settings UI | manual snippet | manual |
 
 Hosts marked "manual" use plugin/marketplace integration models rather than flat config files. For those, `devx mcp install` prints a copy-pasteable JSON snippet plus host-specific instructions.
 
@@ -136,7 +135,7 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-    actor Agent as AI Agent (Gemini / Claude / Cursor)
+    actor Agent as AI Agent (Antigravity / Claude / Cursor)
     participant Client as MCP Client (stdio transport)
     participant Server as devx MCP Server (devx mcp serve)
     participant Infra as Local Infrastructure (containers / DBs / tunnels)

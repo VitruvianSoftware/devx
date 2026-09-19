@@ -478,7 +478,7 @@ func CheckAILandscape() AILandscape {
 		binary string
 		note   string
 	}{
-		{"Gemini CLI", "gemini", "Google's AI coding agent"},
+		{"Antigravity CLI", "agy", "Google's AI coding agent (successor to Gemini CLI)"},
 		{"Claude Code", "claude", "Anthropic's AI coding agent"},
 		{"Codex CLI", "codex", "OpenAI's AI coding agent"},
 		{"OpenCode", "opencode", "Open-source AI coding agent"},

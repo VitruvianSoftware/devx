@@ -37,7 +37,7 @@ const ServerEntryKey = "devx"
 
 // jsonHost is the default adapter for hosts whose MCP config is a JSON file
 // with a top-level map keyed by server name. Covers Claude Code, Cursor,
-// Gemini CLI, Continue, Windsurf, OpenCode, and Zed (with key=context_servers).
+// Antigravity CLI, Continue, Windsurf, OpenCode, and Zed (with key=context_servers).
 type jsonHost struct {
 	displayName string
 	key         string

@@ -92,9 +92,9 @@ func TestResolveTargetsUnknownErrors(t *testing.T) {
 
 func TestExpectedHostsAreRegistered(t *testing.T) {
 	wantKeys := []string{
-		"claude-code", "cursor", "codex", "gemini-cli",
+		"claude-code", "cursor", "codex", "antigravity",
 		"zed", "continue", "windsurf", "opencode",
-		"cowork", "antigravity",
+		"cowork",
 	}
 	got := map[string]bool{}
 	for _, h := range Hosts() {

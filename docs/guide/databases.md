@@ -273,7 +273,7 @@ devx db synthesize postgres --dry-run
 2. **Local LM Studio** on port 1234
 3. **OpenAI API** via `OPENAI_API_KEY` environment variable
 
-For users running gemini-cli, claude code, codex, or opencode who already have cloud API keys, export `OPENAI_API_KEY` (or set `OPENAI_API_BASE` for custom/proxy endpoints like LiteLLM).
+For users running the Antigravity CLI, Claude Code, Codex, or OpenCode who already have cloud API keys, export `OPENAI_API_KEY` (or set `OPENAI_API_BASE` for custom/proxy endpoints like LiteLLM).
 
 #### What makes the data "chaotic"?
 
