@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.73.2...devx-v0.74.0) (2026-09-19)
+
+
+### Features
+
+* replace the retired Gemini CLI with the Antigravity CLI (agy) ([#2373](https://github.com/VitruvianSoftware/vitruvian-core/issues/2373)) ([4810684](https://github.com/VitruvianSoftware/vitruvian-core/commit/4810684d72c2cab5b6b386385aa1bb8831fbb306))
+
 ## [0.73.2](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.73.1...devx-v0.73.2) (2026-09-13)
 
 
