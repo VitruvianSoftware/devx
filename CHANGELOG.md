@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.1](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.0...devx-v0.74.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* **platform:** stabilize csi-driver-nfs, cnpg-operator, coredns, and thanos-sidecar ([#2427](https://github.com/VitruvianSoftware/vitruvian-core/issues/2427)) ([8d62b84](https://github.com/VitruvianSoftware/vitruvian-core/commit/8d62b843165c67e8ff6242f4cb1407ccbb1c5d16))
+
 ## [0.74.0](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.73.2...devx-v0.74.0) (2026-09-19)
 
 
