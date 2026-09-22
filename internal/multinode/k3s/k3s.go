@@ -230,9 +230,10 @@ func l2AdvertisementNodeSelectors(hostnames []string) string {
 
 // corednsHAPatch is a JSON merge patch that makes k3s's bundled CoreDNS
 // survive a single node loss: two replicas, kept on distinct hosts by a
-// *required* pod-anti-affinity on the kube-dns pods. k3s ships a single
+// *required* pod-anti-affinity on the kube-dns pods, pinned to wired nodes
+// so DNS lookups never traverse flaky WiFi links. k3s ships a single
 // replica, so a DNS-hosting node going down is a cluster-wide outage.
-const corednsHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":[{"key":"k8s-app","operator":"In","values":["kube-dns"]}]},"topologyKey":"kubernetes.io/hostname"}]}}}}}}`
+const corednsHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":[{"key":"k8s-app","operator":"In","values":["kube-dns"]}]},"topologyKey":"kubernetes.io/hostname"}]}},"nodeSelector":{"node.ipv1337.dev/link":"wired"}}}}}`
 
 // metallbControllerHAPatch is a JSON merge patch that makes MetalLB's controller
 // survive a single node loss: 2 leader-elected replicas (one active, one hot

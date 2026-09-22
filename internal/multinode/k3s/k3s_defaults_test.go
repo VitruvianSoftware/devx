@@ -81,6 +81,7 @@ func TestEnsureClusterDefaults_PatchesCoreDNSAndStorageClass(t *testing.T) {
 		"requiredDuringSchedulingIgnoredDuringExecution",
 		"kubernetes.io/hostname",
 		"kube-dns",
+		`"node.ipv1337.dev/link":"wired"`,
 	} {
 		if !strings.Contains(patches, want) {
 			t.Errorf("coredns patch missing %q; decoded payloads:\n%s", want, patches)
