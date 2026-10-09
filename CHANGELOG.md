@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.2](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.1...devx-v0.74.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* **devx/docs:** build the docs site on patched vite, esbuild and katex ([#2984](https://github.com/VitruvianSoftware/vitruvian-core/issues/2984)) ([b86729a](https://github.com/VitruvianSoftware/vitruvian-core/commit/b86729aa9678282f34807212f6a3cd3c2535396b))
+
 ## [0.74.1](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.0...devx-v0.74.1) (2026-09-22)
 
 
