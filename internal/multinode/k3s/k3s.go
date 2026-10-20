@@ -233,7 +233,13 @@ func l2AdvertisementNodeSelectors(hostnames []string) string {
 // *required* pod-anti-affinity on the kube-dns pods, pinned to wired nodes
 // so DNS lookups never traverse flaky WiFi links. k3s ships a single
 // replica, so a DNS-hosting node going down is a cluster-wide outage.
-const corednsHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":[{"key":"k8s-app","operator":"In","values":["kube-dns"]}]},"topologyKey":"kubernetes.io/hostname"}]}},"nodeSelector":{"node.ipv1337.dev/link":"wired"}}}}}`
+//
+// It also requires a control-plane node: the always-on servers, never a
+// laptop. A laptop on a cable is "wired" too, and on 2026-10-20 a replica on
+// one (james-mbp32) silently dropped another node's queries while answering
+// others, so every lookup had a coin-flip chance of timing out and the
+// Actions Runner Controller could not resolve api.github.com at all.
+const corednsHAPatch = `{"spec":{"replicas":2,"template":{"spec":{"affinity":{"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-role.kubernetes.io/control-plane","operator":"Exists"}]}]}},"podAntiAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":[{"key":"k8s-app","operator":"In","values":["kube-dns"]}]},"topologyKey":"kubernetes.io/hostname"}]}},"nodeSelector":{"node.ipv1337.dev/link":"wired"}}}}}`
 
 // metallbControllerHAPatch is a JSON merge patch that makes MetalLB's controller
 // survive a single node loss: 2 leader-elected replicas (one active, one hot
