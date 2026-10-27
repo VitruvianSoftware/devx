@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-FROM gcr.io/distroless/static-debian12:nonroot
+# Packages the Rust bridge-agent binary (//apps/cli/devx/tools/bridge-agent:bridge-agent).
+FROM gcr.io/distroless/cc-debian12:nonroot
 COPY devx-bridge-agent /
 ENTRYPOINT ["/devx-bridge-agent"]
