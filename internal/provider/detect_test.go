@@ -21,118 +21,133 @@
 package provider
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 )
 
-func TestDetect_ReturnsResults(t *testing.T) {
-	// Detect() scans the real system. We can't control what's installed,
-	// but we can verify the function doesn't panic and returns a valid slice.
+// fakePath points $PATH at a fresh directory holding a stub executable for
+// each given binary name, so Detect() and Resolve() see exactly those
+// backends and nothing from the host. Each stub prints "<name> version 1.2.3"
+// for any argument, which is what detectVersion() reads. Calling it with no
+// names gives a PATH on which no backend is installed.
+func fakePath(t *testing.T, binaries ...string) string {
+	t.Helper()
+	dir := t.TempDir()
+	for _, b := range binaries {
+		script := "#!/bin/sh\necho \"" + b + " version 1.2.3\"\n"
+		if err := os.WriteFile(filepath.Join(dir, b), []byte(script), 0o755); err != nil {
+			t.Fatalf("writing stub %s: %v", b, err)
+		}
+	}
+	t.Setenv("PATH", dir)
+	return dir
+}
+
+func TestDetect_NoneInstalledReturnsEmptySlice(t *testing.T) {
+	fakePath(t)
 	detected := Detect()
 	if detected == nil {
-		t.Fatal("Detect() returned nil, expected empty slice or results")
+		t.Fatal("Detect() returned nil, want an empty non-nil slice")
 	}
-
-	// Verify each result has required fields populated
-	for _, d := range detected {
-		if d.Name == "" {
-			t.Error("detected provider has empty Name")
-		}
-		if d.Binary == "" {
-			t.Error("detected provider has empty Binary")
-		}
+	if len(detected) != 0 {
+		t.Fatalf("Detect() = %v, want no providers", detected)
 	}
 }
 
-func TestDetect_KnownProviderNames(t *testing.T) {
+func TestDetect_FindsInstalledInPreferenceOrder(t *testing.T) {
+	// Deliberately not in preference order: Detect() must sort by detectOrder.
+	dir := fakePath(t, "docker", "limactl", "podman")
 	detected := Detect()
-	validNames := map[string]bool{
-		"podman": true, "lima": true, "colima": true,
-		"docker": true, "orbstack": true,
+
+	var names []string
+	for _, d := range detected {
+		names = append(names, d.Name)
+	}
+	if want := []string{"podman", "lima", "docker"}; !reflect.DeepEqual(names, want) {
+		t.Fatalf("Detect() names = %v, want %v", names, want)
 	}
 	for _, d := range detected {
-		if !validNames[d.Name] {
-			t.Errorf("Detect() returned unknown provider name %q", d.Name)
+		bin := providerBinary[d.Name]
+		if want := filepath.Join(dir, bin); d.Binary != want {
+			t.Errorf("%s: Binary = %q, want %q", d.Name, d.Binary, want)
+		}
+		if want := bin + " version 1.2.3"; d.Version != want {
+			t.Errorf("%s: Version = %q, want %q", d.Name, d.Version, want)
 		}
 	}
 }
 
-func TestResolve_ExplicitPodman(t *testing.T) {
-	vm, rt, err := Resolve("podman")
-	if err != nil {
-		// Same guard its lima/colima siblings below already carry: podman is an
-		// optional host tool and is absent on the CI runners. Without this the
-		// test is environment-dependent, and it only LOOKED green because its
-		// result was served from the remote cache -- `bazel test //...` reports
-		// "Executed 5 out of 106", so this target was never actually run there.
-		// The race lane (a different configuration, hence a different cache key)
-		// executed it for real and surfaced the failure.
-		if searchSubstring(err.Error(), "not found on $PATH") {
-			t.Skipf("Skipping test: %v", err)
-		}
-		t.Fatalf("Resolve(podman) error: %v", err)
-	}
-	if vm.Name() != "podman" {
-		t.Errorf("expected podman VM, got %s", vm.Name())
-	}
-	if rt.Name() != "podman" {
-		t.Errorf("expected podman runtime, got %s", rt.Name())
-	}
-	if !rt.SupportsCheckpoint() {
-		t.Error("podman runtime should support checkpoint")
+func TestResolve_AutoNoneInstalled(t *testing.T) {
+	fakePath(t)
+	_, _, err := Resolve("auto")
+	if err == nil || !strings.Contains(err.Error(), "no supported VM backend found") {
+		t.Fatalf("Resolve(auto) error = %v, want 'no supported VM backend found'", err)
 	}
 }
 
-func TestResolve_ExplicitLima(t *testing.T) {
-	vm, rt, err := Resolve("lima")
+func TestResolve_AutoSingleInstalled(t *testing.T) {
+	fakePath(t, "colima")
+	vm, rt, err := Resolve("")
 	if err != nil {
-		if searchSubstring(err.Error(), "not found on $PATH") {
-			t.Skipf("Skipping test: %v", err)
-		}
-		t.Fatalf("Resolve(lima) error: %v", err)
+		t.Fatalf("Resolve(\"\") error: %v", err)
 	}
-	if vm.Name() != "lima" {
-		t.Errorf("expected lima VM, got %s", vm.Name())
-	}
-	if rt.Name() != "nerdctl" {
-		t.Errorf("expected nerdctl runtime for lima, got %s", rt.Name())
-	}
-	if rt.SupportsCheckpoint() {
-		t.Error("nerdctl runtime should not support checkpoint")
+	if vm.Name() != "colima" || rt.Name() != "nerdctl" {
+		t.Fatalf("Resolve(\"\") = %s/%s, want colima/nerdctl", vm.Name(), rt.Name())
 	}
 }
 
-func TestResolve_ExplicitColima(t *testing.T) {
-	vm, rt, err := Resolve("colima")
-	if err != nil {
-		if searchSubstring(err.Error(), "not found on $PATH") {
-			t.Skipf("Skipping test: %v", err)
-		}
-		t.Fatalf("Resolve(colima) error: %v", err)
+func TestResolve_AutoMultipleInstalled(t *testing.T) {
+	fakePath(t, "podman", "orb")
+	_, _, err := Resolve("auto")
+	var multi *MultipleProvidersError
+	if !errors.As(err, &multi) {
+		t.Fatalf("Resolve(auto) error = %v, want *MultipleProvidersError", err)
 	}
-	if vm.Name() != "colima" {
-		t.Errorf("expected colima VM, got %s", vm.Name())
-	}
-	if rt.Name() != "nerdctl" {
-		t.Errorf("expected nerdctl runtime for colima, got %s", rt.Name())
+	if len(multi.Available) != 2 || multi.Available[0].Name != "podman" || multi.Available[1].Name != "orbstack" {
+		t.Fatalf("Available = %v, want [podman orbstack]", multi.Available)
 	}
 }
 
-func TestResolve_ExplicitDocker(t *testing.T) {
-	vm, rt, err := Resolve("docker")
-	if err != nil {
-		if searchSubstring(err.Error(), "not found on $PATH") {
-			t.Skipf("Skipping test: %v", err)
-		}
-		t.Fatalf("Resolve(docker) error: %v", err)
+func TestResolve_ExplicitNotInstalled(t *testing.T) {
+	fakePath(t)
+	_, _, err := Resolve("podman")
+	if err == nil || !strings.Contains(err.Error(), "not found on $PATH") {
+		t.Fatalf("Resolve(podman) error = %v, want 'not found on $PATH'", err)
 	}
-	if vm.Name() != "docker" {
-		t.Errorf("expected docker VM, got %s", vm.Name())
+}
+
+func TestResolve_Explicit(t *testing.T) {
+	tests := []struct {
+		name, binary, wantVM, wantRuntime string
+		wantCheckpoint                    bool
+	}{
+		{"podman", "podman", "podman", "podman", true},
+		{"lima", "limactl", "lima", "nerdctl", false},
+		{"colima", "colima", "colima", "nerdctl", false},
+		{"docker", "docker", "docker", "docker", false},
+		{"orbstack", "orb", "docker", "docker", false},
 	}
-	if rt.Name() != "docker" {
-		t.Errorf("expected docker runtime, got %s", rt.Name())
-	}
-	if rt.SupportsCheckpoint() {
-		t.Error("docker runtime should not support checkpoint")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakePath(t, tt.binary)
+			vm, rt, err := Resolve(tt.name)
+			if err != nil {
+				t.Fatalf("Resolve(%s) error: %v", tt.name, err)
+			}
+			if vm.Name() != tt.wantVM {
+				t.Errorf("VM = %s, want %s", vm.Name(), tt.wantVM)
+			}
+			if rt.Name() != tt.wantRuntime {
+				t.Errorf("runtime = %s, want %s", rt.Name(), tt.wantRuntime)
+			}
+			if rt.SupportsCheckpoint() != tt.wantCheckpoint {
+				t.Errorf("SupportsCheckpoint = %v, want %v", rt.SupportsCheckpoint(), tt.wantCheckpoint)
+			}
+		})
 	}
 }
 
@@ -153,7 +168,7 @@ func TestMultipleProvidersError_Message(t *testing.T) {
 	if msg == "" {
 		t.Fatal("expected non-empty error message")
 	}
-	if !contains(msg, "podman") || !contains(msg, "lima") {
+	if !strings.Contains(msg, "podman") || !strings.Contains(msg, "lima") {
 		t.Errorf("error message should mention detected providers, got: %s", msg)
 	}
 }
@@ -173,17 +188,4 @@ func TestBuildProvider_AllNames(t *testing.T) {
 			t.Errorf("buildProvider(%q) returned nil ContainerRuntime", name)
 		}
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchSubstring(s, substr)
-}
-
-func searchSubstring(s, sub string) bool {
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }

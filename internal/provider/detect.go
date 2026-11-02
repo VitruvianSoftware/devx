@@ -51,9 +51,10 @@ var detectOrder = []string{"podman", "lima", "colima", "docker", "orbstack"}
 
 // Detect scans the system for available VM backends and returns them
 // in preference order. Only backends whose CLI binary is found on $PATH
-// are included.
+// are included. When none is installed it returns an empty, non-nil slice,
+// so callers (and anything that serialises the result) see "[]", not null.
 func Detect() []DetectedProvider {
-	var found []DetectedProvider
+	found := make([]DetectedProvider, 0, len(detectOrder))
 	for _, name := range detectOrder {
 		binary := providerBinary[name]
 		path, err := exec.LookPath(binary)
