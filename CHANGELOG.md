@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.4](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.3...devx-v0.74.4) (2026-11-02)
+
+
+### Bug Fixes
+
+* **devx:** return an empty provider list, not nil, and run the provider tests in CI ([#4222](https://github.com/VitruvianSoftware/vitruvian-core/issues/4222)) ([be0a8b1](https://github.com/VitruvianSoftware/vitruvian-core/commit/be0a8b14b2e9d302cf1cc22345c19ef7e43f99b0))
+
 ## [0.74.3](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.2...devx-v0.74.3) (2026-10-20)
 
 
