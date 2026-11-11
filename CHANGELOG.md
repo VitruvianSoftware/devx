@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.5](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.4...devx-v0.74.5) (2026-11-11)
+
+
+### Bug Fixes
+
+* **devx:** embed the scaffold README docs that [#4586](https://github.com/VitruvianSoftware/vitruvian-core/issues/4586) added ([#4590](https://github.com/VitruvianSoftware/vitruvian-core/issues/4590)) ([dc6f4f3](https://github.com/VitruvianSoftware/vitruvian-core/commit/dc6f4f3dcf8f73e9a124a4344efebebbb5092fba))
+
 ## [0.74.4](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.3...devx-v0.74.4) (2026-11-02)
 
 
