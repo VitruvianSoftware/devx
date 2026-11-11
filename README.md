@@ -258,5 +258,35 @@ We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) 
 
 ## License
 
-[MIT](LICENSE) © VitruvianSoftware 
- 
+[MIT](LICENSE) © VitruvianSoftware
+
+## Interface
+- `[magefile.go:Build]`
+- `[magefile.go:Install]`
+- `[magefile.go:Run]`
+- `[magefile.go:Lint]`
+- `[magefile.go:Test]`
+- `[magefile.go:Coverage]`
+- `[magefile.go:Tidy]`
+- `[magefile.go:ValidateTemplate]`
+- `[magefile.go:Clean]`
+- `[magefile.go:Release]`
+- `[magefile.go:Snapshot]`
+- `[magefile.go:License]`
+- `[magefile.go:LicenseCheck]`
+- `[magefile.go:CI]`
+- Subdirectory: [cmd](./cmd/README.md)
+- Subdirectory: [internal](./internal/README.md)
+- Subdirectory: [scripts](./scripts/README.md)
+- Subdirectory: [tools](./tools/README.md)
+
+## Invariants
+- None
+
+## Side Effects
+- [magefile.go:28]: `"os/exec"`
+- [magefile.go:83]: `if _, err := exec.LookPath("butane"); err != nil {`
+- [magefile.go:94]: `if err := os.Remove(f); err != nil && !os.IsNotExist(err) {`
+
+## Verification
+- Run: `bazel test //apps/cli/devx/...`
