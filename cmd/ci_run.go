@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/ci"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ci"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )

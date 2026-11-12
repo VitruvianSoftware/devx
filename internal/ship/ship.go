@@ -36,7 +36,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
 )
 
 // ErrNoStack is returned when no stack is detected and no explicit pipeline exists.

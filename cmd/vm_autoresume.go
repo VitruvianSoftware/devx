@@ -27,9 +27,9 @@ import (
 
 	"github.com/charmbracelet/huh"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
 )
 
 // ensureVMRunning is a lifecycle hook invoked by devx CLI commands

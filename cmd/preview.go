@@ -28,7 +28,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/VitruvianSoftware/devx/internal/preview"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/preview"
 	"github.com/spf13/cobra"
 )
 

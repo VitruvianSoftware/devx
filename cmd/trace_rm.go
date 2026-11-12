@@ -25,7 +25,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )

@@ -27,8 +27,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/envvault"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/envvault"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )

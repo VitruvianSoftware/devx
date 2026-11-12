@@ -3,13 +3,13 @@
 layout: home
 
 hero:
-  name: "devx"
+  name: "Vitruvian DevX CLI"
   text: "Advanced Agentic Coding Environment Orchestrator"
   tagline: "Unifying Container VMs, Ephemeral Databases, Cloudflare Tunnels, and AI Agents."
   image:
     light: /hero-light.png
     dark: /hero-dark.png
-    alt: devx Abstract Tech Architecture Illustration
+    alt: Vitruvian DevX CLI Abstract Tech Architecture Illustration
   actions:
     - theme: brand
       text: Get Started

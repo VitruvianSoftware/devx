@@ -1,7 +1,7 @@
 # K3S
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/k3s`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/k3s`.
 
 ## Interface
 - `[advanced.go:GetVersion]`
@@ -41,4 +41,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - [recipe.go:109]: ``curl -sfL https://get.k3s.io | %sINSTALL_K3S_SKIP_START=true K3S_TOKEN=%q IN...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/k3s/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/k3s/...`

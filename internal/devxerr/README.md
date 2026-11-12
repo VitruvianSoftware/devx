@@ -1,7 +1,7 @@
 # Devxerr
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/devxerr`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/devxerr`.
 
 ## Interface
 - `[error.go:DevxError]`
@@ -20,4 +20,4 @@ Component package providing implementation for `apps/cli/devx/internal/devxerr`.
 - [recovery.go:61]: `cmd := exec.Command("gcloud", "auth", "login")`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/devxerr/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/devxerr/...`

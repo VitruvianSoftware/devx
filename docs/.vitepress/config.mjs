@@ -4,7 +4,7 @@ import { withMermaid } from "vitepress-plugin-mermaid";
 // https://vitepress.dev/reference/site-config
 export default withMermaid(
   defineConfig({
-    title: "devx",
+    title: "Vitruvian DevX CLI",
     description: "Advanced Agentic Coding Environment Orchestrator",
     server: { port: 5173 },
     // Exclude internal planning, analysis, and design-spec docs from the public VitePress build.

@@ -31,8 +31,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/devcontainer"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devcontainer"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
 )
 
 // RunResult holds the outcome of a single job execution.

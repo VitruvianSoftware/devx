@@ -28,7 +28,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/agent"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/agent"
 )
 
 var agentCmd = &cobra.Command{

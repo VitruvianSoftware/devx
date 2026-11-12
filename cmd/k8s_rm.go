@@ -21,7 +21,7 @@
 package cmd
 
 import (
-	"github.com/VitruvianSoftware/devx/internal/k8s"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/k8s"
 	"github.com/spf13/cobra"
 )
 

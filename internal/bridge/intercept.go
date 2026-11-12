@@ -26,7 +26,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
 )
 
 // ServicePortSpec captures a single port from the target Service for dynamic agent generation.

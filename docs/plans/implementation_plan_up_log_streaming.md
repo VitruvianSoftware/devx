@@ -610,7 +610,7 @@ In `cleanupFn` (line 290-320), add (near the `n.cancel()` handling):
 			}
 ```
 
-Add the import `"github.com/VitruvianSoftware/devx/internal/logs"` to `dag.go` (it already imports `internal/logs` for crash-log tailing — confirm; if not, add it).
+Add the import `"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"` to `dag.go` (it already imports `internal/logs` for crash-log tailing — confirm; if not, add it).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -684,7 +684,7 @@ func streamContainerLogs(ctx context.Context, rt provider.ContainerRuntime, n *N
 }
 ```
 
-Add imports `"os"` and `"github.com/VitruvianSoftware/devx/internal/logs"` to `container_node.go`. In `startContainerNode`, after `n.containerStarted = true`, insert:
+Add imports `"os"` and `"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"` to `container_node.go`. In `startContainerNode`, after `n.containerStarted = true`, insert:
 
 ```go
 	streamContainerLogs(ctx, rt, n)
@@ -779,7 +779,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/logs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"
 )
 
 // --- watch-event decoding (pure, unit-tested) ---
@@ -998,7 +998,7 @@ func streamCloudRunLogs(ctx context.Context, n *Node, c *CloudRunNodeConfig, ser
 }
 ```
 
-Add imports `"context"`, `"os"`, `"os/exec"`, and `"github.com/VitruvianSoftware/devx/internal/logs"` to `cloudrun_node.go` as needed. In `startCloudRunNode`, after `fmt.Printf("  ✅ %s deployed\n", n.Name)` (line ~61), insert:
+Add imports `"context"`, `"os"`, `"os/exec"`, and `"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"` to `cloudrun_node.go` as needed. In `startCloudRunNode`, after `fmt.Printf("  ✅ %s deployed\n", n.Name)` (line ~61), insert:
 
 ```go
 	streamCloudRunLogs(ctx, n, c, service)

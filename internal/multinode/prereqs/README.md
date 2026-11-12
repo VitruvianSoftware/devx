@@ -1,7 +1,7 @@
 # Prereqs
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/prereqs`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/prereqs`.
 
 ## Interface
 - `[prereqs.go:CheckResult]`
@@ -15,4 +15,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - [prereqs.go:293]: `<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DT...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/prereqs/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/prereqs/...`

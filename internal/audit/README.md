@@ -1,7 +1,7 @@
 # Audit
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/audit`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/audit`.
 
 ## Interface
 - `[audit.go:ToolMode]`
@@ -23,4 +23,4 @@ Component package providing implementation for `apps/cli/devx/internal/audit`.
 - [audit.go:147]: `var cmd *exec.Cmd`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/audit/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/audit/...`

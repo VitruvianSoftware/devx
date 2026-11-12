@@ -27,7 +27,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/network"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/network"
 )
 
 // serviceForward is a discovered Service port to forward to localhost.

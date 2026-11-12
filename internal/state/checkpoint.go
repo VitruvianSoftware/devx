@@ -28,7 +28,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 // CheckpointsDir returns the directory where state checkpoints are stored.

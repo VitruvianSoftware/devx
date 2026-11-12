@@ -23,8 +23,8 @@ package util
 import (
 	"encoding/base64"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
 )
 
 // Base64Encode encodes a string to base64.

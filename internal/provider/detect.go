@@ -26,7 +26,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
 )
 
 // DetectedProvider holds information about a VM backend found on the system.

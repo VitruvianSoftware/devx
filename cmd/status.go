@@ -28,11 +28,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/exposure"
-	"github.com/VitruvianSoftware/devx/internal/tailscale"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/exposure"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tailscale"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 var statusCmd = &cobra.Command{

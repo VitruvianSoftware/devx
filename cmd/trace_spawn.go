@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 

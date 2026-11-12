@@ -25,8 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/doctor"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/doctor"
 )
 
 func newClusterDoctorCmd(configFile *string) *cobra.Command {

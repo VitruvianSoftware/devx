@@ -25,8 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/cron"
-	"github.com/VitruvianSoftware/devx/internal/envvault"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cron"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/envvault"
 )
 
 var cronCmd = &cobra.Command{

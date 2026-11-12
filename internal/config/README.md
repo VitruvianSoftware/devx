@@ -1,7 +1,7 @@
 # Config
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/config`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/config`.
 
 ## Interface
 - `[config.go:Config]`
@@ -22,4 +22,4 @@ Component package providing implementation for `apps/cli/devx/internal/config`.
 - [local.go:84]: `return os.WriteFile(LocalConfigPath(), data, 0o644)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/config/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/config/...`

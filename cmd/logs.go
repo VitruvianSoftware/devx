@@ -25,7 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/VitruvianSoftware/devx/internal/logs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )

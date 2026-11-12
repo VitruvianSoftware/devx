@@ -24,8 +24,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/exposure"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/exposure"
 	"github.com/spf13/cobra"
 )
 

@@ -1,7 +1,7 @@
 # Cluster
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/cluster`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/cluster`.
 
 ## Interface
 - `[advanced.go:Upgrade]`
@@ -23,4 +23,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/cluster/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/cluster/...`

@@ -24,7 +24,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 // BuildAndLoad ensures the in-cluster registry exists, then builds and pushes each

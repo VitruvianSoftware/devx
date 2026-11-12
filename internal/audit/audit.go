@@ -31,7 +31,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 // ToolMode describes how an audit tool should be executed.

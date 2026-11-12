@@ -1,7 +1,7 @@
 # Image
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/image`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/image`.
 
 ## Interface
 - `[build.go:Build]`
@@ -26,4 +26,4 @@ Component package providing implementation for `apps/cli/devx/internal/image`.
 - [registry.go:156]: `regionendpoint: http://minio-amd64.minio.svc.cluster.local:9000`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/image/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/image/...`

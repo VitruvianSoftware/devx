@@ -27,7 +27,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
 )
 
 type FakeRuntime struct {

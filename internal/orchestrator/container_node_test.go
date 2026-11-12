@@ -24,7 +24,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/image"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/image"
 )
 
 func TestContainerNodeName(t *testing.T) {

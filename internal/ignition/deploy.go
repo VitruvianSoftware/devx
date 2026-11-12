@@ -31,7 +31,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/podman"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/podman"
 )
 
 type ignConfig struct {

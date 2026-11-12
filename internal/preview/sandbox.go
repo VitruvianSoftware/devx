@@ -32,9 +32,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/exposure"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/exposure"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 // Sandbox holds all state for an isolated PR preview environment.

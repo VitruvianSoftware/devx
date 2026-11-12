@@ -28,7 +28,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
 	"github.com/spf13/cobra"
 )
 

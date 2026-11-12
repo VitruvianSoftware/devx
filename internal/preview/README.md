@@ -1,7 +1,7 @@
 # Preview
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/preview`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/preview`.
 
 ## Interface
 - `[sandbox.go:Sandbox]`
@@ -21,4 +21,4 @@ Component package providing implementation for `apps/cli/devx/internal/preview`.
 - [sandbox.go:69]: `if err := exec.Command("gh", "auth", "status").Run(); err != nil {`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/preview/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/preview/...`

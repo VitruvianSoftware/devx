@@ -32,8 +32,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 var (

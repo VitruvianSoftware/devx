@@ -28,8 +28,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 var listRuntime string

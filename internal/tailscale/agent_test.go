@@ -23,7 +23,7 @@ package tailscale_test
 import (
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/tailscale"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tailscale"
 )
 
 func TestExtractAuthURL_Found(t *testing.T) {

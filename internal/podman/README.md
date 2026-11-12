@@ -1,7 +1,7 @@
 # Podman
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/podman`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/podman`.
 
 ## Interface
 - `[machine.go:MachineInfo]`
@@ -23,4 +23,4 @@ Component package providing implementation for `apps/cli/devx/internal/podman`.
 - [machine.go:46]: `cmd := exec.Command("podman", "machine", "rm", "-f", name)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/podman/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/podman/...`

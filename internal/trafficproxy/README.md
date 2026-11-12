@@ -1,7 +1,7 @@
 # Trafficproxy
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/trafficproxy`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/trafficproxy`.
 
 ## Interface
 - `[proxy.go:Profile]`
@@ -17,4 +17,4 @@ Component package providing implementation for `apps/cli/devx/internal/trafficpr
 - [proxy.go:100]: `func handleConnection(ctx context.Context, src net.Conn, targetPort string, p...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/trafficproxy/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/trafficproxy/...`

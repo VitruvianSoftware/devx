@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	devxmock "github.com/VitruvianSoftware/devx/internal/mock"
+	devxmock "github.com/VitruvianSoftware/vitruvian-devx/internal/mock"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

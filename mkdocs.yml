@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-site_name: devx
+site_name: Vitruvian DevX CLI
 site_description: Developer-experience CLI — local dev orchestration (Lima VMs, devcontainers, k3s cluster join/apply, scaffolding)
 repo_url: https://github.com/VitruvianSoftware/vitruvian-core
 edit_uri: edit/main/devx/docs

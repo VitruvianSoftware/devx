@@ -1,7 +1,7 @@
 # Sync
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/sync`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/sync`.
 
 ## Interface
 - `[daemon.go:Session]`
@@ -22,4 +22,4 @@ Component package providing implementation for `apps/cli/devx/internal/sync`.
 - [daemon.go:95]: `cmd := exec.Command("mutagen", args...)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/sync/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/sync/...`

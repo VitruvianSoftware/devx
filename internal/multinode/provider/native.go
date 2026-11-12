@@ -28,10 +28,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/k3s"
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
-	"github.com/VitruvianSoftware/devx/internal/multinode/util"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/k3s"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/util"
 )
 
 // sshSudo runs a command as root on the host and returns combined output.

@@ -28,11 +28,11 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
 )
 
 var (

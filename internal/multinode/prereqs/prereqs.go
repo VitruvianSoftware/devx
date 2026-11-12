@@ -27,9 +27,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
-	"github.com/VitruvianSoftware/devx/internal/multinode/util"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/util"
 )
 
 // brewCmd returns the full path to brew, auto-detecting ARM64 vs Intel.

@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/ignition"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ignition"
 )
 
 // makeTemplate writes a minimal valid Butane template to a temp file.

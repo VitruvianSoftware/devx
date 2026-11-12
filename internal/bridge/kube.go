@@ -38,7 +38,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
 )
 
 // ValidateKubectl checks that kubectl is on the PATH and returns its version.

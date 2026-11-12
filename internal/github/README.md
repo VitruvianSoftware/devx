@@ -1,7 +1,7 @@
 # Github
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/github`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/github`.
 
 ## Interface
 - `[pages.go:EnablePages]`
@@ -23,4 +23,4 @@ Component package providing implementation for `apps/cli/devx/internal/github`.
 - [pages.go:51]: `out, err := exec.Command("gh", "repo", "view", "--json", "owner,name", "-q", ...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/github/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/github/...`

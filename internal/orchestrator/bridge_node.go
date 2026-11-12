@@ -32,7 +32,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/VitruvianSoftware/devx/internal/bridge"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/bridge"
 )
 
 // BridgeNodeState holds the runtime state of a running bridge node, used for teardown.

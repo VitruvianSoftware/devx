@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
 	"gopkg.in/yaml.v3"
 )
 

@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/lima"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/lima"
 )
 
 func TestNodePackagesIncludesSocat(t *testing.T) {

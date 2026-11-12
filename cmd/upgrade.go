@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/updater"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +63,7 @@ func runUpgrade(_ *cobra.Command, _ []string) error {
 	if !result.UpdateAvailable {
 		fmt.Printf("✓ devx %s is already the latest version.", version)
 		if isGoInstallBinary() {
-			fmt.Printf("\n\n  Installed via: go install\n  To upgrade: go install github.com/VitruvianSoftware/devx@latest\n")
+			fmt.Printf("\n\n  Installed via: go install\n  To upgrade: go install github.com/VitruvianSoftware/vitruvian-devx@latest\n")
 		}
 		fmt.Println()
 		return nil

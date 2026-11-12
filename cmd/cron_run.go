@@ -31,7 +31,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/cron"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cron"
 )
 
 var cronRunCmd = &cobra.Command{

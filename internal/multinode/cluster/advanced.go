@@ -28,10 +28,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/k3s"
-	"github.com/VitruvianSoftware/devx/internal/multinode/lima"
-	"github.com/VitruvianSoftware/devx/internal/multinode/util"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/k3s"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/lima"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/util"
 )
 
 // Upgrade performs a rolling upgrade of K3s across all nodes.

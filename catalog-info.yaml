@@ -25,7 +25,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: devx
+  name: vitruvian-devx
+  title: Vitruvian DevX CLI
   description: Developer-experience CLI — local dev orchestration (Lima VMs, devcontainers, k3s cluster join/apply, scaffolding)
   annotations:
     github.com/project-slug: VitruvianSoftware/vitruvian-core

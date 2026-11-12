@@ -1,7 +1,7 @@
 # Mcpinstall
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/mcpinstall`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/mcpinstall`.
 
 ## Interface
 - `[host.go:Scope]`
@@ -39,4 +39,4 @@ Component package providing implementation for `apps/cli/devx/internal/mcpinstal
 - [host_manual.go:50]: `if _, err := exec.LookPath(bin); err == nil {`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/mcpinstall/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/mcpinstall/...`

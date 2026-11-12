@@ -1,7 +1,7 @@
 # Provider
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/provider`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/provider`.
 
 ## Interface
 - `[colima.go:ColimaProvider]`
@@ -41,4 +41,4 @@ Component package providing implementation for `apps/cli/devx/internal/provider`
 - [lima.go:27]: `"os/exec"`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/provider/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/provider/...`

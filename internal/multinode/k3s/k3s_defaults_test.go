@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
 )
 
 // b64Payloads decodes any `echo '<base64>' | base64 -d` segments in the captured

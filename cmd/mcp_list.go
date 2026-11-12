@@ -27,8 +27,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/mcpinstall"
-	"github.com/VitruvianSoftware/devx/internal/mcpserver"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/mcpinstall"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/mcpserver"
 )
 
 var mcpListCmd = &cobra.Command{

@@ -24,9 +24,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/state"
-	"github.com/VitruvianSoftware/devx/internal/tailscale"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/state"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tailscale"
 	"github.com/spf13/cobra"
 )
 

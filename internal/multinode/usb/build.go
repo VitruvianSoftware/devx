@@ -26,7 +26,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
 )
 
 // BuildOptions configures a `devx cluster usb build`.

@@ -31,7 +31,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
 )
 
 // Find locates devx.yaml by walking up from the current directory, returning its

@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"

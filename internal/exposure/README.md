@@ -1,7 +1,7 @@
 # Exposure
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/exposure`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/exposure`.
 
 ## Interface
 - `[domain.go:GenerateDomain]`
@@ -19,4 +19,4 @@ Component package providing implementation for `apps/cli/devx/internal/exposure`
 - [store.go:138]: `return os.WriteFile(path, data, 0o644)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/exposure/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/exposure/...`

@@ -29,9 +29,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/audit"
-	"github.com/VitruvianSoftware/devx/internal/provider"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/audit"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 var (

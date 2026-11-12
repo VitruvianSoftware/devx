@@ -1,7 +1,7 @@
 # Usb
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/usb`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/usb`.
 
 ## Interface
 - `[assemble_script.go:AssemblyParams]`
@@ -41,4 +41,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - [joinspec.go:260]: `timeout 3 bash -c "exec 3<>/dev/tcp/${host}/${port}" 2>/dev/null`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/usb/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/usb/...`

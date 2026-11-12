@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/testutil"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/testutil"
 )
 
 func TestScaffoldCommand(t *testing.T) {

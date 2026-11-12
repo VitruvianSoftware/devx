@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/logs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"
 )
 
 // --- watch-event decoding (pure, unit-tested) ---

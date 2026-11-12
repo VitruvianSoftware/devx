@@ -1,7 +1,7 @@
 # Tui
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/tui`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/tui`.
 
 ## Interface
 - `[setup.go:StepStatus]`
@@ -26,4 +26,4 @@ Component package providing implementation for `apps/cli/devx/internal/tui`.
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/tui/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/tui/...`

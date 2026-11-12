@@ -29,12 +29,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/authproxy"
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/exposure"
-	"github.com/VitruvianSoftware/devx/internal/inspector"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/authproxy"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/exposure"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/inspector"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
 )
 
 var (

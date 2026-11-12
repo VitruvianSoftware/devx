@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
 )
 
 // ReadNodePodCIDR reads a node's assigned pod CIDR off the cluster via kubectl

@@ -1,7 +1,7 @@
 # State
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/state`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/state`.
 
 ## Interface
 - `[checkpoint.go:CheckpointsDir]`
@@ -41,4 +41,4 @@ Component package providing implementation for `apps/cli/devx/internal/state`.
 - [replication.go:103]: `srcTar := filepath.Join(database.SnapshotDir(), db.Engine, db.Name+".tar")`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/state/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/state/...`

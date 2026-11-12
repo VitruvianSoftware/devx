@@ -1,7 +1,7 @@
 # Telemetry
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/telemetry`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/telemetry`.
 
 ## Interface
 - `[dashboard.go:SetGrafanaURL]`
@@ -39,4 +39,4 @@ Component package providing implementation for `apps/cli/devx/internal/telemetry
 - [otel.go:161]: `otlpEndpoint := fmt.Sprintf("http://%s:%d", hostBridge, cfg.OTLPHTTPPort)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/telemetry/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/telemetry/...`

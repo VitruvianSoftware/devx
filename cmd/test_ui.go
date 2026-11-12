@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strings"
 
-	ephemeraltest "github.com/VitruvianSoftware/devx/internal/testing"
+	ephemeraltest "github.com/VitruvianSoftware/vitruvian-devx/internal/testing"
 	"github.com/spf13/cobra"
 )
 

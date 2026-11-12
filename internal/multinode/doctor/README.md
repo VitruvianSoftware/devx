@@ -1,7 +1,7 @@
 # Doctor
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/doctor`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/doctor`.
 
 ## Interface
 - `[doctor.go:CheckResult]`
@@ -14,4 +14,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/doctor/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/doctor/...`

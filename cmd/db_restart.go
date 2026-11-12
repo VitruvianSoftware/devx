@@ -25,7 +25,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
 	"github.com/spf13/cobra"
 )
 

@@ -1,7 +1,7 @@
 # Orchestrator
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/orchestrator`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/orchestrator`.
 
 ## Interface
 - `[bridge_node.go:BridgeNodeState]`
@@ -41,4 +41,4 @@ Component package providing implementation for `apps/cli/devx/internal/orchestra
 - [dag.go:29]: `"net/http"`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/orchestrator/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/orchestrator/...`

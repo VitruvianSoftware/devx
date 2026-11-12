@@ -25,7 +25,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/cloud"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloud"
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )

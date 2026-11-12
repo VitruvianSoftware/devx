@@ -1,7 +1,7 @@
 # Doctor
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/doctor`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/doctor`.
 
 ## Interface
 - `[auth.go:AuthStep]`
@@ -38,4 +38,4 @@ Component package providing implementation for `apps/cli/devx/internal/doctor`.
 - [install.go:158]: `c := exec.Command(parts[0], parts[1:]...)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/doctor/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/doctor/...`

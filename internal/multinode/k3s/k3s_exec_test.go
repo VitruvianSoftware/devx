@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
 )
 
 // A Manager built with NewManagerWithExec routes commands through the injected

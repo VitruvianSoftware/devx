@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">⚡ devx</h1>
+  <h1 align="center">⚡ Vitruvian DevX CLI</h1>
   <p align="center">The unified orchestration layer for your modern developer lifecycle</p>
   <p align="center">
     <a href="https://github.com/VitruvianSoftware/devx/actions/workflows/ci.yml"><img src="https://github.com/VitruvianSoftware/devx/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -95,7 +95,7 @@ sudo mv devx /usr/local/bin/
 ### From Source
 
 ```bash
-go install github.com/VitruvianSoftware/devx@latest
+go install github.com/VitruvianSoftware/vitruvian-devx@latest
 ```
 
 ## Quick Start
@@ -289,4 +289,4 @@ We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) 
 - [magefile.go:94]: `if err := os.Remove(f); err != nil && !os.IsNotExist(err) {`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/...`

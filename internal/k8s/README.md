@@ -1,7 +1,7 @@
 # K8S
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/k8s`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/k8s`.
 
 ## Interface
 - `[k3s.go:Cluster]`
@@ -18,4 +18,4 @@ Component package providing implementation for `apps/cli/devx/internal/k8s`.
 - [k3s.go:52]: `func Spawn(runtime, name string) (*Cluster, error) {`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/k8s/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/k8s/...`

@@ -1,7 +1,7 @@
 # Mock
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/mock`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/mock`.
 
 ## Interface
 - `[server.go:MockServer]`
@@ -22,4 +22,4 @@ Component package providing implementation for `apps/cli/devx/internal/mock`.
 - [server.go:38]: `"net/http"`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/mock/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/mock/...`

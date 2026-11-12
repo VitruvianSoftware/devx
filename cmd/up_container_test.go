@@ -23,7 +23,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/image"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/image"
 )
 
 func TestToContainerNodeConfig_Image(t *testing.T) {

@@ -1,7 +1,7 @@
 # Cloud
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/cloud`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/cloud`.
 
 ## Interface
 - `[emulator.go:Emulator]`
@@ -18,4 +18,4 @@ Component package providing implementation for `apps/cli/devx/internal/cloud`.
 - [emulator.go:101]: `"AWS_ENDPOINT_URL_S3":   "http://%s",`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/cloud/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/cloud/...`

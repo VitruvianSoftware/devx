@@ -23,7 +23,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
 )
 
 func TestNew_Defaults(t *testing.T) {

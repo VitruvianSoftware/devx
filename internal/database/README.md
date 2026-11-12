@@ -1,7 +1,7 @@
 # Database
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/database`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/database`.
 
 ## Interface
 - `[engine.go:Engine]`
@@ -41,4 +41,4 @@ Component package providing implementation for `apps/cli/devx/internal/database`
 - [synthesizer.go:54]: `cmd = exec.Command(runtime, "exec", "-i", containerName,`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/database/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/database/...`

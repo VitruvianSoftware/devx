@@ -1,7 +1,7 @@
 # Webhook
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/webhook`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/webhook`.
 
 ## Interface
 - `[server.go:Request]`
@@ -26,4 +26,4 @@ Component package providing implementation for `apps/cli/devx/internal/webhook`.
 - [server.go:56]: `srv      *http.Server`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/webhook/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/webhook/...`

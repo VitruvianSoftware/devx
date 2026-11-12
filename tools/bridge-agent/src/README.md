@@ -1,7 +1,7 @@
 # Src
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/tools/bridge-agent/src`.
+Component package providing implementation for `apps/cli/vitruvian-devx/tools/bridge-agent/src`.
 
 ## Interface
 - `[lib.rs:PortSpec]`
@@ -34,4 +34,4 @@ Component package providing implementation for `apps/cli/devx/tools/bridge-agent
 - [lib.rs:252]: `/// Handles a single HTTP request on the health server, returning `(status_co...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/tools/bridge-agent/src/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/tools/bridge-agent/src/...`

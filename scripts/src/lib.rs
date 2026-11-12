@@ -19,7 +19,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//! Native Rust port of `apps/cli/devx/scripts/migrate_to_docker.py`.
+//! Native Rust port of `apps/cli/vitruvian-devx/scripts/migrate_to_docker.py`.
 //! Migrates Lima-backed K3s cluster nodes to Docker CE runtime with socket forwarding.
 
 use std::fs;

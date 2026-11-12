@@ -33,7 +33,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
 )
 
 const defaultVMName = "k8s-node"

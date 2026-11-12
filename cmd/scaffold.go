@@ -32,7 +32,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/scaffold"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/scaffold"
 )
 
 var (

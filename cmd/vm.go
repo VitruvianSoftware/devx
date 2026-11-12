@@ -29,8 +29,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 var vmProviderFlag string

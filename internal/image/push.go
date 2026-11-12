@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 // pushArgs assembles the `<runtime> push` args for ref, adding the runtime's

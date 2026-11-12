@@ -33,7 +33,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
 )
 
 func TestNativeIntegration(t *testing.T) {

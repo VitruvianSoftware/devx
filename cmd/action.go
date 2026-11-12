@@ -35,7 +35,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
 )
 
 var actionList bool

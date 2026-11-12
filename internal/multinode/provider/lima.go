@@ -25,11 +25,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/k3s"
-	"github.com/VitruvianSoftware/devx/internal/multinode/lima"
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
-	"github.com/VitruvianSoftware/devx/internal/multinode/util"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/k3s"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/lima"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/util"
 )
 
 // LimaProvider provisions a node as a Lima VM on a (macOS) host — the original

@@ -26,7 +26,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/util"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/util"
 )
 
 // NodeKeeperLabel is the launchd label for the per-host VM keeper LaunchAgent.

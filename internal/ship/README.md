@@ -1,7 +1,7 @@
 # Ship
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/ship`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/ship`.
 
 ## Interface
 - `[hook.go:PreCommitHookContent]`
@@ -34,4 +34,4 @@ Component package providing implementation for `apps/cli/devx/internal/ship`.
 - [ship.go:34]: `"os/exec"`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/ship/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/ship/...`

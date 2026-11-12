@@ -28,7 +28,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/logs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"
 )
 
 // startCloudRunNode deploys a runtime: cloud service to Google Cloud Run via the

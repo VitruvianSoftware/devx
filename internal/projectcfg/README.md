@@ -1,7 +1,7 @@
 # Projectcfg
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/projectcfg`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/projectcfg`.
 
 ## Interface
 - `[projectcfg.go:Find]`
@@ -17,4 +17,4 @@ Component package providing implementation for `apps/cli/devx/internal/projectcf
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/projectcfg/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/projectcfg/...`

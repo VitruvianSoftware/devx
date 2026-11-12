@@ -1,7 +1,7 @@
 # Logging
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/logging`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/logging`.
 
 ## Interface
 - `[logging.go:Setup]`
@@ -13,4 +13,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/logging/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/logging/...`

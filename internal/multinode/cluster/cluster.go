@@ -35,12 +35,12 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/k3s"
-	"github.com/VitruvianSoftware/devx/internal/multinode/lima"
-	"github.com/VitruvianSoftware/devx/internal/multinode/prereqs"
-	"github.com/VitruvianSoftware/devx/internal/multinode/provider"
-	"github.com/VitruvianSoftware/devx/internal/multinode/util"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/k3s"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/lima"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/prereqs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/util"
 )
 
 // providerFor builds the NodeProvider for a node. It is a package var so tests

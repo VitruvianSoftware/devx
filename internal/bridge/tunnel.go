@@ -31,7 +31,7 @@ import (
 
 	"github.com/hashicorp/yamux"
 
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
 )
 
 // TunnelConfig defines parameters for establishing the Yamux tunnel.

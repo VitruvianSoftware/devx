@@ -21,7 +21,7 @@
 package cmd
 
 import (
-	devxmock "github.com/VitruvianSoftware/devx/internal/mock"
+	devxmock "github.com/VitruvianSoftware/vitruvian-devx/internal/mock"
 	"github.com/spf13/cobra"
 )
 

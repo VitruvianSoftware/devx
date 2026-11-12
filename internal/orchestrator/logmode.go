@@ -20,7 +20,7 @@
 
 package orchestrator
 
-import "github.com/VitruvianSoftware/devx/internal/logs"
+import "github.com/VitruvianSoftware/vitruvian-devx/internal/logs"
 
 // LogMode controls how a service node's logs are surfaced during `devx up`.
 type LogMode int

@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 // SnapshotMeta holds metadata about a database snapshot.

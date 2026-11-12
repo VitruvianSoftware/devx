@@ -1,7 +1,7 @@
 # Src
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/scaffold/templates/node-api/src`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/scaffold/templates/node-api/src`.
 
 ## Interface
 - Internal implementation components
@@ -13,4 +13,4 @@ Component package providing implementation for `apps/cli/devx/internal/scaffold/
 - [index.ts:25]: `console.log(`Server running on http://localhost:${port}`);`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/scaffold/templates/node-api/src/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/scaffold/templates/node-api/src/...`

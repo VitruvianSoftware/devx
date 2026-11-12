@@ -1,7 +1,7 @@
 # Remote
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/remote`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/remote`.
 
 ## Interface
 - `[remote.go:DefaultMaxRetries]`
@@ -22,4 +22,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - [remote.go:147]: `cmd := exec.CommandContext(ctx, "ssh", args...)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/remote/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/remote/...`

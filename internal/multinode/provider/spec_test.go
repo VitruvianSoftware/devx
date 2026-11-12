@@ -23,7 +23,7 @@ package provider
 import (
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
 )
 
 // #369: specFor is the single adapter point between config.* and the providers.

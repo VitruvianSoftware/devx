@@ -1,7 +1,7 @@
 # Ignition
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/ignition`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/ignition`.
 
 ## Interface
 - `[builder.go:Build]`
@@ -19,4 +19,4 @@ Component package providing implementation for `apps/cli/devx/internal/ignition`
 - [builder.go:83]: `cmd := exec.Command("butane", "--pretty", "--strict", "--output", ignPath, bu...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/ignition/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/ignition/...`

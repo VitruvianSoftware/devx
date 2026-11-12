@@ -34,8 +34,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/tui"
-	"github.com/VitruvianSoftware/devx/internal/webhook"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/webhook"
 )
 
 var (

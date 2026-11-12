@@ -20,7 +20,7 @@
 
 package main
 
-import "github.com/VitruvianSoftware/devx/cmd"
+import "github.com/VitruvianSoftware/vitruvian-devx/cmd"
 
 func main() {
 	cmd.Execute()

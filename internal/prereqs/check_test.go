@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/prereqs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/prereqs"
 )
 
 func TestAllPassed_AllFound(t *testing.T) {

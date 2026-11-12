@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 type LogLine struct {

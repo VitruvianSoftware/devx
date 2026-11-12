@@ -32,8 +32,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/bridge"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/bridge"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 var (

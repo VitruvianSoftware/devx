@@ -1,7 +1,7 @@
 # Updater
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/updater`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/updater`.
 
 ## Interface
 - `[updater.go:CheckResult]`
@@ -23,4 +23,4 @@ Component package providing implementation for `apps/cli/devx/internal/updater`.
 - [upgrade.go:137]: `return os.Remove(f.Name())`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/updater/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/updater/...`

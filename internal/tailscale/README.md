@@ -1,7 +1,7 @@
 # Tailscale
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/tailscale`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/tailscale`.
 
 ## Interface
 - `[agent.go:SSHFunc]`
@@ -22,4 +22,4 @@ Component package providing implementation for `apps/cli/devx/internal/tailscale
 - [agent.go:81]: `fmt.Sprintf("sudo %s exec tailscaled tailscale status --self 2>/dev/null | he...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/tailscale/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/tailscale/...`

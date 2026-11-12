@@ -1,7 +1,7 @@
 # Agent
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/agent`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/agent`.
 
 ## Interface
 - `[embed.go:EmbedFS]`
@@ -16,4 +16,4 @@ Component package providing implementation for `apps/cli/devx/internal/agent`.
 - [embed.go:87]: `if err := os.WriteFile(relPath, content, 0o644); err != nil {`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/agent/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/agent/...`

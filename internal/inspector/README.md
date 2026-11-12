@@ -1,7 +1,7 @@
 # Inspector
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/inspector`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/inspector`.
 
 ## Interface
 - `[capture.go:CapturedExchange]`
@@ -38,4 +38,4 @@ Component package providing implementation for `apps/cli/devx/internal/inspector
 - [tui.go:472]: `func renderHeaders(h http.Header) string {`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/inspector/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/inspector/...`

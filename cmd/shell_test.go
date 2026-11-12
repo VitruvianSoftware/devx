@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/testutil"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/testutil"
 )
 
 func TestShellCommand(t *testing.T) {

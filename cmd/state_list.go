@@ -26,7 +26,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/VitruvianSoftware/devx/internal/state"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/state"
 	"github.com/spf13/cobra"
 )
 

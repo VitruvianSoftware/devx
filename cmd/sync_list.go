@@ -24,8 +24,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	devxsync "github.com/VitruvianSoftware/devx/internal/sync"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	devxsync "github.com/VitruvianSoftware/vitruvian-devx/internal/sync"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 	"github.com/spf13/cobra"
 )
 

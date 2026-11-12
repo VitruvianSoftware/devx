@@ -28,12 +28,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/ai"
-	"github.com/VitruvianSoftware/devx/internal/bridge"
-	"github.com/VitruvianSoftware/devx/internal/devcontainer"
-	"github.com/VitruvianSoftware/devx/internal/envvault"
-	"github.com/VitruvianSoftware/devx/internal/projectcfg"
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ai"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/bridge"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devcontainer"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/envvault"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/projectcfg"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
 )
 
 var shellCmd = &cobra.Command{

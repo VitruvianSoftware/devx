@@ -1,8 +1,8 @@
 # AGENTS.md
 
-Guidance for AI coding agents working in **devx** (useful for humans too). devx is a standalone
-Go CLI. **This repo is plain Go + [Mage](https://magefile.org) — there are no Bazel `BUILD`
-files here.** (Bazel/gazelle only apply when devx is synced into the vitruvian-core monorepo via
+Guidance for AI coding agents working in **Vitruvian DevX CLI** (`devx`, useful for humans too). Vitruvian DevX CLI is a standalone
+Go CLI whose command binary is `devx`. **This repo is plain Go + [Mage](https://magefile.org) — there are no Bazel `BUILD`
+files here.** (Bazel/gazelle only apply when Vitruvian DevX CLI is synced into the vitruvian-core monorepo via
 Copybara; a `//:tidy`-style commit may ride in from the monorepo side — ignore it here.)
 
 ## Build, test, run

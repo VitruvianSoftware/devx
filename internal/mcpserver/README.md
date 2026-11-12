@@ -1,7 +1,7 @@
 # Mcpserver
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/mcpserver`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/mcpserver`.
 
 ## Interface
 - `[server.go:ServerName]`
@@ -20,4 +20,4 @@ Component package providing implementation for `apps/cli/devx/internal/mcpserver
 - [tools.go:298]: `// annotations and a shared subprocess handler.`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/mcpserver/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/mcpserver/...`

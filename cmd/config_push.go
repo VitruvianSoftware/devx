@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/VitruvianSoftware/devx/internal/envvault"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/envvault"
 	"github.com/spf13/cobra"
 )
 

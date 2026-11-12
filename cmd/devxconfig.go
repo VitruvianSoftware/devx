@@ -28,8 +28,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
 )
 
 // ─── Schema Types ─────────────────────────────────────────────────────────────

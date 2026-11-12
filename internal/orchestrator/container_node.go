@@ -27,10 +27,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/image"
-	"github.com/VitruvianSoftware/devx/internal/logs"
-	"github.com/VitruvianSoftware/devx/internal/network"
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/image"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/network"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 const containerNodeBase = "devx-svc"

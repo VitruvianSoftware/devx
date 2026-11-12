@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
 )
 
 func TestResolveMounts(t *testing.T) {

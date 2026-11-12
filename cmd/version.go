@@ -26,8 +26,8 @@ import (
 	"runtime"
 	"runtime/debug"
 
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
-	"github.com/VitruvianSoftware/devx/internal/updater"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/updater"
 	"github.com/spf13/cobra"
 )
 

@@ -1,7 +1,7 @@
 # Ai
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/ai`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/ai`.
 
 ## Interface
 - `[agent.go:AgentMode]`
@@ -30,4 +30,4 @@ Component package providing implementation for `apps/cli/devx/internal/ai`.
 - [diagnose.go:26]: `"os/exec"`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/ai/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/ai/...`

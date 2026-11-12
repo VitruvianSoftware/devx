@@ -28,7 +28,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/mcpserver"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/mcpserver"
 )
 
 var mcpServeListTools bool

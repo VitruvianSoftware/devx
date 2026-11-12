@@ -23,7 +23,7 @@ package cmd
 import (
 	"fmt"
 
-	devxsync "github.com/VitruvianSoftware/devx/internal/sync"
+	devxsync "github.com/VitruvianSoftware/vitruvian-devx/internal/sync"
 	"github.com/spf13/cobra"
 )
 

@@ -69,7 +69,7 @@ sudo mv devx /usr/local/bin/
 ### From Source
 
 ```bash
-go install github.com/VitruvianSoftware/devx@latest
+go install github.com/VitruvianSoftware/vitruvian-devx@latest
 ```
 
 ## Quick Start

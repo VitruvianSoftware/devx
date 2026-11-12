@@ -1,7 +1,7 @@
 # Bridge
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/bridge`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/bridge`.
 
 ## Interface
 - `[agent.go:AgentConfig]`
@@ -41,4 +41,4 @@ Component package providing implementation for `apps/cli/devx/internal/bridge`.
 - [kube.go:37]: `"os/exec"`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/bridge/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/bridge/...`

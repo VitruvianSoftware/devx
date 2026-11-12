@@ -1,7 +1,7 @@
 # Testutil
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/testutil`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/testutil`.
 
 ## Interface
 - `[fake_runtime.go:FakeRuntime]`
@@ -15,4 +15,4 @@ Component package providing implementation for `apps/cli/devx/internal/testutil`
 - [fake_runtime.go:64]: `if err := os.WriteFile(stubPath, []byte(stubPython), 0o755); err != nil {`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/testutil/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/testutil/...`

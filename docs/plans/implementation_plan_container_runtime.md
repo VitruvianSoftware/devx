@@ -160,7 +160,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/image"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/image"
 )
 
 func TestToContainerNodeConfig_Image(t *testing.T) {
@@ -274,7 +274,7 @@ func toContainerNodeConfig(svc DevxConfigService, providerName string) *orchestr
 }
 ```
 
-Ensure `cmd/up.go` imports `"github.com/VitruvianSoftware/devx/internal/image"` (it already references `image.Spec` in the kubernetes mapping, so the import exists).
+Ensure `cmd/up.go` imports `"github.com/VitruvianSoftware/vitruvian-devx/internal/image"` (it already references `image.Spec` in the kubernetes mapping, so the import exists).
 
 In the service loop, add a `containerCfg` variable alongside the other config vars (near line 258, with `kubeCfg`/`crCfg`):
 
@@ -393,8 +393,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/network"
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/network"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 const containerNodeBase = "devx-svc"
@@ -513,7 +513,7 @@ git commit -m "feat(orchestrator): run runtime: container services (pre-built im
 Add to `internal/orchestrator/container_node_test.go`:
 
 ```go
-import "github.com/VitruvianSoftware/devx/internal/image" // add to existing import block
+import "github.com/VitruvianSoftware/vitruvian-devx/internal/image" // add to existing import block
 
 func TestContainerImageRef_BuildDefaultsTag(t *testing.T) {
 	ref := containerImageRef("web", &image.Spec{Name: "web", Context: "."})
@@ -537,7 +537,7 @@ Expected: FAIL — `undefined: containerImageRef`.
 
 - [ ] **Step 3: Implement the build branch**
 
-In `internal/orchestrator/container_node.go`, add the import `"github.com/VitruvianSoftware/devx/internal/image"` and this helper:
+In `internal/orchestrator/container_node.go`, add the import `"github.com/VitruvianSoftware/vitruvian-devx/internal/image"` and this helper:
 
 ```go
 // containerImageRef computes the local image tag for a built container service.

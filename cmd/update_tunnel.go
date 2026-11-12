@@ -26,9 +26,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
 )
 
 var updateTunnelCmd = &cobra.Command{

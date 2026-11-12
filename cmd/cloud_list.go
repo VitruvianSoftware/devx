@@ -26,8 +26,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/cloud"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloud"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 	"github.com/spf13/cobra"
 )
 

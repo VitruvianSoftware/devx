@@ -1,7 +1,7 @@
 # Cron
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/cron`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/cron`.
 
 ## Interface
 - `[cron.go:Job]`
@@ -22,4 +22,4 @@ Component package providing implementation for `apps/cli/devx/internal/cron`.
 - [cron.go:111]: `cmd := exec.CommandContext(runCtx, cfg.Job.Command[0], cfg.Job.Command[1:]...)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/cron/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/cron/...`

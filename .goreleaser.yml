@@ -20,6 +20,10 @@
 
 version: 2
 
+# The formula and archives stay "devx": the command people type is unchanged.
+# (Without this, GoReleaser takes the name from the go.mod module path.)
+project_name: devx
+
 builds:
   - id: devx
     main: .
@@ -34,7 +38,7 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/VitruvianSoftware/devx/cmd.version={{.Version}}
+      - -X github.com/VitruvianSoftware/vitruvian-devx/cmd.version={{.Version}}
 
 archives:
   - id: default

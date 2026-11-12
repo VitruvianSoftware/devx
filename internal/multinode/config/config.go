@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
 	"gopkg.in/yaml.v3"
 )
 

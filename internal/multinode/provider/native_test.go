@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
 )
 
 // nativeWithRunner builds a NativeProvider whose command runner is replaced with

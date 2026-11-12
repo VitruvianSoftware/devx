@@ -1,14 +1,14 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "bootstrap-sha": "df9b391b59b6549053583b7d0c61fcab105d098f",
+  "bootstrap-sha": "e9a7aa4e800498cfc4d5ebac4fbd2b1575a8ca65",
   "include-component-in-tag": true,
   "include-v-in-tag": true,
   "tag-separator": "-",
   "packages": {
-    "apps/cli/devx": {
+    "apps/cli/vitruvian-devx": {
       "release-type": "go",
-      "package-name": "devx",
-      "component": "devx",
+      "package-name": "vitruvian-devx",
+      "component": "vitruvian-devx",
       "changelog-path": "CHANGELOG.md"
     }
   }

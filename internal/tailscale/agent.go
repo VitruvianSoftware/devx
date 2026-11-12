@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/podman"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/podman"
 )
 
 // SSHFunc is a function that executes a command on a remote machine.

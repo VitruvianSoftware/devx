@@ -1,7 +1,7 @@
 # Prereqs
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/prereqs`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/prereqs`.
 
 ## Interface
 - `[check.go:Result]`
@@ -19,4 +19,4 @@ Component package providing implementation for `apps/cli/devx/internal/prereqs`.
 - [check.go:45]: `out, err = exec.Command(tool, "version").Output()`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/prereqs/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/prereqs/...`

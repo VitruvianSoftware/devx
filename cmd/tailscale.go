@@ -24,8 +24,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
 	"github.com/spf13/cobra"
 )
 

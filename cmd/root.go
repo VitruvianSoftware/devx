@@ -26,11 +26,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/ai"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
-	"github.com/VitruvianSoftware/devx/internal/telemetry"
-	"github.com/VitruvianSoftware/devx/internal/updater"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ai"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/telemetry"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/updater"
 	"github.com/spf13/cobra"
 )
 

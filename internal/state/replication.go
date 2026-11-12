@@ -30,7 +30,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
 )
 
 // BundleManifest describes the contents of a state replication bundle.

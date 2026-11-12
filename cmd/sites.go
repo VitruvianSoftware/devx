@@ -30,8 +30,8 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 
-	cfapi "github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/github"
+	cfapi "github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/github"
 )
 
 var sitesCmd = &cobra.Command{

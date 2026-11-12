@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/provider"
 )
 
 // fakeNodeProvider records Reconcile calls; every other method is a no-op so it

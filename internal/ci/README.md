@@ -1,7 +1,7 @@
 # Ci
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/ci`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/ci`.
 
 ## Interface
 - `[executor.go:RunResult]`
@@ -34,4 +34,4 @@ Component package providing implementation for `apps/cli/devx/internal/ci`.
 - [executor.go:214]: `cmd = exec.Command(cfg.Runtime, createArgs...)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/ci/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/ci/...`

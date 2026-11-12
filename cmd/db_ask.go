@@ -29,10 +29,10 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/ai"
-	"github.com/VitruvianSoftware/devx/internal/database"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ai"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 var (

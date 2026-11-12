@@ -1,7 +1,7 @@
 # Envvault
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/envvault`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/envvault`.
 
 ## Interface
 - `[vault.go:PullAll]`
@@ -16,4 +16,4 @@ Component package providing implementation for `apps/cli/devx/internal/envvault`
 - [vault.go:116]: `cmd := exec.Command("op", "read", ref)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/envvault/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/envvault/...`

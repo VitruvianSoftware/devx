@@ -81,8 +81,8 @@ graph TD
 All 32 tests pass:
 
 ```
-ok  github.com/VitruvianSoftware/devx/internal/ai        0.559s  (14 tests)
-ok  github.com/VitruvianSoftware/devx/internal/database   0.749s  (18 tests)
+ok  github.com/VitruvianSoftware/vitruvian-devx/internal/ai        0.559s  (14 tests)
+ok  github.com/VitruvianSoftware/vitruvian-devx/internal/database   0.749s  (18 tests)
 ```
 
 Lint: `0 issues` via `golangci-lint run`.

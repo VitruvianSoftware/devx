@@ -26,11 +26,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/doctor"
-	"github.com/VitruvianSoftware/devx/internal/exposure"
-	"github.com/VitruvianSoftware/devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/doctor"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/exposure"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
 )
 
 // DumpReport represents the full topological and contextual state of the devx environment.

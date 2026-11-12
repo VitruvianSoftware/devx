@@ -40,7 +40,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
 )
 
 // EphemeralDB holds metadata about a single ephemeral database container.

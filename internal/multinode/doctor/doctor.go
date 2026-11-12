@@ -26,11 +26,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
-	"github.com/VitruvianSoftware/devx/internal/multinode/k3s"
-	"github.com/VitruvianSoftware/devx/internal/multinode/lima"
-	"github.com/VitruvianSoftware/devx/internal/multinode/remote"
-	"github.com/VitruvianSoftware/devx/internal/multinode/util"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/k3s"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/lima"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/remote"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/util"
 )
 
 // CheckResult represents the outcome of a single diagnostic check.

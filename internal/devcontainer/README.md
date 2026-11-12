@@ -1,7 +1,7 @@
 # Devcontainer
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/devcontainer`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/devcontainer`.
 
 ## Interface
 - `[config.go:Config]`
@@ -15,4 +15,4 @@ Component package providing implementation for `apps/cli/devx/internal/devcontai
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/devcontainer/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/devcontainer/...`

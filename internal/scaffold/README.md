@@ -1,7 +1,7 @@
 # Scaffold
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/scaffold`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/scaffold`.
 
 ## Interface
 - `[engine.go:EmbedFS]`
@@ -24,4 +24,4 @@ Component package providing implementation for `apps/cli/devx/internal/scaffold`
 - [engine.go:82]: `Description: "TypeScript Express API — Prisma ORM, PostgreSQL, Jest, Docker, ...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/scaffold/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/scaffold/...`

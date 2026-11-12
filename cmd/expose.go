@@ -26,12 +26,12 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/VitruvianSoftware/devx/internal/authproxy"
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/exposure"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
-	"github.com/VitruvianSoftware/devx/internal/trafficproxy"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/authproxy"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/exposure"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/trafficproxy"
 	"github.com/spf13/cobra"
 )
 

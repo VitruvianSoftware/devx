@@ -29,8 +29,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
-	"github.com/VitruvianSoftware/devx/internal/network"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/network"
 )
 
 // PortForwardState represents the health of a single port-forward.

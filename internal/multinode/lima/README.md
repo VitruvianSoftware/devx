@@ -1,7 +1,7 @@
 # Lima
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/lima`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/lima`.
 
 ## Interface
 - `[keeper.go:NodeKeeperLabel]`
@@ -33,4 +33,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - [lima.go:163]: `curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/lima/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/lima/...`

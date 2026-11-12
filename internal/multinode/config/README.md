@@ -1,7 +1,7 @@
 # Config
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/config`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/config`.
 
 ## Interface
 - `[config.go:Config]`
@@ -32,4 +32,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/config/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/config/...`

@@ -1,7 +1,7 @@
 # Logs
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/logs`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/logs`.
 
 ## Interface
 - `[color.go:ColorPicker]`
@@ -36,4 +36,4 @@ Component package providing implementation for `apps/cli/devx/internal/logs`.
 - [streamer.go:195]: `cmd := exec.CommandContext(ctx, "tail", "-n", "50", "-f", path)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/logs/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/logs/...`

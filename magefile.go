@@ -37,7 +37,7 @@ const binary = "devx"
 // Build compiles the binary for the current platform.
 func Build() error {
 	fmt.Println("» Building", binary, "...")
-	return sh.Run("go", "build", "-ldflags=-s -w -X github.com/VitruvianSoftware/devx/cmd.version=dev", "-o", binary, ".")
+	return sh.Run("go", "build", "-ldflags=-s -w -X github.com/VitruvianSoftware/vitruvian-devx/cmd.version=dev", "-o", binary, ".")
 }
 
 // Install compiles and installs the binary to $GOPATH/bin.

@@ -25,8 +25,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
 	"github.com/charmbracelet/huh"
 )
 

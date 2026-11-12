@@ -28,14 +28,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/cloudflare"
-	"github.com/VitruvianSoftware/devx/internal/config"
-	"github.com/VitruvianSoftware/devx/internal/ignition"
-	"github.com/VitruvianSoftware/devx/internal/prereqs"
-	"github.com/VitruvianSoftware/devx/internal/provider"
-	"github.com/VitruvianSoftware/devx/internal/secrets"
-	"github.com/VitruvianSoftware/devx/internal/tailscale"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/cloudflare"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ignition"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/prereqs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/provider"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/secrets"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tailscale"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 const butaneTemplatePath = "dev-machine.template.bu"

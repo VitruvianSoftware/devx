@@ -26,7 +26,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
 )
 
 func TestBundleManifestRoundTrip(t *testing.T) {

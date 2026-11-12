@@ -1,7 +1,7 @@
 # Src
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/scripts/src`.
+Component package providing implementation for `apps/cli/vitruvian-devx/scripts/src`.
 
 ## Interface
 - `[lib.rs:ClusterNode]`
@@ -26,4 +26,4 @@ Component package providing implementation for `apps/cli/devx/scripts/src`.
 - None
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/scripts/src/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/scripts/src/...`

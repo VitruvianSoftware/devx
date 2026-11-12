@@ -1,7 +1,7 @@
 # Provider
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/multinode/provider`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/multinode/provider`.
 
 ## Interface
 - `[lima.go:LimaProvider]`
@@ -34,4 +34,4 @@ Component package providing implementation for `apps/cli/devx/internal/multinode
 - [native.go:276]: ``curl -sfL https://get.k3s.io | %s INSTALL_K3S_EXEC="server" sh -s - --server...`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/multinode/provider/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/multinode/provider/...`

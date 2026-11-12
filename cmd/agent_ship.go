@@ -32,9 +32,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 
-	"github.com/VitruvianSoftware/devx/internal/ai"
-	"github.com/VitruvianSoftware/devx/internal/ship"
-	"github.com/VitruvianSoftware/devx/internal/tui"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ai"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/ship"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/tui"
 )
 
 var (

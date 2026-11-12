@@ -1,4 +1,4 @@
-module github.com/VitruvianSoftware/devx
+module github.com/VitruvianSoftware/vitruvian-devx
 
 go 1.26.10
 

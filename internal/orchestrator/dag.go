@@ -35,9 +35,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/image"
-	"github.com/VitruvianSoftware/devx/internal/logs"
-	"github.com/VitruvianSoftware/devx/internal/network"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/image"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/logs"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/network"
 )
 
 // Runtime determines where a service executes.

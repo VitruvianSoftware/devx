@@ -1,7 +1,7 @@
 # Cmd
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/cmd`.
+Component package providing implementation for `apps/cli/vitruvian-devx/cmd`.
 
 ## Interface
 - `[debug_export.go:GetRootCmd]`
@@ -46,4 +46,4 @@ Component package providing implementation for `apps/cli/devx/cmd`.
 - [agent_ship.go:28]: `"os/exec"`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/cmd/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/cmd/...`

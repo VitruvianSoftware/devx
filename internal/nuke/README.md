@@ -1,7 +1,7 @@
 # Nuke
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/nuke`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/nuke`.
 
 ## Interface
 - `[nuke.go:Item]`
@@ -19,4 +19,4 @@ Component package providing implementation for `apps/cli/devx/internal/nuke`.
 - [nuke.go:193]: `out, err = runtime.Exec(`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/nuke/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/nuke/...`

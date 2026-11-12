@@ -1,7 +1,7 @@
 # Cloudflare
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/cloudflare`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/cloudflare`.
 
 ## Interface
 - `[client.go:Tunnel]`
@@ -31,4 +31,4 @@ Component package providing implementation for `apps/cli/devx/internal/cloudflar
 - [dns.go:93]: `resp, err := http.DefaultClient.Do(req)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/cloudflare/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/cloudflare/...`

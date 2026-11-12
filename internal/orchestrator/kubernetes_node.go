@@ -28,8 +28,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VitruvianSoftware/devx/internal/bridge"
-	"github.com/VitruvianSoftware/devx/internal/image"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/bridge"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/image"
 )
 
 // kubectlArgs builds a fresh kubectl arg slice with --kubeconfig/--context flags

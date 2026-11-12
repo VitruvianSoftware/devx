@@ -1,7 +1,7 @@
 # Network
 
 ## Overview
-Component package providing implementation for `apps/cli/devx/internal/network`.
+Component package providing implementation for `apps/cli/vitruvian-devx/internal/network`.
 
 ## Interface
 - `[ports.go:CheckPortAvailable]`
@@ -17,4 +17,4 @@ Component package providing implementation for `apps/cli/devx/internal/network`.
 - [ports.go:46]: `addr := ln.Addr().(*net.TCPAddr)`
 
 ## Verification
-- Run: `bazel test //apps/cli/devx/internal/network/...`
+- Run: `bazel test //apps/cli/vitruvian-devx/internal/network/...`

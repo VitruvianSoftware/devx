@@ -27,9 +27,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/database"
-	"github.com/VitruvianSoftware/devx/internal/devxerr"
-	"github.com/VitruvianSoftware/devx/internal/state"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/database"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/devxerr"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/state"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )

@@ -28,7 +28,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/VitruvianSoftware/devx/internal/multinode/config"
+	"github.com/VitruvianSoftware/vitruvian-devx/internal/multinode/config"
 )
 
 // JoinOpts carries the K3s join recipe inputs shared by all providers.
