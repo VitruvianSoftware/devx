@@ -54,15 +54,15 @@ brew install vitruviansoftware/tap/devx
 
 ```bash
 # macOS (Apple Silicon)
-curl -sL https://github.com/VitruvianSoftware/devx/releases/latest/download/devx_darwin_arm64.tar.gz | tar xz
+curl -sL https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest/download/devx_darwin_arm64.tar.gz | tar xz
 sudo mv devx /usr/local/bin/
 
 # macOS (Intel)
-curl -sL https://github.com/VitruvianSoftware/devx/releases/latest/download/devx_darwin_amd64.tar.gz | tar xz
+curl -sL https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest/download/devx_darwin_amd64.tar.gz | tar xz
 sudo mv devx /usr/local/bin/
 
 # Linux (amd64)
-curl -sL https://github.com/VitruvianSoftware/devx/releases/latest/download/devx_linux_amd64.tar.gz | tar xz
+curl -sL https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest/download/devx_linux_amd64.tar.gz | tar xz
 sudo mv devx /usr/local/bin/
 ```
 

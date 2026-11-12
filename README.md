@@ -2,10 +2,10 @@
   <h1 align="center">⚡ Vitruvian DevX CLI</h1>
   <p align="center">The unified orchestration layer for your modern developer lifecycle</p>
   <p align="center">
-    <a href="https://github.com/VitruvianSoftware/devx/actions/workflows/ci.yml"><img src="https://github.com/VitruvianSoftware/devx/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-    <a href="https://github.com/VitruvianSoftware/devx/releases/latest"><img src="https://img.shields.io/github/v/release/VitruvianSoftware/devx" alt="Release"></a>
-    <a href="https://github.com/VitruvianSoftware/devx/blob/main/LICENSE"><img src="https://img.shields.io/github/license/VitruvianSoftware/devx" alt="License"></a>
-    <a href="https://goreportcard.com/report/github.com/VitruvianSoftware/devx"><img src="https://goreportcard.com/badge/github.com/VitruvianSoftware/devx" alt="Go Report Card"></a>
+    <a href="https://github.com/VitruvianSoftware/vitruvian-devx/actions/workflows/ci.yml"><img src="https://github.com/VitruvianSoftware/vitruvian-devx/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest"><img src="https://img.shields.io/github/v/release/VitruvianSoftware/vitruvian-devx" alt="Release"></a>
+    <a href="https://github.com/VitruvianSoftware/vitruvian-devx/blob/main/LICENSE"><img src="https://img.shields.io/github/license/VitruvianSoftware/vitruvian-devx" alt="License"></a>
+    <a href="https://goreportcard.com/report/github.com/VitruvianSoftware/vitruvian-devx"><img src="https://goreportcard.com/badge/github.com/VitruvianSoftware/vitruvian-devx" alt="Go Report Card"></a>
   </p>
 </p>
 
@@ -76,19 +76,19 @@ brew install vitruviansoftware/tap/devx
 
 ### From Releases
 
-Download the latest binary from [GitHub Releases](https://github.com/VitruvianSoftware/devx/releases/latest):
+Download the latest binary from [GitHub Releases](https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest):
 
 ```bash
 # macOS (Apple Silicon)
-curl -sL https://github.com/VitruvianSoftware/devx/releases/latest/download/devx_darwin_arm64.tar.gz | tar xz
+curl -sL https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest/download/devx_darwin_arm64.tar.gz | tar xz
 sudo mv devx /usr/local/bin/
 
 # macOS (Intel)
-curl -sL https://github.com/VitruvianSoftware/devx/releases/latest/download/devx_darwin_amd64.tar.gz | tar xz
+curl -sL https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest/download/devx_darwin_amd64.tar.gz | tar xz
 sudo mv devx /usr/local/bin/
 
 # Linux (amd64)
-curl -sL https://github.com/VitruvianSoftware/devx/releases/latest/download/devx_linux_amd64.tar.gz | tar xz
+curl -sL https://github.com/VitruvianSoftware/vitruvian-devx/releases/latest/download/devx_linux_amd64.tar.gz | tar xz
 sudo mv devx /usr/local/bin/
 ```
 

@@ -100,7 +100,10 @@ export default withMermaid(
       ],
 
       socialLinks: [
-        { icon: "github", link: "https://github.com/VitruvianSoftware/devx" },
+        {
+          icon: "github",
+          link: "https://github.com/VitruvianSoftware/vitruvian-devx",
+        },
       ],
 
       footer: {

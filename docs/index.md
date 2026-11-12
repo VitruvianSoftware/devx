@@ -16,7 +16,7 @@ hero:
       link: /guide/getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/VitruvianSoftware/devx
+      link: https://github.com/VitruvianSoftware/vitruvian-devx
 
 features:
   - title: Ephemeral Virtual Machines

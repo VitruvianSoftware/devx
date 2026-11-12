@@ -36,12 +36,12 @@ metadata:
     grafana/dashboard-selector: devx
     vitruvian.dev/release-workflow: apps-release.yaml
     vitruvian.dev/release-model: goreleaser
-    vitruvian.dev/mirror: VitruvianSoftware/devx
+    vitruvian.dev/mirror: VitruvianSoftware/vitruvian-devx
   links:
-    - url: https://github.com/VitruvianSoftware/devx
+    - url: https://github.com/VitruvianSoftware/vitruvian-devx
       title: GitHub Mirror
       icon: github
-    - url: https://github.com/VitruvianSoftware/devx/releases
+    - url: https://github.com/VitruvianSoftware/vitruvian-devx/releases
       title: Releases (GoReleaser)
       icon: card_giftcard
     - url: https://grafana.lab.ipv1337.dev/d/devx

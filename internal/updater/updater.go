@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	repo          = "VitruvianSoftware/devx"
+	repo          = "VitruvianSoftware/vitruvian-devx"
 	checkInterval = 24 * time.Hour
 	apiURL        = "https://api.github.com/repos/" + repo + "/releases/latest"
 	timeout       = 5 * time.Second
