@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.6](https://github.com/VitruvianSoftware/vitruvian-core/compare/vitruvian-devx-v0.74.5...vitruvian-devx-v0.74.6) (2026-11-13)
+
+
+### Bug Fixes
+
+* **vitruvian-devx:** ship agent skills from one source, generated from the commands, with a drift test ([#4735](https://github.com/VitruvianSoftware/vitruvian-core/issues/4735)) ([68550d3](https://github.com/VitruvianSoftware/vitruvian-core/commit/68550d377d1e3882a799e69fe9b606c14174aae6))
+
 ## [0.74.5](https://github.com/VitruvianSoftware/vitruvian-core/compare/devx-v0.74.4...devx-v0.74.5) (2026-11-11)
 
 
