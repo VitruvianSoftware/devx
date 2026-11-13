@@ -74,7 +74,7 @@ This document serves as an organized historical record of all major capabilities
 
 ### 15. Official Agent Tool Manifest (`.agents/skills/devx`) (DONE)
 * **The Problem:** When an AI drops into a repository, it has to guess what `devx` does or blindly run `devx --help` over and over, consuming expensive tokens.
-* **The Solution:** Created official agent manifest files (`.agents/skills/devx/SKILL.md` for standard Antigravity agents, `.cursorrules` for Cursor, `CLAUDE.md` for Claude Code, and `.github/copilot-instructions.md` for Copilot). These configuration files ensure any AI immediately drops into a repository natively understanding `devx`'s non-interactive composition, JSON workflows, and numeric error codes without hallucinations.
+* **The Solution:** Created official agent skill files (`.agents/skills/<skill>/SKILL.md`, `.cursor/skills/<skill>/SKILL.md`, `.claude/skills/<skill>/SKILL.md`, and `.github/skills/<skill>/SKILL.md`) installed from a single embedded source. These skill files ensure any AI immediately drops into a repository natively understanding `devx`'s non-interactive composition, JSON workflows, and numeric error codes without hallucinations.
 
 ### 64. Intelligent CLI Agent Integration & Local AI Tool Use (DONE)
 * **The Problem:** Setting up AI coding agents (like Claude Code) to use local LLMs securely and without configuration friction is difficult. Additionally, CLI actions like writing commit messages or reviewing code are often disconnected from the AI agent loop.

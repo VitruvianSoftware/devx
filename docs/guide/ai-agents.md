@@ -84,8 +84,9 @@ Enforces team-wide platform engineering best practices:
 
 New skills are embedded directly into the `devx` binary at compile time. To add a skill:
 
-1. Create `internal/agent/templates/.<agent>/skills/<skill-name>/SKILL.md` for each agent platform.
+1. Create `internal/agent/templates/skills/<skill-name>/SKILL.md` (shared across all agent platforms).
 2. Add an entry to `AvailableSkills` in `internal/agent/embed.go`.
+3. Run `go generate ./cmd` (or `bazel run //apps/cli/vitruvian-devx/internal/genskills`) to sync the repository's checked-in skill files.
 
 The next `devx agent init` will offer the new skill automatically.
 

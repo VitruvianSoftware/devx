@@ -55,6 +55,3 @@ Before presenting the plan for approval, perform a self-review:
 - ❌ Writing a verification plan that only tests the happy path
 - ❌ Assuming default values without checking if they can be overridden at runtime
 - ❌ Skipping the self-review phase
-
-## Gemini Added Memories
-- When asked about events, always check these calendars in addition to the primary calendar: james@abrial.ai

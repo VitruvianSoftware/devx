@@ -49,9 +49,9 @@ var ollamaLaunchable = map[string]string{
 
 var agentInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize AI Agent tools/manifests for the devx environment",
-	Long: `Automatically configures standard AI agent constraints (.cursorrules, CLAUDE.md, etc)
-so agents understand devx conventions like --json and --dry-run.
+	Short: "Install AI agent skills for the devx environment",
+	Long: `Installs AI agent skill files (.agents/skills, .claude/skills, .cursor/skills, .github/skills)
+so coding agents understand devx conventions like --json, -y, and --dry-run.
 
 If Ollama is installed, you will also be offered the option to configure
 selected coding agents to use local models via 'ollama launch --config'.

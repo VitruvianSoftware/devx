@@ -54,7 +54,28 @@ var AvailableSkills = []struct {
 	},
 }
 
-// Install copies the correct template string to the local working directory.
+// CheckedInSkillDirs lists the checked-in skill roots inside the vitruvian-devx repository.
+var CheckedInSkillDirs = []string{
+	".agents/skills",
+	".github/skills",
+}
+
+// SkillTemplatePath returns the embedded template path for skillName.
+func SkillTemplatePath(skillName string) string {
+	return fmt.Sprintf("templates/skills/%s/SKILL.md", skillName)
+}
+
+// SkillContent returns the canonical embedded bytes for skillName.
+func SkillContent(skillName string) ([]byte, error) {
+	templatePath := SkillTemplatePath(skillName)
+	content, err := EmbedFS.ReadFile(templatePath)
+	if err != nil {
+		return nil, fmt.Errorf("reading embedded template %q: %w", templatePath, err)
+	}
+	return content, nil
+}
+
+// Install copies the canonical skill bytes to the target agent's local folder.
 func Install(targetAgent string, skillName string, force bool) error {
 	basePath, ok := AgentBasePaths[targetAgent]
 	if !ok {
@@ -62,11 +83,10 @@ func Install(targetAgent string, skillName string, force bool) error {
 	}
 
 	relPath := fmt.Sprintf("%s/%s/SKILL.md", basePath, skillName)
-	templatePath := "templates/" + relPath
 
-	content, err := EmbedFS.ReadFile(templatePath)
+	content, err := SkillContent(skillName)
 	if err != nil {
-		return fmt.Errorf("reading embedded template %q: %w", templatePath, err)
+		return err
 	}
 
 	// Make sure the target directory exists (for things like .github/ or .agents/)
